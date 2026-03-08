@@ -1,0 +1,6 @@
+timestamp	commit	primary_metric	metric_value	secondary_metrics	status	description
+2026-03-09T16:00:00Z	a1b2c3d	eval_accuracy	0.920000	{"eval_loss": 0.312, "train_runtime": 180}	keep	baseline: bert-base-uncased default config
+2026-03-09T16:30:00Z	e4f5g6h	eval_accuracy	0.928000	{"eval_loss": 0.298, "train_runtime": 185}	keep	linear warmup 10% + cosine decay
+2026-03-09T17:00:00Z	i7j8k9l	eval_accuracy	0.915000	{"eval_loss": 0.340, "train_runtime": 175}	discard	reduced max_seq_length to 64 (accuracy drop)
+2026-03-09T17:30:00Z	m0n1o2p	eval_accuracy	0.935000	{"eval_loss": 0.275, "train_runtime": 195}	keep	switched to roberta-base + lr 1e-5
+2026-03-09T18:00:00Z	q3r4s5t	eval_accuracy	0.932000	{"eval_loss": 0.280, "train_runtime": 200}	discard	added label smoothing 0.1 (marginal)

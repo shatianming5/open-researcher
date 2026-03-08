@@ -1,0 +1,12 @@
+mode: autonomous
+experiment:
+  timeout: 1200
+  max_consecutive_crashes: 3
+metrics:
+  primary:
+    name: eval_accuracy
+    direction: higher_is_better
+environment: |
+  Python 3.10+, PyTorch 2.0+, HuggingFace Transformers
+  GPU recommended (A10G or better for reasonable speed)
+  Dataset: SST-2 from GLUE benchmark (auto-downloaded)
