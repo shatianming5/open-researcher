@@ -6,6 +6,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+RECORD_SCRIPT = Path(__file__).parent.parent / "src" / "open_researcher" / "scripts" / "record.py"
+
 
 def test_record_appends_to_tsv():
     """record.py should append a row to results.tsv with correct fields."""
@@ -25,10 +27,9 @@ def test_record_appends_to_tsv():
         results_file.write_text("timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n")
 
         # Copy record.py to target
-        record_script = Path("/Users/shatianming/Downloads/open-researcher/src/open_researcher/scripts/record.py")
         target_script = research_dir / "scripts" / "record.py"
         target_script.parent.mkdir(parents=True, exist_ok=True)
-        target_script.write_text(record_script.read_text())
+        target_script.write_text(RECORD_SCRIPT.read_text())
 
         # Run record.py
         result = subprocess.run(
@@ -73,9 +74,8 @@ def test_record_creates_header_if_missing():
         scripts_dir = research_dir / "scripts"
         scripts_dir.mkdir()
 
-        record_script = Path("/Users/shatianming/Downloads/open-researcher/src/open_researcher/scripts/record.py")
         target_script = scripts_dir / "record.py"
-        target_script.write_text(record_script.read_text())
+        target_script.write_text(RECORD_SCRIPT.read_text())
 
         result = subprocess.run(
             [
