@@ -28,7 +28,8 @@ def status():
 @app.command()
 def results():
     """Print experiment results table."""
-    typer.echo("results called")
+    from open_researcher.results_cmd import print_results
+    print_results(Path.cwd())
 
 
 @app.command()
@@ -40,7 +41,8 @@ def dashboard(port: int = typer.Option(8384, help="Dashboard port")):
 @app.command()
 def export():
     """Export experiment report as Markdown."""
-    typer.echo("export called")
+    from open_researcher.export_cmd import do_export
+    do_export(Path.cwd())
 
 
 if __name__ == "__main__":
