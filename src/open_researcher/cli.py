@@ -49,5 +49,15 @@ def export():
     do_export(Path.cwd())
 
 
+@app.command()
+def run(
+    agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode). Auto-detects if omitted."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show the command without executing."),
+):
+    """Launch an AI agent to run the research workflow."""
+    from open_researcher.run_cmd import do_run
+    do_run(repo_path=Path.cwd(), agent_name=agent, dry_run=dry_run)
+
+
 if __name__ == "__main__":
     app()
