@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Researcher Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 24px; color: #58a6ff; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; }
+        .card h2 { font-size: 16px; color: #8b949e; margin-bottom: 12px; }
+        .stat { font-size: 32px; font-weight: bold; color: #58a6ff; }
+        .stat-label { font-size: 14px; color: #8b949e; }
+        .stat-row { display: flex; gap: 20px; margin-top: 10px; }
+        .stat-item { text-align: center; }
+        .stat-item .num { font-size: 20px; font-weight: bold; }
+        .keep { color: #3fb950; }
+        .discard { color: #d29922; }
+        .crash { color: #f85149; }
+        .chart-container { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #30363d; }
+        th { color: #8b949e; font-weight: 600; }
+        .badge { padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .badge-keep { background: #238636; color: #fff; }
+        .badge-discard { background: #9e6a03; color: #fff; }
+        .badge-crash { background: #da3633; color: #fff; }
+        .phase-indicator { display: inline-block; padding: 4px 12px; border-radius: 16px; background: #1f6feb; color: #fff; font-size: 14px; }
+        .doc-viewer { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 20px; white-space: pre-wrap; font-family: monospace; font-size: 13px; max-height: 400px; overflow-y: auto; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+        .tab { padding: 6px 16px; border-radius: 6px; cursor: pointer; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; }
+        .tab.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Open Researcher</h1>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Phase</h2>
+            <div id="phase" class="phase-indicator">Loading...</div>
+        </div>
+        <div class="card">
+            <h2>Primary Metric</h2>
+            <div id="metric-current" class="stat">—</div>
+            <div id="metric-name" class="stat-label"></div>
+            <div class="stat-row">
+                <div class="stat-item"><div class="stat-label">Baseline</div><div id="metric-baseline" class="num">—</div></div>
+                <div class="stat-item"><div class="stat-label">Best</div><div id="metric-best" class="num">—</div></div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Experiments</h2>
+            <div id="total" class="stat">0</div>
+            <div class="stat-row">
+                <div class="stat-item"><div class="num keep" id="n-keep">0</div><div class="stat-label">Keep</div></div>
+                <div class="stat-item"><div class="num discard" id="n-discard">0</div><div class="stat-label">Discard</div></div>
+                <div class="stat-item"><div class="num crash" id="n-crash">0</div><div class="stat-label">Crash</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <h2 style="color: #8b949e; margin-bottom: 12px;">Metric Trend</h2>
+        <canvas id="chart" height="80"></canvas>
+    </div>
+
+    <div class="card" style="margin-bottom: 20px;">
+        <h2>Experiment History</h2>
+        <table>
+            <thead><tr><th>#</th><th>Status</th><th>Value</th><th>Description</th><th>Time</th></tr></thead>
+            <tbody id="results-table"></tbody>
+        </table>
+    </div>
+
+    <div>
+        <div class="tabs">
+            <div class="tab active" onclick="showDoc('project-understanding.md', this)">Project Understanding</div>
+            <div class="tab" onclick="showDoc('evaluation.md', this)">Evaluation Design</div>
+            <div class="tab" onclick="showDoc('program.md', this)">Program</div>
+        </div>
+        <div id="doc-viewer" class="doc-viewer">Loading...</div>
+    </div>
+
+    <script>
+        const PHASE_NAMES = {1: 'Phase 1: Understand Project', 2: 'Phase 2: Design Evaluation', 3: 'Phase 3: Establish Baseline', 4: 'Phase 4: Experiment Loop'};
+        let chart = null;
+
+        async function refresh() {
+            const [statusResp, resultsResp] = await Promise.all([
+                fetch('/api/status'), fetch('/api/results')
+            ]);
+            const status = await statusResp.json();
+            const results = await resultsResp.json();
+
+            document.getElementById('phase').textContent = PHASE_NAMES[status.phase] || 'Unknown';
+            document.getElementById('total').textContent = status.total;
+            document.getElementById('n-keep').textContent = status.keep;
+            document.getElementById('n-discard').textContent = status.discard;
+            document.getElementById('n-crash').textContent = status.crash;
+            document.getElementById('metric-name').textContent = status.primary_metric || '—';
+
+            if (status.current_value != null) {
+                document.getElementById('metric-current').textContent = status.current_value.toFixed(4);
+                document.getElementById('metric-baseline').textContent = status.baseline_value.toFixed(4);
+                document.getElementById('metric-best').textContent = status.best_value.toFixed(4);
+            }
+
+            const tbody = document.getElementById('results-table');
+            tbody.innerHTML = results.map((r, i) =>
+                `<tr><td>${i+1}</td><td><span class="badge badge-${r.status}">${r.status}</span></td><td>${parseFloat(r.metric_value).toFixed(4)}</td><td>${r.description}</td><td>${r.timestamp.slice(0,19)}</td></tr>`
+            ).join('');
+
+            const keepResults = results.filter(r => r.status === 'keep');
+            const labels = keepResults.map((_, i) => `#${i+1}`);
+            const data = keepResults.map(r => parseFloat(r.metric_value));
+
+            if (chart) chart.destroy();
+            chart = new Chart(document.getElementById('chart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: status.primary_metric || 'Metric',
+                        data,
+                        borderColor: '#58a6ff',
+                        backgroundColor: 'rgba(88,166,255,0.1)',
+                        fill: true, tension: 0.3, pointRadius: 4,
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { grid: { color: '#30363d' }, ticks: { color: '#8b949e' } },
+                        y: { grid: { color: '#30363d' }, ticks: { color: '#8b949e' } }
+                    },
+                    plugins: { legend: { labels: { color: '#c9d1d9' } } }
+                }
+            });
+        }
+
+        async function showDoc(name, el) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            const resp = await fetch(`/api/docs/${name}`);
+            const data = await resp.json();
+            document.getElementById('doc-viewer').textContent = data.content || '(empty)';
+        }
+
+        refresh();
+        setInterval(refresh, 10000);
+        showDoc('project-understanding.md', document.querySelector('.tab.active'));
+    </script>
+</body>
+</html>

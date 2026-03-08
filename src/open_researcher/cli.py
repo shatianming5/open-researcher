@@ -35,7 +35,11 @@ def results():
 @app.command()
 def dashboard(port: int = typer.Option(8384, help="Dashboard port")):
     """Launch web dashboard."""
-    typer.echo(f"dashboard called on port {port}")
+    import uvicorn
+    from open_researcher.dashboard.app import create_app
+    web_app = create_app(Path.cwd())
+    typer.echo(f"Starting dashboard at http://localhost:{port}")
+    uvicorn.run(web_app, host="0.0.0.0", port=port)
 
 
 @app.command()
