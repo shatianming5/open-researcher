@@ -14,7 +14,8 @@ app = typer.Typer(
 @app.command()
 def init(tag: str = typer.Option(None, help="Experiment tag (e.g. mar8). Defaults to today's date.")):
     """Initialize .research/ directory in the current repo."""
-    typer.echo(f"init called with tag={tag}")
+    from open_researcher.init_cmd import do_init
+    do_init(repo_path=Path.cwd(), tag=tag)
 
 
 @app.command()
