@@ -7,8 +7,8 @@ from pathlib import Path
 from jinja2 import Environment, PackageLoader
 from rich.console import Console
 
-from open_researcher.agents import detect_agent, get_agent
 from open_researcher.config import load_config
+from open_researcher.run_cmd import _resolve_agent
 
 console = Console()
 
@@ -37,27 +37,6 @@ def do_start_init(repo_path: Path, tag: str | None = None) -> Path:
 
     do_init(repo_path, tag=tag)
     return research
-
-
-def _resolve_agent(agent_name: str | None, agent_configs: dict | None = None):
-    """Resolve agent by name or auto-detect."""
-    configs = agent_configs or {}
-    if agent_name:
-        try:
-            return get_agent(agent_name, config=configs.get(agent_name))
-        except KeyError as e:
-            console.print(f"[red]Error:[/red] {e}")
-            raise SystemExit(1)
-    agent = detect_agent(configs=configs)
-    if agent is None:
-        console.print(
-            "[red]Error:[/red] No supported AI agent found.\n"
-            "Install one of: claude (Claude Code), codex, aider, opencode\n"
-            "Or specify with: --agent <name>"
-        )
-        raise SystemExit(1)
-    console.print(f"[green]Auto-detected agent:[/green] {agent.name}")
-    return agent
 
 
 def do_start(
@@ -98,22 +77,26 @@ def do_start(
     exit_codes: dict[str, int] = {}
     on_output_ref: list = []
 
-    def _on_goal_result(goal: str | None) -> None:
-        """Called when user submits or skips the goal input."""
-        # Re-render scout program with goal
-        render_scout_program(research, tag=tag, goal=goal)
+    def _on_review_result(result: str | None) -> None:
+        """Handle ReviewScreen dismissal."""
+        if result == "confirm":
+            app.app_phase = "experimenting"
+            _start_experiment_agents()
+        elif result == "reanalyze":
+            app.app_phase = "scouting"
+            _launch_scout()
+        else:
+            app.exit()
 
-        # Save goal to file for reference
-        if goal:
-            (research / "goal.md").write_text(f"# Research Goal\n\n{goal}\n")
+    def _show_review() -> None:
+        """Push ReviewScreen onto the app."""
+        app.push_screen(ReviewScreen(research), _on_review_result)
 
-        # Update app phase
-        app.app_phase = "scouting"
-
-        # Launch Scout Agent in background thread
-        on_output = _make_safe_output(app.append_log, research / "run.log")
-        on_output_ref.append(on_output)
-
+    def _launch_scout() -> None:
+        """Launch Scout Agent and transition to ReviewScreen when done."""
+        on_output = on_output_ref[0] if on_output_ref else _make_safe_output(app.append_log, research / "run.log")
+        if not on_output_ref:
+            on_output_ref.append(on_output)
         done_scout = threading.Event()
 
         def _after_scout():
@@ -123,57 +106,22 @@ def do_start(
                 app.call_from_thread(
                     app.notify, f"Scout Agent failed (code={code}). Check logs.", severity="error"
                 )
-            # Switch to review screen
             app.app_phase = "reviewing"
             app.call_from_thread(_show_review)
 
-        def _show_review():
-            def _on_review(result: str | None) -> None:
-                if result == "confirm":
-                    app.app_phase = "experimenting"
-                    _start_experiment_agents()
-                elif result == "reanalyze":
-                    app.app_phase = "scouting"
-                    _run_scout()
-                else:
-                    app.exit()
-
-            app.push_screen(ReviewScreen(research), _on_review)
-
         _launch_agent_thread(
             scout_agent, repo_path, on_output, done_scout, exit_codes, "scout",
             program_file="scout_program.md",
         )
         threading.Thread(target=_after_scout, daemon=True).start()
 
-    def _run_scout():
-        """Re-run scout agent (for re-analyze flow)."""
-        on_output = on_output_ref[0] if on_output_ref else _make_safe_output(app.append_log, research / "run.log")
-        done_scout = threading.Event()
-
-        def _after_scout():
-            done_scout.wait()
-            app.app_phase = "reviewing"
-            app.call_from_thread(_show_review_again)
-
-        def _show_review_again():
-            def _on_review(result: str | None) -> None:
-                if result == "confirm":
-                    app.app_phase = "experimenting"
-                    _start_experiment_agents()
-                elif result == "reanalyze":
-                    app.app_phase = "scouting"
-                    _run_scout()
-                else:
-                    app.exit()
-
-            app.push_screen(ReviewScreen(research), _on_review)
-
-        _launch_agent_thread(
-            scout_agent, repo_path, on_output, done_scout, exit_codes, "scout",
-            program_file="scout_program.md",
-        )
-        threading.Thread(target=_after_scout, daemon=True).start()
+    def _on_goal_result(goal: str | None) -> None:
+        """Called when user submits or skips the goal input."""
+        render_scout_program(research, tag=tag, goal=goal)
+        if goal:
+            (research / "goal.md").write_text(f"# Research Goal\n\n{goal}\n")
+        app.app_phase = "scouting"
+        _launch_scout()
 
     def _start_experiment_agents():
         """Transition to experiment phase — launch idea + experiment agents."""
@@ -255,10 +203,8 @@ def do_start(
                                  program_file="program.md")
 
     def start_app():
-        """Called on app mount — show goal input modal."""
-        app.call_from_thread(
-            lambda: app.push_screen(GoalInputModal(), _on_goal_result)
-        )
+        """Called on app mount (already on event loop thread)."""
+        app.push_screen(GoalInputModal(), _on_goal_result)
 
     app = ResearchApp(repo_path, multi=bool(multi or idea_agent_name), on_ready=start_app, initial_phase="scouting")
     try:
@@ -281,3 +227,6 @@ def do_start(
                 console.print(f"[green]{name} completed successfully.[/green]")
             else:
                 console.print(f"[red]{name} exited with code {code}.[/red]")
+
+    from open_researcher.status_cmd import print_status
+    print_status(repo_path)
