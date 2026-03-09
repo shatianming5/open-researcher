@@ -57,7 +57,7 @@ def test_run_dry_run_prints_command(capsys):
             do_run(repo, agent_name="test-agent", dry_run=True)
 
         captured = capsys.readouterr()
-        assert "test-cmd" in captured.out
+        assert "test-agent" in captured.out
 
 
 def test_run_launches_agent():

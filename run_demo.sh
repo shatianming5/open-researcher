@@ -103,6 +103,8 @@ mode: autonomous
 experiment:
   timeout: 300
   max_consecutive_crashes: 3
+  max_parallel_workers: 0       # 0 = auto (one per available GPU), 1 = serial
+  worker_agent: ""              # sub-worker agent (default: same as master)
 metrics:
   primary:
     name: val_loss

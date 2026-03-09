@@ -27,3 +27,7 @@ class AgentAdapter(ABC):
         program_file: str = "program.md",
     ) -> int:
         """Launch the agent, stream output via callback, return exit code."""
+
+    def terminate(self) -> None:
+        """Terminate the running agent subprocess. Override in subclasses."""
+        pass

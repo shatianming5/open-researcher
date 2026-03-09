@@ -21,10 +21,14 @@ class ActivityMonitor:
             return {}
 
     def _write(self, data: dict) -> None:
-        with open(self.path, "w") as f:
+        mode = "r+" if self.path.exists() else "w"
+        with open(self.path, mode) as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             try:
+                f.seek(0)
+                f.truncate()
                 json.dump(data, f, indent=2)
+                f.flush()
             finally:
                 fcntl.flock(f, fcntl.LOCK_UN)
 

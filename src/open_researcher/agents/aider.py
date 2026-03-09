@@ -1,5 +1,6 @@
 """Aider agent adapter."""
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -13,6 +14,9 @@ from open_researcher.agents.base import AgentAdapter
 class AiderAdapter(AgentAdapter):
     name = "aider"
     command = "aider"
+
+    def __init__(self):
+        self._proc: subprocess.Popen | None = None
 
     def check_installed(self) -> bool:
         return shutil.which(self.command) is not None
@@ -35,8 +39,18 @@ class AiderAdapter(AgentAdapter):
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
+            start_new_session=True,
         )
+        self._proc = proc
         for line in proc.stdout:
             if on_output:
                 on_output(line.rstrip("\n"))
         return proc.wait()
+
+    def terminate(self) -> None:
+        """Terminate the running agent subprocess."""
+        if self._proc and self._proc.poll() is None:
+            try:
+                os.killpg(os.getpgid(self._proc.pid), 15)
+            except (OSError, ProcessLookupError):
+                pass

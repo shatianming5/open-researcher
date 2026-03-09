@@ -133,14 +133,14 @@ class AgentPanel(Widget):
 class AgentStatusWidget(Widget):
     """Prominent display of agent's current phase and action."""
 
-    status_text = reactive("")
+    status_text = reactive("  -- [IDLE] waiting to start...")
 
     def render(self) -> str:
-        return self.status_text or "[dim]waiting to start...[/dim]"
+        return self.status_text
 
     def update_status(self, activity: dict | None) -> None:
         if not activity:
-            self.status_text = "[dim]waiting to start...[/dim]"
+            self.status_text = "  -- [IDLE] waiting to start..."
             return
 
         status = activity.get("status", "idle")
@@ -167,11 +167,11 @@ class AgentStatusWidget(Widget):
 
         lines = [f"  {icon} [{status.upper()}]"]
         if detail:
-            lines.append(f"  {detail}")
+            lines.append(f"     {detail}")
         if idea:
-            lines.append(f"  Idea: {idea}")
+            lines.append(f"     Idea: {idea}")
         if updated:
-            lines.append(f"  Updated: {updated}")
+            lines.append(f"     Updated: {updated}")
 
         self.status_text = "\n".join(lines)
 
@@ -179,10 +179,10 @@ class AgentStatusWidget(Widget):
 class WorkerStatusPanel(Widget):
     """Panel showing experiment workers and their GPU assignments."""
 
-    workers_text = reactive("")
+    workers_text = reactive("Experiment Master -- waiting for ideas...")
 
     def render(self) -> str:
-        return self.workers_text or "Experiment Master — idle"
+        return self.workers_text
 
     def update_workers(self, workers: list[dict], gpu_total: int = 0) -> None:
         if not workers:
@@ -207,4 +207,4 @@ class HotkeyBar(Static):
     """Bottom bar showing available keyboard shortcuts."""
 
     def render(self) -> str:
-        return "[p]ause [r]esume [s]kip [a]dd idea [e]dit [g]pu [l]og [q]uit"
+        return "\\[p]ause \\[r]esume \\[s]kip \\[a]dd idea \\[e]dit \\[g]pu \\[l]og \\[q]uit"

@@ -15,13 +15,20 @@ class IdeaPool:
     def _read(self) -> dict:
         if not self.path.exists():
             return {"ideas": []}
-        return json.loads(self.path.read_text())
+        try:
+            return json.loads(self.path.read_text())
+        except (json.JSONDecodeError, OSError):
+            return {"ideas": []}
 
     def _write(self, data: dict) -> None:
-        with open(self.path, "w") as f:
+        mode = "r+" if self.path.exists() else "w"
+        with open(self.path, mode) as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             try:
+                f.seek(0)
+                f.truncate()
                 json.dump(data, f, indent=2)
+                f.flush()
             finally:
                 fcntl.flock(f, fcntl.LOCK_UN)
 
@@ -32,6 +39,27 @@ class IdeaPool:
             n += 1
         return f"idea-{n:03d}"
 
+    def _atomic_update(self, updater) -> dict:
+        """Lock file, read, apply updater function, write back, return data."""
+        mode = "r+" if self.path.exists() else "w"
+        if mode == "w":
+            # Create file with empty structure first
+            self.path.write_text(json.dumps({"ideas": []}, indent=2))
+            mode = "r+"
+        with open(self.path, mode) as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            try:
+                content = f.read()
+                data = json.loads(content) if content.strip() else {"ideas": []}
+                result = updater(data)
+                f.seek(0)
+                f.truncate()
+                json.dump(data, f, indent=2)
+                f.flush()
+                return result
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+
     def add(
         self,
         description: str,
@@ -40,23 +68,23 @@ class IdeaPool:
         priority: int = 5,
         gpu_hint: int | str = "auto",
     ) -> dict:
-        data = self._read()
-        idea = {
-            "id": self._next_id(data),
-            "description": description,
-            "source": source,
-            "category": category,
-            "priority": priority,
-            "status": "pending",
-            "gpu_hint": gpu_hint,
-            "claimed_by": None,
-            "assigned_experiment": None,
-            "result": None,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        }
-        data["ideas"].append(idea)
-        self._write(data)
-        return idea
+        def _do(data):
+            idea = {
+                "id": self._next_id(data),
+                "description": description,
+                "source": source,
+                "category": category,
+                "priority": priority,
+                "status": "pending",
+                "gpu_hint": gpu_hint,
+                "claimed_by": None,
+                "assigned_experiment": None,
+                "result": None,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            data["ideas"].append(idea)
+            return idea
+        return self._atomic_update(_do)
 
     def claim_idea(self, worker_id: str) -> dict | None:
         """Atomically claim the highest-priority pending idea for a worker."""
@@ -91,36 +119,36 @@ class IdeaPool:
         return self._read()["ideas"]
 
     def update_status(self, idea_id: str, status: str, experiment: int | None = None) -> None:
-        data = self._read()
-        for idea in data["ideas"]:
-            if idea["id"] == idea_id:
-                idea["status"] = status
-                if experiment is not None:
-                    idea["assigned_experiment"] = experiment
-                break
-        self._write(data)
+        def _do(data):
+            for idea in data["ideas"]:
+                if idea["id"] == idea_id:
+                    idea["status"] = status
+                    if experiment is not None:
+                        idea["assigned_experiment"] = experiment
+                    break
+        self._atomic_update(_do)
 
     def mark_done(self, idea_id: str, metric_value: float, verdict: str) -> None:
-        data = self._read()
-        for idea in data["ideas"]:
-            if idea["id"] == idea_id:
-                idea["status"] = "done"
-                idea["result"] = {"metric_value": metric_value, "verdict": verdict}
-                break
-        self._write(data)
+        def _do(data):
+            for idea in data["ideas"]:
+                if idea["id"] == idea_id:
+                    idea["status"] = "done"
+                    idea["result"] = {"metric_value": metric_value, "verdict": verdict}
+                    break
+        self._atomic_update(_do)
 
     def delete(self, idea_id: str) -> None:
-        data = self._read()
-        data["ideas"] = [i for i in data["ideas"] if i["id"] != idea_id]
-        self._write(data)
+        def _do(data):
+            data["ideas"] = [i for i in data["ideas"] if i["id"] != idea_id]
+        self._atomic_update(_do)
 
     def update_priority(self, idea_id: str, priority: int) -> None:
-        data = self._read()
-        for idea in data["ideas"]:
-            if idea["id"] == idea_id:
-                idea["priority"] = priority
-                break
-        self._write(data)
+        def _do(data):
+            for idea in data["ideas"]:
+                if idea["id"] == idea_id:
+                    idea["priority"] = priority
+                    break
+        self._atomic_update(_do)
 
     def summary(self) -> dict:
         data = self._read()

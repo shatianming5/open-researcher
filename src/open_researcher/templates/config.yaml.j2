@@ -10,6 +10,8 @@ mode: autonomous
 experiment:
   timeout: 600                  # seconds per experiment before kill
   max_consecutive_crashes: 3    # pause after N consecutive crashes
+  max_parallel_workers: 0       # 0 = auto (one per available GPU), 1 = serial
+  worker_agent: ""              # agent for sub-workers (default: same as master)
 
 # Metrics (filled by agent in Phase 2)
 metrics:

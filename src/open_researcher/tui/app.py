@@ -51,11 +51,11 @@ class ResearchApp(App):
             with Vertical(id="idea-agent-section"):
                 yield Static("Idea Agent", classes="panel-title")
                 yield AgentStatusWidget(id="idea-status")
-                yield RichLog(id="idea-log", wrap=True, markup=True)
+                yield RichLog(id="idea-log", wrap=True, markup=False)
             with Vertical(id="exp-agent-section"):
                 yield Static("Experiment Master", classes="panel-title")
                 yield WorkerStatusPanel(id="worker-status")
-                yield RichLog(id="exp-log", wrap=True, markup=True)
+                yield RichLog(id="exp-log", wrap=True, markup=False)
         yield HotkeyBar(id="hotkey-bar")
 
     def on_mount(self) -> None:
@@ -66,7 +66,7 @@ class ResearchApp(App):
         try:
             state = parse_research_state(self.repo_path)
             self.query_one("#stats-bar", StatsBar).update_stats(state)
-        except Exception:
+        except (json.JSONDecodeError, OSError, KeyError, NoMatches):
             pass
 
         # Refresh idea pool with worker GPU info
@@ -76,14 +76,14 @@ class ResearchApp(App):
             exp_master = self.activity.get("experiment_master")
             workers = exp_master.get("workers", []) if exp_master else []
             self.query_one("#idea-pool", IdeaPoolPanel).update_ideas(ideas, summary, workers)
-        except Exception:
+        except (json.JSONDecodeError, OSError, KeyError, NoMatches):
             pass
 
         # Refresh idea agent status
         try:
             idea_act = self.activity.get("idea_agent")
             self.query_one("#idea-status", AgentStatusWidget).update_status(idea_act)
-        except Exception:
+        except (json.JSONDecodeError, OSError, KeyError, NoMatches):
             pass
 
         # Refresh worker status panel
@@ -93,7 +93,7 @@ class ResearchApp(App):
                 workers = exp_master.get("workers", [])
                 gpu_total = exp_master.get("gpu_total", 0)
                 self.query_one("#worker-status", WorkerStatusPanel).update_workers(workers, gpu_total)
-        except Exception:
+        except (json.JSONDecodeError, OSError, KeyError, NoMatches):
             pass
 
     def _read_control(self) -> dict:
@@ -151,7 +151,11 @@ class ResearchApp(App):
         self.push_screen(GPUStatusModal(gpus))
 
     def action_view_log(self) -> None:
-        log_path = str(self.research_dir / "run.log")
+        if self.multi:
+            # In multi mode, show both logs concatenated
+            log_path = str(self.research_dir / "experiment_agent.log")
+        else:
+            log_path = str(self.research_dir / "run.log")
         self.push_screen(LogScreen(log_path))
 
     def action_quit_app(self) -> None:

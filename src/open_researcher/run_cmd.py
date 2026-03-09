@@ -1,6 +1,8 @@
 """Run command — launch AI agents with interactive Textual TUI."""
 
+import json
 import threading
+import time
 from pathlib import Path
 
 from rich.console import Console
@@ -27,6 +29,70 @@ def _launch_agent_thread(
         except Exception:
             code = 1
         exit_codes[key] = code
+        done_event.set()
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+    return t
+
+
+def _has_pending_ideas(research_dir: Path) -> bool:
+    """Check if idea_pool.json has any pending ideas."""
+    pool_path = research_dir / "idea_pool.json"
+    if not pool_path.exists():
+        return False
+    try:
+        data = json.loads(pool_path.read_text())
+        return any(i["status"] == "pending" for i in data.get("ideas", []))
+    except (json.JSONDecodeError, OSError):
+        return False
+
+
+def _launch_exp_with_wait(
+    agent,
+    workdir: Path,
+    on_output,
+    done_event: threading.Event,
+    exit_codes: dict,
+    stop_event: threading.Event,
+):
+    """Wait for ideas in the pool, then run experiment agent. Restart if more ideas remain."""
+    research = workdir / ".research"
+
+    def _run():
+        on_output("[exp] Waiting for Idea Agent to generate ideas...")
+        while not stop_event.is_set():
+            if _has_pending_ideas(research):
+                break
+            time.sleep(5)
+        if stop_event.is_set():
+            exit_codes["exp"] = 0
+            done_event.set()
+            return
+
+        # Run experiment agent, restart if there are still pending ideas
+        run_count = 0
+        while not stop_event.is_set():
+            run_count += 1
+            on_output(f"[exp] Starting experiment agent (run #{run_count})...")
+            try:
+                code = agent.run(workdir, on_output=on_output, program_file="experiment_program.md")
+            except Exception:
+                code = 1
+            exit_codes["exp"] = code
+
+            # Check if there are still pending ideas to process
+            if not _has_pending_ideas(research):
+                on_output("[exp] No more pending ideas. Waiting for new ideas...")
+                while not stop_event.is_set():
+                    if _has_pending_ideas(research):
+                        break
+                    time.sleep(10)
+                if stop_event.is_set():
+                    break
+            else:
+                on_output("[exp] More pending ideas found, restarting...")
+
         done_event.set()
 
     t = threading.Thread(target=_run, daemon=True)
@@ -69,9 +135,8 @@ def do_run(repo_path: Path, agent_name: str | None, dry_run: bool) -> None:
     agent = _resolve_agent(agent_name)
 
     if dry_run:
-        cmd = agent.build_command(program_md, repo_path)
         console.print(f"[bold]Agent:[/bold] {agent.name}")
-        console.print(f"[bold]Command:[/bold] {' '.join(cmd[:3])}...")
+        console.print(f"[bold]Command:[/bold] {agent.name} -p <program.md>")
         console.print(f"[bold]Working directory:[/bold] {repo_path}")
         console.print("\n[dim]Dry run -- no agent launched.[/dim]")
         return
@@ -92,7 +157,10 @@ def do_run(repo_path: Path, agent_name: str | None, dry_run: bool) -> None:
     _launch_agent_thread(agent, repo_path, on_output, done, exit_codes, "agent")
     app.run()
 
-    code = exit_codes.get("agent", 0)
+    # Cleanup: terminate agent subprocess when TUI exits
+    agent.terminate()
+
+    code = exit_codes.get("agent", -1)
     if code == 0:
         console.print(f"\n[green]Agent {agent.name} completed successfully.[/green]")
     else:
@@ -143,6 +211,7 @@ def do_run_multi(
     app = ResearchApp(repo_path, multi=True)
     done_idea = threading.Event()
     done_exp = threading.Event()
+    stop_exp = threading.Event()
     exit_codes: dict[str, int] = {}
 
     def on_idea_output(line: str):
@@ -166,20 +235,24 @@ def do_run_multi(
         "idea",
         program_file="idea_program.md",
     )
-    _launch_agent_thread(
+    _launch_exp_with_wait(
         exp_agent,
         repo_path,
         on_exp_output,
         done_exp,
         exit_codes,
-        "exp",
-        program_file="experiment_program.md",
+        stop_exp,
     )
 
     app.run()
 
+    # Cleanup: terminate agent subprocesses when TUI exits
+    idea_agent.terminate()
+    exp_agent.terminate()
+    stop_exp.set()  # Signal experiment thread to stop when TUI exits
+
     for key, name in [("idea", "Idea Agent"), ("exp", "Experiment Master")]:
-        code = exit_codes.get(key, 0)
+        code = exit_codes.get(key, -1)
         if code == 0:
             console.print(f"[green]{name} completed successfully.[/green]")
         else:

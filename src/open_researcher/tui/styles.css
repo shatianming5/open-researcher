@@ -38,15 +38,15 @@ Screen {
 }
 
 #idea-status, #worker-status {
+    min-height: 3;
     height: auto;
-    max-height: 6;
+    max-height: 8;
     border-bottom: solid $accent;
     padding: 0 1;
 }
 
 #idea-log, #exp-log {
     height: 1fr;
-    max-height: 10;
     border: solid $primary;
 }
 

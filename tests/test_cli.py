@@ -65,4 +65,4 @@ def test_run_dry_run():
         with patch("open_researcher.run_cmd.detect_agent", return_value=mock_agent):
             result = runner.invoke(app, ["run", "--dry-run"])
             assert result.exit_code == 0
-            assert "mock-cmd" in result.stdout
+            assert "mock-agent" in result.stdout

@@ -65,7 +65,7 @@ class GPUStatusModal(ModalScreen):
                 used = g.get("memory_used", 0)
                 free = g.get("memory_free", 0)
                 alloc = g.get("allocated_to", None)
-                status = f"[{alloc}]" if alloc else "[free]"
+                status = f"\\[{alloc}]" if alloc else "\\[free]"
                 lines.append(f"{host}:{dev}  {used}/{total} MiB  free:{free} MiB  {status}")
             yield Static("\n".join(lines))
             yield Button("Close", id="btn-close")
@@ -95,7 +95,7 @@ class LogScreen(Screen):
             lines = p.read_text().splitlines()
             content = "\n".join(lines[-200:])
         yield TextArea(content, read_only=True, id="log-content")
-        yield Static("Press [Esc] or [q] to return", id="log-footer")
+        yield Static("Press \\[Esc] or \\[q] to return", id="log-footer")
 
     def action_go_back(self) -> None:
         self.app.pop_screen()

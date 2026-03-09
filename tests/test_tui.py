@@ -119,7 +119,7 @@ def test_agent_status_widget_update():
 def test_agent_status_widget_none():
     widget = AgentStatusWidget()
     widget.update_status(None)
-    assert "waiting" in widget.status_text
+    assert "IDLE" in widget.status_text
 
 
 def test_agent_status_widget_with_idea():
