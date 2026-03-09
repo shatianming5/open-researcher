@@ -61,6 +61,8 @@ def test_run_dry_run_prints_command(capsys):
 
 
 def test_run_launches_agent():
+    import time
+
     from open_researcher.run_cmd import do_run
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -70,11 +72,21 @@ def test_run_launches_agent():
         mock_agent.run.return_value = 0
 
         mock_app = MagicMock()
-        mock_app_cls = MagicMock(return_value=mock_app)
+
+        def mock_app_factory(*args, **kwargs):
+            on_ready = kwargs.get("on_ready")
+
+            def run_side_effect():
+                if on_ready:
+                    on_ready()
+                time.sleep(0.1)  # let daemon thread call agent.run()
+
+            mock_app.run.side_effect = run_side_effect
+            return mock_app
 
         with (
             patch("open_researcher.run_cmd.get_agent", return_value=mock_agent),
-            patch("open_researcher.tui.app.ResearchApp", mock_app_cls),
+            patch("open_researcher.tui.app.ResearchApp", mock_app_factory),
             patch("open_researcher.status_cmd.print_status", return_value=None),
         ):
             do_run(repo, agent_name="test-agent", dry_run=False)

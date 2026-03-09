@@ -1,8 +1,10 @@
 """Run command — launch AI agents with interactive Textual TUI."""
 
 import json
+import sys
 import threading
 import time
+import traceback
 from pathlib import Path
 
 from rich.console import Console
@@ -26,7 +28,8 @@ def _launch_agent_thread(
     def _run():
         try:
             code = agent.run(workdir, on_output=on_output, program_file=program_file)
-        except Exception:
+        except Exception as exc:
+            on_output(f"[{key}] Agent error: {exc}")
             code = 1
         exit_codes[key] = code
         done_event.set()
@@ -60,44 +63,72 @@ def _launch_exp_with_wait(
     research = workdir / ".research"
 
     def _run():
-        on_output("[exp] Waiting for Idea Agent to generate ideas...")
-        while not stop_event.is_set():
-            if _has_pending_ideas(research):
-                break
-            time.sleep(5)
-        if stop_event.is_set():
-            exit_codes["exp"] = 0
-            done_event.set()
-            return
-
-        # Run experiment agent, restart if there are still pending ideas
-        run_count = 0
-        while not stop_event.is_set():
-            run_count += 1
-            on_output(f"[exp] Starting experiment agent (run #{run_count})...")
-            try:
-                code = agent.run(workdir, on_output=on_output, program_file="experiment_program.md")
-            except Exception:
-                code = 1
-            exit_codes["exp"] = code
-
-            # Check if there are still pending ideas to process
-            if not _has_pending_ideas(research):
-                on_output("[exp] No more pending ideas. Waiting for new ideas...")
-                while not stop_event.is_set():
-                    if _has_pending_ideas(research):
-                        break
-                    time.sleep(10)
-                if stop_event.is_set():
+        try:
+            on_output("[exp] Waiting for Idea Agent to generate ideas...")
+            while not stop_event.is_set():
+                if _has_pending_ideas(research):
                     break
-            else:
-                on_output("[exp] More pending ideas found, restarting...")
+                time.sleep(5)
+            if stop_event.is_set():
+                exit_codes["exp"] = 0
+                done_event.set()
+                return
 
-        done_event.set()
+            # Run experiment agent, restart if there are still pending ideas
+            run_count = 0
+            while not stop_event.is_set():
+                run_count += 1
+                on_output(f"[exp] Starting experiment agent (run #{run_count})...")
+                try:
+                    code = agent.run(workdir, on_output=on_output, program_file="experiment_program.md")
+                except Exception as exc:
+                    on_output(f"[exp] Agent error: {exc}")
+                    code = 1
+                exit_codes["exp"] = code
+
+                # Check if there are still pending ideas to process
+                if not _has_pending_ideas(research):
+                    on_output("[exp] No more pending ideas. Waiting for new ideas...")
+                    while not stop_event.is_set():
+                        if _has_pending_ideas(research):
+                            break
+                        time.sleep(10)
+                    if stop_event.is_set():
+                        break
+                else:
+                    on_output("[exp] More pending ideas found, restarting...")
+        except Exception as exc:
+            # Catch-all: ensure thread doesn't die silently
+            try:
+                on_output(f"[exp] Fatal error: {exc}")
+            except Exception:
+                traceback.print_exc(file=sys.stderr)
+            exit_codes["exp"] = 1
+        finally:
+            done_event.set()
 
     t = threading.Thread(target=_run, daemon=True)
     t.start()
     return t
+
+
+def _make_safe_output(app_log_fn, log_path: Path):
+    """Create a robust output callback: writes log file FIRST, then TUI (never throws)."""
+
+    def on_output(line: str):
+        # 1. Always write to log file first (this always works)
+        try:
+            with open(log_path, "a") as f:
+                f.write(line + "\n")
+        except OSError:
+            pass
+        # 2. Try to update TUI (may fail during startup race)
+        try:
+            app_log_fn(line)
+        except Exception:
+            pass
+
+    return on_output
 
 
 def _resolve_agent(agent_name: str | None):
@@ -144,17 +175,20 @@ def do_run(repo_path: Path, agent_name: str | None, dry_run: bool) -> None:
     # Launch with Textual TUI
     from open_researcher.tui.app import ResearchApp
 
-    app = ResearchApp(repo_path, multi=False)
     done = threading.Event()
     exit_codes: dict[str, int] = {}
 
-    def on_output(line: str):
-        app.append_exp_log(line)
-        log_path = research / "run.log"
-        with open(log_path, "a") as f:
-            f.write(line + "\n")
+    on_output = _make_safe_output(
+        lambda line: None,  # placeholder, replaced after app creation
+        research / "run.log",
+    )
 
-    _launch_agent_thread(agent, repo_path, on_output, done, exit_codes, "agent")
+    def start_threads():
+        nonlocal on_output
+        on_output = _make_safe_output(app.append_exp_log, research / "run.log")
+        _launch_agent_thread(agent, repo_path, on_output, done, exit_codes, "agent")
+
+    app = ResearchApp(repo_path, multi=False, on_ready=start_threads)
     app.run()
 
     # Cleanup: terminate agent subprocess when TUI exits
@@ -208,42 +242,34 @@ def do_run_multi(
     # Launch with Textual TUI
     from open_researcher.tui.app import ResearchApp
 
-    app = ResearchApp(repo_path, multi=True)
     done_idea = threading.Event()
     done_exp = threading.Event()
     stop_exp = threading.Event()
     exit_codes: dict[str, int] = {}
 
-    def on_idea_output(line: str):
-        app.append_idea_log(line)
-        log_path = research / "idea_agent.log"
-        with open(log_path, "a") as f:
-            f.write(line + "\n")
+    def start_threads():
+        on_idea_output = _make_safe_output(app.append_idea_log, research / "idea_agent.log")
+        on_exp_output = _make_safe_output(app.append_exp_log, research / "experiment_agent.log")
 
-    def on_exp_output(line: str):
-        app.append_exp_log(line)
-        log_path = research / "experiment_agent.log"
-        with open(log_path, "a") as f:
-            f.write(line + "\n")
+        _launch_agent_thread(
+            idea_agent,
+            repo_path,
+            on_idea_output,
+            done_idea,
+            exit_codes,
+            "idea",
+            program_file="idea_program.md",
+        )
+        _launch_exp_with_wait(
+            exp_agent,
+            repo_path,
+            on_exp_output,
+            done_exp,
+            exit_codes,
+            stop_exp,
+        )
 
-    _launch_agent_thread(
-        idea_agent,
-        repo_path,
-        on_idea_output,
-        done_idea,
-        exit_codes,
-        "idea",
-        program_file="idea_program.md",
-    )
-    _launch_exp_with_wait(
-        exp_agent,
-        repo_path,
-        on_exp_output,
-        done_exp,
-        exit_codes,
-        stop_exp,
-    )
-
+    app = ResearchApp(repo_path, multi=True, on_ready=start_threads)
     app.run()
 
     # Cleanup: terminate agent subprocesses when TUI exits

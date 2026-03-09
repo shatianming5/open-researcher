@@ -36,13 +36,14 @@ class ResearchApp(App):
         ("q", "quit_app", "Quit"),
     ]
 
-    def __init__(self, repo_path: Path, multi: bool = False):
+    def __init__(self, repo_path: Path, multi: bool = False, on_ready=None):
         super().__init__()
         self.repo_path = repo_path
         self.research_dir = repo_path / ".research"
         self.multi = multi
         self.pool = IdeaPool(self.research_dir / "idea_pool.json")
         self.activity = ActivityMonitor(self.research_dir)
+        self._on_ready = on_ready
 
     def compose(self) -> ComposeResult:
         yield StatsBar(id="stats-bar")
@@ -60,6 +61,10 @@ class ResearchApp(App):
 
     def on_mount(self) -> None:
         self.set_interval(1.0, self._refresh_data)
+        # Start agent threads AFTER event loop is running
+        # to avoid call_from_thread failures during startup
+        if self._on_ready:
+            self._on_ready()
 
     def _refresh_data(self) -> None:
         # Refresh stats bar
