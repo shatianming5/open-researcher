@@ -12,7 +12,13 @@ from open_researcher.activity import ActivityMonitor
 from open_researcher.idea_pool import IdeaPool
 from open_researcher.status_cmd import parse_research_state
 from open_researcher.tui.modals import AddIdeaModal, GPUStatusModal, LogScreen
-from open_researcher.tui.widgets import HotkeyBar, IdeaPoolPanel, StatsBar, WorkerStatusPanel
+from open_researcher.tui.widgets import (
+    AgentStatusWidget,
+    HotkeyBar,
+    IdeaPoolPanel,
+    StatsBar,
+    WorkerStatusPanel,
+)
 
 
 class ResearchApp(App):
@@ -44,8 +50,10 @@ class ResearchApp(App):
         with Horizontal(id="agent-panels"):
             with Vertical(id="idea-agent-section"):
                 yield Static("Idea Agent", classes="panel-title")
+                yield AgentStatusWidget(id="idea-status")
                 yield RichLog(id="idea-log", wrap=True, markup=True)
             with Vertical(id="exp-agent-section"):
+                yield Static("Experiment Master", classes="panel-title")
                 yield WorkerStatusPanel(id="worker-status")
                 yield RichLog(id="exp-log", wrap=True, markup=True)
         yield HotkeyBar(id="hotkey-bar")
@@ -68,6 +76,13 @@ class ResearchApp(App):
             exp_master = self.activity.get("experiment_master")
             workers = exp_master.get("workers", []) if exp_master else []
             self.query_one("#idea-pool", IdeaPoolPanel).update_ideas(ideas, summary, workers)
+        except Exception:
+            pass
+
+        # Refresh idea agent status
+        try:
+            idea_act = self.activity.get("idea_agent")
+            self.query_one("#idea-status", AgentStatusWidget).update_status(idea_act)
         except Exception:
             pass
 

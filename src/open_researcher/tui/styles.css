@@ -27,7 +27,7 @@ Screen {
 }
 
 #exp-agent-section {
-    width: 2fr;
+    width: 1fr;
 }
 
 .panel-title {
@@ -37,15 +37,16 @@ Screen {
     padding: 0 1;
 }
 
-#worker-status {
+#idea-status, #worker-status {
     height: auto;
-    max-height: 8;
+    max-height: 6;
     border-bottom: solid $accent;
     padding: 0 1;
 }
 
 #idea-log, #exp-log {
     height: 1fr;
+    max-height: 10;
     border: solid $primary;
 }
 

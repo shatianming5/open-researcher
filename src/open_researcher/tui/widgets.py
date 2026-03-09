@@ -130,6 +130,52 @@ class AgentPanel(Widget):
         self.agent_text = "\n".join(lines)
 
 
+class AgentStatusWidget(Widget):
+    """Prominent display of agent's current phase and action."""
+
+    status_text = reactive("")
+
+    def render(self) -> str:
+        return self.status_text or "[dim]waiting to start...[/dim]"
+
+    def update_status(self, activity: dict | None) -> None:
+        if not activity:
+            self.status_text = "[dim]waiting to start...[/dim]"
+            return
+
+        status = activity.get("status", "idle")
+        detail = activity.get("detail", "")
+        idea = activity.get("idea", "")
+        updated = activity.get("updated_at", "")[:19]
+
+        # Status icon mapping (text symbols, no emoji)
+        status_icons = {
+            "analyzing": ">>",
+            "generating": "**",
+            "searching": "..",
+            "idle": "--",
+            "coding": "<>",
+            "evaluating": "##",
+            "scheduling": "::",
+            "detecting_gpus": "||",
+            "establishing_baseline": "==",
+            "monitoring": "()",
+            "paused": "--",
+            "cpu_serial_mode": "[]",
+        }
+        icon = status_icons.get(status, " *")
+
+        lines = [f"  {icon} [{status.upper()}]"]
+        if detail:
+            lines.append(f"  {detail}")
+        if idea:
+            lines.append(f"  Idea: {idea}")
+        if updated:
+            lines.append(f"  Updated: {updated}")
+
+        self.status_text = "\n".join(lines)
+
+
 class WorkerStatusPanel(Widget):
     """Panel showing experiment workers and their GPU assignments."""
 

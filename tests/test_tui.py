@@ -1,6 +1,6 @@
 """Tests for Textual TUI components."""
 
-from open_researcher.tui.widgets import AgentPanel, IdeaPoolPanel, StatsBar
+from open_researcher.tui.widgets import AgentPanel, AgentStatusWidget, IdeaPoolPanel, StatsBar
 
 
 def test_stats_bar_update():
@@ -102,3 +102,35 @@ def test_idea_pool_shows_gpu_info():
     panel.update_ideas(ideas, summary, workers)
     assert "GPU:0,1" in panel.ideas_text
     assert "DDP" in panel.ideas_text
+
+
+def test_agent_status_widget_update():
+    widget = AgentStatusWidget()
+    activity = {
+        "status": "analyzing",
+        "detail": "reading codebase",
+        "updated_at": "2026-03-09T12:00:00",
+    }
+    widget.update_status(activity)
+    assert "ANALYZING" in widget.status_text
+    assert "reading codebase" in widget.status_text
+
+
+def test_agent_status_widget_none():
+    widget = AgentStatusWidget()
+    widget.update_status(None)
+    assert "waiting" in widget.status_text
+
+
+def test_agent_status_widget_with_idea():
+    widget = AgentStatusWidget()
+    activity = {
+        "status": "generating",
+        "detail": "creating new hypothesis",
+        "idea": "cosine-lr-schedule",
+        "updated_at": "2026-03-09T14:30:00",
+    }
+    widget.update_status(activity)
+    assert "GENERATING" in widget.status_text
+    assert "cosine-lr-schedule" in widget.status_text
+    assert "2026-03-09T14:30:00" in widget.status_text
