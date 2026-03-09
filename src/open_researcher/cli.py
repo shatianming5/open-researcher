@@ -4,10 +4,18 @@ from pathlib import Path
 
 import typer
 
+from open_researcher.config_cmd import config_app
+from open_researcher.ideas_cmd import ideas_app
+from open_researcher.logs_cmd import logs_app
+
 app = typer.Typer(
     name="open-researcher",
     help="Research workflow framework for AI agents. Initialize automated experiment tracking in any repo.",
 )
+
+app.add_typer(ideas_app, name="ideas")
+app.add_typer(config_app, name="config")
+app.add_typer(logs_app, name="logs")
 
 
 @app.command()
@@ -19,19 +27,31 @@ def init(tag: str = typer.Option(None, help="Experiment tag (e.g. mar8). Default
 
 
 @app.command()
-def status():
+def status(
+    sparkline: bool = typer.Option(False, "--sparkline", help="Show metric sparkline"),
+):
     """Show current research progress."""
     from open_researcher.status_cmd import print_status
 
-    print_status(Path.cwd())
+    print_status(Path.cwd(), sparkline=sparkline)
 
 
 @app.command()
-def results():
+def results(
+    chart: str = typer.Option(None, "--chart", help="Show chart for metric (use 'primary' or metric name)"),
+    json_out: bool = typer.Option(False, "--json", help="Output as JSON"),
+    last: int = typer.Option(None, "--last", help="Show only last N experiments"),
+):
     """Print experiment results table."""
-    from open_researcher.results_cmd import print_results
+    from open_researcher.results_cmd import print_results, print_results_chart, print_results_json
 
-    print_results(Path.cwd())
+    if json_out:
+        print_results_json(Path.cwd())
+    elif chart is not None:
+        metric = chart if chart else None
+        print_results_chart(Path.cwd(), metric=metric, last=last)
+    else:
+        print_results(Path.cwd())
 
 
 @app.command()
@@ -40,6 +60,14 @@ def export():
     from open_researcher.export_cmd import do_export
 
     do_export(Path.cwd())
+
+
+@app.command()
+def doctor():
+    """Run health checks on the research environment."""
+    from open_researcher.doctor_cmd import print_doctor
+
+    print_doctor(Path.cwd())
 
 
 @app.command()
