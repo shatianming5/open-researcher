@@ -121,3 +121,66 @@ GoalInputModal #goal-hint {
     color: $text-muted;
     margin: 0 0 1 0;
 }
+
+ReviewScreen {
+    background: $surface;
+}
+
+#review-container {
+    height: 1fr;
+    overflow-y: auto;
+    padding: 1 2;
+}
+
+#review-title {
+    text-style: bold;
+    color: $success;
+    margin: 0 0 1 0;
+}
+
+#section-understanding, #section-strategy, #section-evaluation {
+    text-style: bold;
+    margin: 1 0 0 0;
+}
+
+#understanding-content, #strategy-content, #evaluation-content {
+    margin: 0 0 1 2;
+    color: $text;
+}
+
+#review-actions {
+    dock: bottom;
+    height: auto;
+    padding: 1 2;
+    layout: horizontal;
+}
+
+#review-footer {
+    dock: bottom;
+    height: 1;
+    background: $primary-background;
+    color: $text-muted;
+    padding: 0 1;
+}
+
+EditDocScreen {
+    background: $surface;
+}
+
+#edit-title {
+    dock: top;
+    height: 1;
+    text-style: bold;
+    padding: 0 1;
+}
+
+#edit-area {
+    height: 1fr;
+}
+
+#edit-buttons {
+    dock: bottom;
+    height: auto;
+    layout: horizontal;
+    padding: 0 1;
+}
