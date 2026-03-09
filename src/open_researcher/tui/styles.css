@@ -10,18 +10,30 @@ Screen {
     padding: 0 1;
 }
 
+#tabs {
+    height: 1fr;
+}
+
+TabPane {
+    padding: 0;
+}
+
 #exp-status {
     height: auto;
     min-height: 2;
-    max-height: 5;
+    max-height: 6;
     border: solid $accent;
     padding: 0 1;
 }
 
-#idea-scroll {
+#recent-exp {
     height: auto;
-    max-height: 14;
-    border: solid $primary;
+    max-height: 10;
+    padding: 0 1;
+}
+
+#idea-scroll {
+    height: 1fr;
     overflow-y: auto;
 }
 
@@ -30,14 +42,17 @@ Screen {
     padding: 0 1;
 }
 
-#agent-log {
+#metric-chart {
     height: 1fr;
-    border: solid $primary;
+    min-height: 10;
 }
 
-#agent-log.minimized {
-    height: 3;
-    max-height: 3;
+#agent-log {
+    height: 1fr;
+}
+
+#doc-viewer {
+    height: 1fr;
 }
 
 #hotkey-bar {

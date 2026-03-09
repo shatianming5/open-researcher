@@ -6,16 +6,19 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import ScrollableContainer
 from textual.css.query import NoMatches
-from textual.widgets import RichLog
+from textual.widgets import RichLog, TabbedContent, TabPane
 
 from open_researcher.activity import ActivityMonitor
 from open_researcher.idea_pool import IdeaPool
 from open_researcher.status_cmd import parse_research_state
 from open_researcher.tui.modals import AddIdeaModal, GPUStatusModal, LogScreen
 from open_researcher.tui.widgets import (
+    DocViewer,
     ExperimentStatusPanel,
     HotkeyBar,
     IdeaListPanel,
+    MetricChart,
+    RecentExperiments,
     StatsBar,
 )
 
@@ -26,13 +29,17 @@ class ResearchApp(App):
     CSS_PATH = "styles.css"
 
     BINDINGS = [
+        ("1", "switch_tab('tab-overview')", "Overview"),
+        ("2", "switch_tab('tab-ideas')", "Ideas"),
+        ("3", "switch_tab('tab-charts')", "Charts"),
+        ("4", "switch_tab('tab-logs')", "Logs"),
+        ("5", "switch_tab('tab-docs')", "Docs"),
         ("p", "pause", "Pause"),
         ("r", "resume", "Resume"),
         ("s", "skip", "Skip idea"),
         ("a", "add_idea", "Add idea"),
         ("g", "gpu_status", "GPU status"),
         ("l", "view_log", "View log"),
-        ("m", "toggle_log", "Min/max log"),
         ("q", "quit_app", "Quit"),
     ]
 
@@ -44,14 +51,22 @@ class ResearchApp(App):
         self.pool = IdeaPool(self.research_dir / "idea_pool.json")
         self.activity = ActivityMonitor(self.research_dir)
         self._on_ready = on_ready
-        self._log_minimized = False
 
     def compose(self) -> ComposeResult:
         yield StatsBar(id="stats-bar")
-        yield ExperimentStatusPanel(id="exp-status")
-        with ScrollableContainer(id="idea-scroll"):
-            yield IdeaListPanel(id="idea-list")
-        yield RichLog(id="agent-log", wrap=True, markup=True)
+        with TabbedContent(id="tabs"):
+            with TabPane("Overview", id="tab-overview"):
+                yield ExperimentStatusPanel(id="exp-status")
+                yield RecentExperiments(id="recent-exp")
+            with TabPane("Ideas", id="tab-ideas"):
+                with ScrollableContainer(id="idea-scroll"):
+                    yield IdeaListPanel(id="idea-list")
+            with TabPane("Charts", id="tab-charts"):
+                yield MetricChart(id="metric-chart")
+            with TabPane("Logs", id="tab-logs"):
+                yield RichLog(id="agent-log", wrap=True, markup=True)
+            with TabPane("Docs", id="tab-docs"):
+                yield DocViewer(research_dir=self.research_dir, id="doc-viewer")
         yield HotkeyBar(id="hotkey-bar")
 
     def on_mount(self) -> None:
@@ -61,8 +76,15 @@ class ResearchApp(App):
         if self._on_ready:
             self._on_ready()
 
+    def action_switch_tab(self, tab_id: str) -> None:
+        try:
+            self.query_one("#tabs", TabbedContent).active = tab_id
+        except Exception:
+            pass
+
     def _refresh_data(self) -> None:
         # Refresh stats bar
+        state = None
         try:
             state = parse_research_state(self.repo_path)
             self.query_one("#stats-bar", StatsBar).update_stats(state)
@@ -84,7 +106,7 @@ class ResearchApp(App):
 
         # Refresh experiment status
         try:
-            exp_act = self.activity.get("experiment_master")
+            exp_act = self.activity.get("experiment_agent")
             idea_act = self.activity.get("idea_agent")
             active = (
                 exp_act
@@ -95,6 +117,29 @@ class ResearchApp(App):
                 active, completed, total
             )
         except (json.JSONDecodeError, OSError, KeyError, NoMatches):
+            pass
+
+        # Refresh recent experiments and metric chart from results.tsv
+        try:
+            from open_researcher.results_cmd import load_results
+
+            rows = load_results(self.repo_path)
+            try:
+                self.query_one("#recent-exp", RecentExperiments).update_results(rows)
+            except NoMatches:
+                pass
+            try:
+                metric_name = (
+                    state.get("primary_metric", "metric")
+                    if state
+                    else "metric"
+                )
+                self.query_one("#metric-chart", MetricChart).update_data(
+                    rows, metric_name
+                )
+            except NoMatches:
+                pass
+        except Exception:
             pass
 
     def _read_control(self) -> dict:
@@ -154,18 +199,6 @@ class ResearchApp(App):
     def action_view_log(self) -> None:
         log_path = str(self.research_dir / "run.log")
         self.push_screen(LogScreen(log_path))
-
-    def action_toggle_log(self) -> None:
-        self._log_minimized = not self._log_minimized
-        try:
-            log = self.query_one("#agent-log", RichLog)
-            if self._log_minimized:
-                log.add_class("minimized")
-                self.notify("Log minimized — press [m] to expand")
-            else:
-                log.remove_class("minimized")
-        except NoMatches:
-            pass
 
     def action_quit_app(self) -> None:
         self.exit()

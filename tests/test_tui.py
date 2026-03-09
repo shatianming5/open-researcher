@@ -4,6 +4,7 @@ from open_researcher.tui.widgets import (
     ExperimentStatusPanel,
     HotkeyBar,
     IdeaListPanel,
+    RecentExperiments,
     StatsBar,
 )
 
@@ -76,8 +77,30 @@ def test_idea_list_panel_empty():
     assert "No ideas" in panel.ideas_text
 
 
-def test_hotkey_bar_includes_minimize():
+def test_hotkey_bar_shows_tabs():
     bar = HotkeyBar()
     rendered = bar.render()
-    assert "m" in str(rendered)
+    assert "tabs" in rendered.plain
+
+
+def test_hotkey_bar_includes_quit():
+    bar = HotkeyBar()
+    rendered = bar.render()
     assert "q" in str(rendered)
+
+
+def test_recent_experiments_renders():
+    widget = RecentExperiments()
+    rows = [
+        {"status": "keep", "metric_value": "0.85", "description": "baseline"},
+        {"status": "discard", "metric_value": "0.80", "description": "exp1"},
+    ]
+    widget.update_results(rows)
+    assert "0.85" in widget.results_text
+    assert "0.80" in widget.results_text
+
+
+def test_recent_experiments_empty():
+    widget = RecentExperiments()
+    widget.update_results([])
+    assert "No experiments" in widget.results_text
