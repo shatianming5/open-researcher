@@ -1,50 +1,50 @@
-# Open Researcher
+<div align="center">
 
-> **Let AI agents run experiments in any repo while you sleep.**
+# Open Researcher: Let AI Agents Run Experiments While You Sleep
 
-Open Researcher is a CLI framework that sets up automated research workflows in any git repository. Point it at your project, pick an AI agent, and let it autonomously understand your code, design evaluation metrics, establish baselines, and run experiments — keeping what works, discarding what doesn't.
+<p>
+  <a href="https://pypi.org/project/open-researcher/"><img alt="PyPI" src="https://img.shields.io/pypi/v/open-researcher?style=flat-square&logo=pypi&logoColor=white" /></a>
+  <a href="https://pepy.tech/projects/open-researcher"><img alt="Downloads" src="https://img.shields.io/pepy/dt/open-researcher?style=flat-square&logo=python&logoColor=white" /></a>
+  <a href="https://www.python.org/downloads/"><img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" /></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green?style=flat-square" /></a>
+  <a href="https://github.com/open-researcher/open-researcher"><img alt="GitHub stars" src="https://img.shields.io/github/stars/open-researcher/open-researcher?style=flat-square&logo=github" /></a>
+</p>
 
-Unlike tools locked to specific repo formats, Open Researcher works with **any** project — ML training, performance optimization, algorithm design, or anything with measurable outcomes.
+<h3>🔬 Point it at any repo — it scouts, experiments, and improves your code autonomously</h3>
 
-## See It in Action
+[**Quick Start**](#-quick-start) · [**How It Works**](#-how-it-works) · [**Agents**](#-supported-agents) · [**TUI Dashboard**](#-interactive-tui-dashboard) · [**CLI Reference**](#%EF%B8%8F-cli-reference) · [**Configuration**](#%EF%B8%8F-configuration) · [**Examples**](#-examples)
 
-Try the interactive demo — no agent or API key needed:
+</div>
 
-```bash
-pip install open-researcher
-open-researcher demo
-```
+---
 
-<!-- TUI Dashboard Screenshot — replace with actual screenshot/GIF -->
-```
-┌─ Open Researcher ──────────────────────────────────────────────────────┐
-│ Experiments: 15 │ Kept: 10 │ Discarded: 3 │ Crashed: 1 │ Best: 0.329 │
-├─ Overview ─ Ideas ─ Charts ─ Logs ─ Docs ──────────────────────────────┤
-│                                                                        │
-│  ▌ Experiment Agent  experimenting                                     │
-│  ▌ Running: sliding window attention (idea-003)                        │
-│  ▌ ████████████████████░░░░░░░░  62%  (5/8 ideas)                     │
-│                                                                        │
-│  Recent Experiments:                                                   │
-│  #15  final-tune      keep     val_loss=0.329  ↓ Fine-tune LR 1e-5    │
-│  #14  kv-cache        keep     val_loss=0.335  ↓ KV-cache optim       │
-│  #13  mixup-aug       discard  val_loss=0.355  ↑ MixUp augmentation   │
-│  #12  batch-x2        keep     val_loss=0.338  ↓ Double batch size    │
-│  #11  flash-attn      keep     val_loss=0.343  ↓ FlashAttention-2     │
-│                                                                        │
-│  [p]ause [r]esume [s]kip [a]dd idea [g]pu [q]uit                      │
-└────────────────────────────────────────────────────────────────────────┘
-```
+## ✨ Key Features
 
-**5 tabs**: Overview (stats + progress) · Ideas (pool management) · Charts (metric trends) · Logs (live agent output with diff coloring) · Docs (project understanding, literature, evaluation)
+- **🚀 Zero-Config Start**: One command (`open-researcher start`) does everything — init, analyze your project, confirm the plan, then run experiments autonomously.
 
-## Quick Start
+- **🤖 Multi-Agent Support**: Works with Claude Code, Codex CLI, Aider, and OpenCode — auto-detects the first installed agent, or pick your own.
+
+- **🔬 Scout → Review → Experiment Flow**: AI agent analyzes your codebase, searches related work, designs evaluation metrics, then runs experiments — keeping what works, discarding what doesn't.
+
+- **📊 Rich 5-Tab TUI Dashboard**: Real-time stats, idea pool, metric trend charts, live agent logs with diff coloring, and auto-refreshing docs — all in your terminal.
+
+- **🛡️ Safety First**: Every experiment is an isolated git commit. Failed experiments auto-rollback. Timeout watchdog, crash counter, and max-experiments limit keep things under control.
+
+- **🔄 Dual-Agent Mode**: Separate Idea Agent (generates hypotheses) and Experiment Agent (implements & evaluates) for structured research workflows.
+
+- **📡 Headless Mode**: Run without TUI — outputs structured JSON Lines to stdout, perfect for scripts, CI, or monitoring with external tools.
+
+- **⚡ Parallel Workers**: Run experiments across multiple GPUs in isolated git worktrees — workers can't interfere with each other.
+
+---
+
+## 🚀 Quick Start
 
 ### Zero-Config Start (Recommended)
 
-One command does everything — init, analyze your project, confirm the plan, then run experiments:
-
 ```bash
+pip install open-researcher
+
 cd your-project
 open-researcher start
 ```
@@ -86,12 +86,20 @@ open-researcher status --sparkline
 open-researcher results --chart primary
 ```
 
-## How It Works
+> Try the interactive demo — no agent or API key needed: `open-researcher demo`
 
-Open Researcher generates a `.research/` directory in your repo with:
+---
+
+## 🔬 How It Works
+
+Open Researcher generates a `.research/` directory in your repo with everything needed for autonomous research.
+
+<details>
+<summary><b>📂 .research/ Directory Structure</b></summary>
+<br/>
 
 | File | Purpose |
-|------|---------|
+|:---|:---|
 | `program.md` | Agent instructions — the full research workflow |
 | `scout_program.md` | Scout agent instructions — project analysis phase |
 | `idea_program.md` | Idea agent instructions — hypothesis generation |
@@ -106,7 +114,11 @@ Open Researcher generates a `.research/` directory in your repo with:
 | `control.json` | Runtime control commands (pause/resume/skip) |
 | `activity.json` | Real-time agent status for TUI display |
 
-### The Scout → Review → Experiment Flow
+</details>
+
+<details>
+<summary><b>🔄 The Scout → Review → Experiment Flow</b></summary>
+<br/>
 
 ```
 Phase 0: Bootstrap
@@ -135,24 +147,30 @@ Phase 4: Experiment Loop
 
 Each experiment is a git commit. Successful experiments stay; failed ones are rolled back. Everything is logged in `results.tsv`.
 
-## Safety First
+</details>
 
-Open Researcher treats your repo with care:
+---
 
-- Every experiment is an **isolated git commit** — nothing is lost
-- Failed experiments are **automatically rolled back** via `git reset`
-- **Timeout watchdog** kills runaway experiments
-- **Crash counter** auto-pauses after N consecutive failures
-- **Max experiments** limit stops after a set number of experiments
-- **Collaborative mode** pauses for human review between phases
-- **Control plane** supports pause / resume / skip via `control.json`
-- **Failure memory** tracks past failures to improve fix strategies
-- Parallel workers run in **isolated git worktrees** — they can't interfere with each other
+## 🛡️ Safety & Runtime Controls
 
-## Supported Agents
+| Feature | Description |
+|:---|:---|
+| **Isolated git commits** | Every experiment is a separate commit — nothing is lost |
+| **Auto-rollback** | Failed experiments are automatically rolled back via `git reset` |
+| **Timeout watchdog** | Kills experiments exceeding the configured time limit |
+| **Crash counter** | Auto-pauses after N consecutive crashes (default: 3) |
+| **Max experiments** | Stops after N experiments (`--max-experiments` or `config.yaml`) |
+| **Control plane** | Linearized pause / resume / skip commands via `control.json` |
+| **Failure memory** | Persistent ledger of past failures, ranked by recovery success |
+| **Phase gate** | In collaborative mode, pauses between phase transitions |
+| **Parallel workers** | Run experiments across multiple GPUs in isolated worktrees |
+
+---
+
+## 🤖 Supported Agents
 
 | Agent | Command | Status |
-|-------|---------|--------|
+|:---|:---|:---|
 | [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | `--agent claude-code` | Supported |
 | [Codex CLI](https://github.com/openai/codex) | `--agent codex` | Supported |
 | [Aider](https://github.com/paul-gauthier/aider) | `--agent aider` | Supported |
@@ -160,7 +178,9 @@ Open Researcher treats your repo with care:
 
 Auto-detection: If you don't specify `--agent`, Open Researcher finds the first installed one.
 
-### Agent Configuration
+<details>
+<summary><b>⚙️ Agent Configuration</b></summary>
+<br/>
 
 Customize agent parameters in `.research/config.yaml`:
 
@@ -178,44 +198,37 @@ agents:
     extra_flags: ["--no-git"]
 ```
 
-## Commands
+</details>
 
-```bash
-# Zero-config start (recommended)
-open-researcher start                                  # TUI: Scout → Review → Experiment
-open-researcher start --multi                          # Dual-agent mode
-open-researcher start --headless --goal "..." --max-experiments 10  # Headless JSON Lines mode
+---
 
-# Manual workflow
-open-researcher init [--tag NAME]                      # Initialize .research/ directory
-open-researcher run [--agent NAME]                     # Launch AI agent with TUI dashboard
-open-researcher run --multi                            # Dual-agent mode (idea + experiment)
+## 📊 Interactive TUI Dashboard
 
-# Monitoring
-open-researcher status [--sparkline]                   # Show experiment progress
-open-researcher results [--chart primary] [--json]     # Print results table or chart
-open-researcher logs [--follow] [--errors]             # View agent logs
-
-# Management
-open-researcher ideas list                             # List idea pool
-open-researcher ideas add "description"                # Add idea manually
-open-researcher ideas delete IDEA_ID                   # Remove idea
-open-researcher ideas prioritize                       # Re-prioritize ideas
-open-researcher config show                            # View/validate configuration
-open-researcher export                                 # Export markdown report
-open-researcher doctor                                 # Health check environment
-open-researcher demo                                   # Try the TUI with sample data
+```
+┌─ Open Researcher ──────────────────────────────────────────────────────┐
+│ Experiments: 15 │ Kept: 10 │ Discarded: 3 │ Crashed: 1 │ Best: 0.329 │
+├─ Overview ─ Ideas ─ Charts ─ Logs ─ Docs ──────────────────────────────┤
+│                                                                        │
+│  ▌ Experiment Agent  experimenting                                     │
+│  ▌ Running: sliding window attention (idea-003)                        │
+│  ▌ ████████████████████░░░░░░░░  62%  (5/8 ideas)                     │
+│                                                                        │
+│  Recent Experiments:                                                   │
+│  #15  final-tune      keep     val_loss=0.329  ↓ Fine-tune LR 1e-5    │
+│  #14  kv-cache        keep     val_loss=0.335  ↓ KV-cache optim       │
+│  #13  mixup-aug       discard  val_loss=0.355  ↑ MixUp augmentation   │
+│  #12  batch-x2        keep     val_loss=0.338  ↓ Double batch size    │
+│  #11  flash-attn      keep     val_loss=0.343  ↓ FlashAttention-2     │
+│                                                                        │
+│  [p]ause [r]esume [s]kip [a]dd idea [g]pu [q]uit                      │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Interactive TUI Dashboard
+<details>
+<summary><b>📑 5 Tabs & Keyboard Shortcuts</b></summary>
+<br/>
 
-```bash
-open-researcher start
-# or
-open-researcher run --agent claude-code
-```
-
-Rich terminal dashboard with 5 tabs:
+**5 tabs**:
 
 - **Overview** — Real-time stats, agent status with progress bar, recent results
 - **Ideas** — Idea pool with status, priority, category, metric values
@@ -223,23 +236,113 @@ Rich terminal dashboard with 5 tabs:
 - **Logs** — Live agent output with diff highlighting and thinking/acting phases
 - **Docs** — Auto-refreshing views of project understanding, literature, evaluation, ideas
 
-Keyboard shortcuts: `1-5` switch tabs, `p` pause, `r` resume, `s` skip idea, `a` add idea, `g` GPU status, `q` quit.
+**Keyboard shortcuts**: `1-5` switch tabs, `p` pause, `r` resume, `s` skip idea, `a` add idea, `g` GPU status, `q` quit.
 
-## Runtime Controls
+</details>
 
-| Feature | Description |
-|---------|-------------|
-| **Timeout watchdog** | Kills experiments exceeding the configured time limit |
-| **Crash counter** | Auto-pauses after N consecutive crashes (default: 3) |
-| **Max experiments** | Stops after N experiments (`--max-experiments` or `config.yaml`) |
-| **Control plane** | Linearized pause / resume / skip commands via `control.json` |
-| **Failure memory** | Persistent ledger of past failures, ranked by recovery success |
-| **Phase gate** | In collaborative mode, pauses between phase transitions |
-| **Parallel workers** | Run experiments across multiple GPUs in isolated worktrees |
+---
 
-## Configuration
+## 📦 Installation
+
+Open Researcher supports **Linux**, **macOS**, and **Windows**. Python 3.10+ required.
+
+### Option A: pip install (recommended)
+
+```bash
+pip install open-researcher
+
+# Try the demo first (no agent or API key needed)
+open-researcher demo
+
+# Then use it for real
+cd your-project
+open-researcher start
+```
+
+### Option B: From source (for development)
+
+<details>
+<summary><b>🐧 Linux / 🍎 macOS / 💻 Windows</b></summary>
+<br/>
+
+```bash
+git clone https://github.com/open-researcher/open-researcher.git
+cd open-researcher
+make dev    # install with dev dependencies
+make test   # run tests
+make lint   # run linter
+```
+
+</details>
+
+---
+
+## 🖥️ CLI Reference
+
+> All commands: `open-researcher <command>`
+
+<details>
+<summary>⚡ <b>Core Commands</b></summary>
+<br/>
+
+| Command | What It Does |
+|:---|:---|
+| `start` | Zero-config: Scout → Review → Experiment (TUI) |
+| `start --multi` | Dual-agent mode (idea + experiment agents) |
+| `start --headless --goal "..." --max-experiments N` | Headless JSON Lines mode |
+| `init [--tag NAME]` | Initialize `.research/` directory |
+| `run [--agent NAME]` | Launch AI agent with TUI dashboard |
+| `run --multi` | Dual-agent mode (idea + experiment) |
+| `demo` | Try the TUI with sample data (no agent needed) |
+
+</details>
+
+<details>
+<summary>📈 <b>Monitoring & Results</b></summary>
+<br/>
+
+| Command | What It Does |
+|:---|:---|
+| `status [--sparkline]` | Show experiment progress |
+| `results [--chart primary] [--json]` | Print results table or chart |
+| `logs [--follow] [--errors]` | View agent logs |
+| `export` | Export markdown report |
+
+</details>
+
+<details>
+<summary>💡 <b>Idea Management</b></summary>
+<br/>
+
+| Command | What It Does |
+|:---|:---|
+| `ideas list` | List idea pool |
+| `ideas add "description"` | Add idea manually |
+| `ideas delete IDEA_ID` | Remove idea |
+| `ideas prioritize` | Re-prioritize ideas |
+
+</details>
+
+<details>
+<summary>🔧 <b>Utilities & Diagnostics</b></summary>
+<br/>
+
+| Command | What It Does |
+|:---|:---|
+| `config show` | View/validate configuration |
+| `doctor` | Health check environment |
+
+</details>
+
+---
+
+## ⚙️ Configuration
 
 Edit `.research/config.yaml`:
+
+<details>
+<summary>🎛️ <b>Full Configuration Reference</b></summary>
+<br/>
 
 ```yaml
 mode: autonomous              # autonomous | collaborative
@@ -275,7 +378,77 @@ agents:                       # per-agent overrides (optional)
     allowed_tools: "Edit,Write,Bash,Read,Glob,Grep"
 ```
 
-## Examples
+</details>
+
+---
+
+## 📁 Project Structure
+
+<details>
+<summary>🎯 <b>Core System</b></summary>
+<br/>
+
+| Module | Description |
+|:---|:---|
+| `cli.py` | CLI entry point, all commands (Typer) |
+| `start_cmd.py` | Zero-config start flow (Scout → Review → Experiment) |
+| `run_cmd.py` | Agent launch & TUI integration |
+| `headless.py` | Headless mode (JSON Lines output) |
+| `init_cmd.py` | Initialize `.research/` directory |
+| `config.py` | Configuration parsing |
+
+</details>
+
+<details>
+<summary>🤖 <b>Agent Adapters (<code>agents/</code>)</b></summary>
+<br/>
+
+| Module | Description |
+|:---|:---|
+| `base.py` | AgentAdapter abstract base class |
+| `claude_code.py` | Claude Code adapter |
+| `codex.py` | Codex CLI adapter |
+| `aider.py` | Aider adapter |
+| `opencode.py` | OpenCode adapter |
+
+</details>
+
+<details>
+<summary>📊 <b>TUI Components (<code>tui/</code>)</b></summary>
+<br/>
+
+| Module | Description |
+|:---|:---|
+| `app.py` | Main Textual application, 5-tab layout |
+| `widgets.py` | UI components (Stats, Ideas, Charts, Logs, Docs) |
+| `review.py` | Post-Scout review TUI |
+| `modals.py` | Modal dialogs (AddIdea, GPUStatus, Log) |
+| `styles.css` | CSS styling |
+
+</details>
+
+<details>
+<summary>⚙️ <b>Runtime Engine</b></summary>
+<br/>
+
+| Module | Description |
+|:---|:---|
+| `idea_pool.py` | Idea pool management (atomic reads/writes, file locking) |
+| `control_plane.py` | Runtime control (pause/resume/skip) |
+| `failure_memory.py` | Failure memory ledger (categorize, improve fixes) |
+| `worker.py` | Parallel worker management (multi-GPU) |
+| `worktree.py` | Git worktree management (worker isolation) |
+| `gpu_manager.py` | GPU allocation (local/remote) |
+| `watchdog.py` | Timeout watchdog (kill runaway experiments) |
+| `crash_counter.py` | Crash counter (auto-pause after N failures) |
+| `phase_gate.py` | Phase gate (collaborative mode confirmation) |
+| `activity.py` | Activity monitor (real-time agent status) |
+
+</details>
+
+---
+
+## 📚 Examples
 
 See [`examples/`](examples/) for complete setups:
 
@@ -283,22 +456,26 @@ See [`examples/`](examples/) for complete setups:
 - **[Liger-Kernel](examples/liger-kernel/)** — Optimize Triton GPU kernels
 - **[HF GLUE](examples/hf-glue/)** — Improve HuggingFace Transformers fine-tuning
 
-## Platform Support
+---
 
-macOS, Linux, and Windows (Python 3.10+).
+## 🤝 Contributing
 
-## Development
+Contributions are welcome! Please follow these steps:
 
-```bash
-git clone https://github.com/open-researcher/open-researcher.git
-cd open-researcher
-make dev    # install with dev dependencies
-make test   # run tests
-make lint   # run linter
-```
+1. Open an [issue](https://github.com/open-researcher/open-researcher/issues) to discuss the proposed change
+2. Fork the repository and create your feature branch
+3. Submit a pull request with a clear description
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines and [CHANGELOG.md](CHANGELOG.md) for version history.
 
-## License
+## 📄 License
 
-MIT — see [LICENSE](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+<p align="center">
+  <a href="https://star-history.com/#open-researcher/open-researcher&Date">
+    <img src="https://api.star-history.com/svg?repos=open-researcher/open-researcher&type=Date" width="600" alt="Star History" />
+  </a>
+</p>
