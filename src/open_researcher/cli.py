@@ -3,10 +3,13 @@
 from pathlib import Path
 
 import typer
+from rich.console import Console
 
 from open_researcher.config_cmd import config_app
 from open_researcher.ideas_cmd import ideas_app
 from open_researcher.logs_cmd import logs_app
+
+console = Console()
 
 app = typer.Typer(
     name="open-researcher",
@@ -109,18 +112,38 @@ def start(
     multi: bool = typer.Option(False, "--multi", help="Enable dual-agent mode (Idea + Experiment)."),
     idea_agent: str = typer.Option(None, "--idea-agent", help="Agent for idea generation (multi mode)."),
     exp_agent: str = typer.Option(None, "--exp-agent", help="Agent for experiments (multi mode)."),
+    headless: bool = typer.Option(False, "--headless", help="Run without TUI, output JSON Lines to stdout."),
+    goal: str = typer.Option(None, "--goal", help="Research goal (required for --headless)."),
+    max_experiments: int = typer.Option(0, "--max-experiments", help="Stop after N experiments (0 = unlimited)."),
 ):
     """Zero-config start: auto-init, analyze repo, confirm plan, then run experiments."""
-    from open_researcher.start_cmd import do_start
+    if headless:
+        if not goal:
+            console.print("[red]--goal is required when using --headless.[/red]")
+            raise typer.Exit(code=1)
+        from open_researcher.headless import do_start_headless
 
-    do_start(
-        repo_path=Path.cwd(),
-        agent_name=agent,
-        tag=tag,
-        multi=multi,
-        idea_agent_name=idea_agent,
-        exp_agent_name=exp_agent,
-    )
+        do_start_headless(
+            repo_path=Path.cwd(),
+            goal=goal,
+            max_experiments=max_experiments,
+            agent_name=agent,
+            tag=tag,
+            multi=multi,
+            idea_agent_name=idea_agent,
+            exp_agent_name=exp_agent,
+        )
+    else:
+        from open_researcher.start_cmd import do_start
+
+        do_start(
+            repo_path=Path.cwd(),
+            agent_name=agent,
+            tag=tag,
+            multi=multi,
+            idea_agent_name=idea_agent,
+            exp_agent_name=exp_agent,
+        )
 
 
 if __name__ == "__main__":

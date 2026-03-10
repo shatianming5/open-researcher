@@ -80,3 +80,21 @@ def test_start_help():
     result = runner.invoke(app, ["start", "--help"])
     assert result.exit_code == 0
     assert "start" in result.stdout.lower() or "Start" in result.stdout
+
+
+def test_start_headless_requires_goal():
+    """start --headless without --goal should fail."""
+    with runner.isolated_filesystem():
+        Path(".git").mkdir()
+        result = runner.invoke(app, ["start", "--headless"])
+        assert result.exit_code != 0
+        assert "goal" in result.stdout.lower() or "goal" in str(result.exception).lower()
+
+
+def test_start_headless_help():
+    """start --help should show --headless and --max-experiments flags."""
+    result = runner.invoke(app, ["start", "--help"])
+    assert result.exit_code == 0
+    assert "--headless" in result.stdout
+    assert "--max-experiments" in result.stdout
+    assert "--goal" in result.stdout
