@@ -38,21 +38,49 @@ open-researcher demo
 
 **5 tabs**: Overview (stats + progress) · Ideas (pool management) · Charts (metric trends) · Logs (live agent output with diff coloring) · Docs (project understanding, literature, evaluation)
 
-<!-- TODO: Replace the ASCII mockup above with actual screenshot/GIF:
-     1. Run `open-researcher demo`
-     2. Record with asciinema: `asciinema rec demo.cast`
-     3. Convert to GIF: `agg demo.cast demo.gif`
-     4. Replace this block with: ![TUI Dashboard](docs/assets/demo.gif)
--->
-
 ## Quick Start
+
+### Zero-Config Start (Recommended)
+
+One command does everything — init, analyze your project, confirm the plan, then run experiments:
+
+```bash
+cd your-project
+open-researcher start
+```
+
+This launches a **3-phase flow**:
+
+1. **Scout** — AI agent analyzes your codebase, searches related work, designs evaluation metrics
+2. **Review** — You review the analysis in an interactive TUI and confirm or edit the plan
+3. **Experiment** — Agent runs experiments autonomously, keeping what improves metrics
+
+### Headless Mode
+
+Run without TUI — perfect for scripts, CI, or monitoring with external tools:
+
+```bash
+open-researcher start --headless --goal "reduce val_loss below 0.3" --max-experiments 20
+```
+
+Outputs structured **JSON Lines** to stdout, one event per line:
+
+```json
+{"ts": "2026-03-10T12:34:56Z", "level": "info", "phase": "scouting", "event": "scout_started"}
+{"ts": "2026-03-10T12:45:00Z", "level": "info", "phase": "experimenting", "event": "experiment_completed", "idea": "idea-001", "metric_value": 0.95, "experiment_num": 3, "max_experiments": 20}
+{"ts": "2026-03-10T12:50:00Z", "level": "info", "phase": "done", "event": "limit_reached", "detail": "Max experiments (20) reached"}
+```
+
+Also writes to `.research/events.jsonl` for persistent logging.
+
+### Manual Step-by-Step
 
 ```bash
 pip install open-researcher
 
 cd your-project
-open-researcher init
-open-researcher run --agent claude-code
+open-researcher init                      # Initialize .research/ directory
+open-researcher run --agent claude-code   # Launch with TUI dashboard
 # Go to sleep. Check results in the morning:
 open-researcher status --sparkline
 open-researcher results --chart primary
@@ -64,20 +92,46 @@ Open Researcher generates a `.research/` directory in your repo with:
 
 | File | Purpose |
 |------|---------|
-| `program.md` | Agent instructions — the 4-phase research workflow |
-| `config.yaml` | Mode (autonomous/collaborative), metrics, timeout, agent settings |
-| `project-understanding.md` | Agent fills this: what the project does |
-| `evaluation.md` | Agent fills this: how to measure improvement |
+| `program.md` | Agent instructions — the full research workflow |
+| `scout_program.md` | Scout agent instructions — project analysis phase |
+| `idea_program.md` | Idea agent instructions — hypothesis generation |
+| `experiment_program.md` | Experiment agent instructions — run & evaluate |
+| `config.yaml` | Mode, metrics, timeout, experiment limits, agent settings |
+| `project-understanding.md` | Agent fills: what the project does |
+| `research-strategy.md` | Agent fills: research direction and focus areas |
+| `literature.md` | Agent fills: related work and prior art |
+| `evaluation.md` | Agent fills: how to measure improvement |
+| `idea_pool.json` | Idea queue with priority, status, claims |
 | `results.tsv` | Experiment log (timestamp, commit, metrics, status) |
-| `scripts/record.py` | Record experiment results |
-| `scripts/rollback.sh` | Discard failed experiments |
+| `control.json` | Runtime control commands (pause/resume/skip) |
+| `activity.json` | Real-time agent status for TUI display |
 
-### The 4-Phase Workflow
+### The Scout → Review → Experiment Flow
 
-1. **Understand Project** — Agent reads your code, docs, tests. Writes `project-understanding.md`.
-2. **Design Evaluation** — Agent defines metrics (what to optimize, how to measure). Writes `evaluation.md`.
-3. **Establish Baseline** — Run current code, record baseline metrics.
-4. **Experiment Loop** — Propose idea, implement, test, evaluate, keep or discard. Repeat.
+```
+Phase 0: Bootstrap
+  └─ Auto-init .research/ if needed, load config
+
+Phase 1: Goal Input
+  └─ Optional research goal (TUI modal or --goal flag)
+
+Phase 2: Scout Analysis
+  ├─ Read codebase → project-understanding.md
+  ├─ Search related work → literature.md
+  ├─ Define strategy → research-strategy.md
+  └─ Design evaluation → evaluation.md + config.yaml
+
+Phase 3: Human Review (TUI only, auto-confirmed in headless)
+  ├─ Review all Scout outputs
+  └─ Confirm, edit, or re-analyze
+
+Phase 4: Experiment Loop
+  ├─ Single-Agent: runs full program.md
+  └─ Dual-Agent (--multi):
+     ├─ Idea Agent: generates 1 hypothesis → idea_pool.json
+     └─ Experiment Agent: implements, tests, evaluates → results.tsv
+     └─ Repeat until no ideas left or --max-experiments reached
+```
 
 Each experiment is a git commit. Successful experiments stay; failed ones are rolled back. Everything is logged in `results.tsv`.
 
@@ -89,7 +143,10 @@ Open Researcher treats your repo with care:
 - Failed experiments are **automatically rolled back** via `git reset`
 - **Timeout watchdog** kills runaway experiments
 - **Crash counter** auto-pauses after N consecutive failures
+- **Max experiments** limit stops after a set number of experiments
 - **Collaborative mode** pauses for human review between phases
+- **Control plane** supports pause / resume / skip via `control.json`
+- **Failure memory** tracks past failures to improve fix strategies
 - Parallel workers run in **isolated git worktrees** — they can't interfere with each other
 
 ## Supported Agents
@@ -114,7 +171,7 @@ agents:
     allowed_tools: "Edit,Write,Bash,Read,Glob,Grep"
     extra_flags: ["--max-turns", "50"]
   codex:
-    model: "gpt-5.2"                      # override default gpt-5.3-codex
+    model: "gpt-5.2"                      # override default
     sandbox: "suggest"                     # full-auto | suggest | ask
   aider:
     model: "gpt-4o"
@@ -124,22 +181,37 @@ agents:
 ## Commands
 
 ```bash
-open-researcher demo                        # Try the TUI with sample data (no agent needed!)
-open-researcher init [--tag NAME]           # Initialize .research/ directory
-open-researcher run [--agent NAME]          # Launch AI agent with TUI dashboard
-open-researcher run --multi                 # Dual-agent mode (idea + experiment)
-open-researcher status [--sparkline]        # Show experiment progress
-open-researcher results [--chart primary]   # Print results table or chart
-open-researcher export [--output FILE]      # Export markdown report
-open-researcher doctor                      # Health check environment
-open-researcher ideas list                  # Manage idea pool
-open-researcher config show                 # View/validate configuration
-open-researcher logs [--follow] [--errors]  # View agent logs
+# Zero-config start (recommended)
+open-researcher start                                  # TUI: Scout → Review → Experiment
+open-researcher start --multi                          # Dual-agent mode
+open-researcher start --headless --goal "..." --max-experiments 10  # Headless JSON Lines mode
+
+# Manual workflow
+open-researcher init [--tag NAME]                      # Initialize .research/ directory
+open-researcher run [--agent NAME]                     # Launch AI agent with TUI dashboard
+open-researcher run --multi                            # Dual-agent mode (idea + experiment)
+
+# Monitoring
+open-researcher status [--sparkline]                   # Show experiment progress
+open-researcher results [--chart primary] [--json]     # Print results table or chart
+open-researcher logs [--follow] [--errors]             # View agent logs
+
+# Management
+open-researcher ideas list                             # List idea pool
+open-researcher ideas add "description"                # Add idea manually
+open-researcher ideas delete IDEA_ID                   # Remove idea
+open-researcher ideas prioritize                       # Re-prioritize ideas
+open-researcher config show                            # View/validate configuration
+open-researcher export                                 # Export markdown report
+open-researcher doctor                                 # Health check environment
+open-researcher demo                                   # Try the TUI with sample data
 ```
 
 ## Interactive TUI Dashboard
 
 ```bash
+open-researcher start
+# or
 open-researcher run --agent claude-code
 ```
 
@@ -149,59 +221,59 @@ Rich terminal dashboard with 5 tabs:
 - **Ideas** — Idea pool with status, priority, category, metric values
 - **Charts** — Metric trend visualization with keep/discard/crash coloring
 - **Logs** — Live agent output with diff highlighting and thinking/acting phases
-- **Docs** — View project understanding, literature, evaluation design
+- **Docs** — Auto-refreshing views of project understanding, literature, evaluation, ideas
 
-Keyboard shortcuts: `1-5` switch tabs, `p` pause, `r` resume, `s` skip, `a` add idea, `g` GPU status, `q` quit.
+Keyboard shortcuts: `1-5` switch tabs, `p` pause, `r` resume, `s` skip idea, `a` add idea, `g` GPU status, `q` quit.
 
 ## Runtime Controls
 
-- **Timeout watchdog** — Kills experiments exceeding the configured time limit
-- **Crash counter** — Auto-pauses after N consecutive crashes
-- **Collaborative mode** — Pauses for human review between phases
-- **Parallel workers** — Run experiments across multiple GPUs in isolated worktrees
-
-## Comparison with autoresearch
-
-| Feature | autoresearch | Open Researcher |
-|---------|-------------|-----------------|
-| Works with any repo | Fixed 3-file format | **Any git repo** |
-| Agent support | Claude Code only | **Claude Code, Codex, Aider, OpenCode** |
-| Agent configurability | Hardcoded | **Per-agent model, flags, tools via config** |
-| Auto project understanding | Manual | **Agent-driven** |
-| Auto evaluation design | Manual | **Agent-driven** |
-| Interactive TUI dashboard | No | **5-tab terminal dashboard** |
-| Terminal charts | No | **plotext metric trends** |
-| Runtime controls | No | **Timeout, crash limit, collaborative mode** |
-| Parallel experiments | No | **Multi-GPU workers with worktree isolation** |
-| Health checks | No | **`doctor` command** |
-| Try without setup | No | **`demo` command** |
-| `pip install` | No | **Yes** |
+| Feature | Description |
+|---------|-------------|
+| **Timeout watchdog** | Kills experiments exceeding the configured time limit |
+| **Crash counter** | Auto-pauses after N consecutive crashes (default: 3) |
+| **Max experiments** | Stops after N experiments (`--max-experiments` or `config.yaml`) |
+| **Control plane** | Linearized pause / resume / skip commands via `control.json` |
+| **Failure memory** | Persistent ledger of past failures, ranked by recovery success |
+| **Phase gate** | In collaborative mode, pauses between phase transitions |
+| **Parallel workers** | Run experiments across multiple GPUs in isolated worktrees |
 
 ## Configuration
 
 Edit `.research/config.yaml`:
 
 ```yaml
-mode: autonomous          # autonomous | collaborative
+mode: autonomous              # autonomous | collaborative
+
 experiment:
-  timeout: 600            # seconds per experiment before kill
-  max_consecutive_crashes: 3
-  max_parallel_workers: 0  # 0 = auto (one per GPU), 1 = serial
+  timeout: 600                # seconds per experiment before kill
+  max_consecutive_crashes: 3  # pause after N consecutive crashes
+  max_experiments: 0          # 0 = unlimited; set to N to stop after N experiments
+  max_parallel_workers: 0     # 0 = auto (one per GPU), 1 = serial
+  worker_agent: ""            # agent for sub-workers (default: same as master)
+
 metrics:
   primary:
-    name: ""              # filled by agent (e.g., "val_loss")
-    direction: ""         # higher_is_better | lower_is_better
+    name: ""                  # filled by agent (e.g., "val_loss")
+    direction: ""             # higher_is_better | lower_is_better
+
 environment: |
-  # Describe your execution environment
-  # e.g., Python 3.11, CUDA 12.1, 1x A100
-agents:                   # per-agent overrides (optional)
-  codex:
-    model: "gpt-5.3-codex"
+  # Describe how to run commands for this project
+  # Local: just run commands directly
+  # Remote: ssh user@host "cd /path && ..."
+  # Docker: docker exec container_name ...
+
+research:
+  web_search: true            # let agent use web search if available
+  search_interval: 5          # refresh ideas every N experiments
+
+gpu:
+  remote_hosts: []            # for multi-agent GPU allocation
+
+agents:                       # per-agent overrides (optional)
+  claude-code:
+    model: ""
+    allowed_tools: "Edit,Write,Bash,Read,Glob,Grep"
 ```
-
-## Platform Support
-
-macOS, Linux, and Windows (Python 3.10+).
 
 ## Examples
 
@@ -210,6 +282,10 @@ See [`examples/`](examples/) for complete setups:
 - **[nanoGPT](examples/nanogpt/)** — Reduce validation loss in character-level language model training
 - **[Liger-Kernel](examples/liger-kernel/)** — Optimize Triton GPU kernels
 - **[HF GLUE](examples/hf-glue/)** — Improve HuggingFace Transformers fine-tuning
+
+## Platform Support
+
+macOS, Linux, and Windows (Python 3.10+).
 
 ## Development
 
