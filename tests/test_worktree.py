@@ -7,7 +7,10 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from open_researcher.idea_pool import IdeaPool
+from open_researcher.storage import atomic_write_json
 from open_researcher.worktree import create_worktree, remove_worktree
+from open_researcher.worktree import worktrees_root
 
 
 def _init_git_repo(path: Path) -> None:
@@ -47,7 +50,7 @@ def _setup_research(path: Path) -> Path:
 
 
 def test_create_and_remove_worktree():
-    """Worktree is created with symlinked .research/ and cleaned up."""
+    """Worktree is created with a shared .research symlink and cleaned up."""
     with tempfile.TemporaryDirectory() as tmp:
         repo = Path(tmp)
         _init_git_repo(repo)
@@ -59,26 +62,16 @@ def test_create_and_remove_worktree():
         assert wt_path.exists()
         assert (wt_path / "hello.py").exists()
 
-        # .research/ exists in worktree as a directory with symlinks
+        # .research/ is a directory symlink to the canonical shared state
         wt_research = wt_path / ".research"
         assert wt_research.is_dir()
-
-        # Shared files are symlinked
+        assert os.path.islink(str(wt_research))
+        assert wt_research.resolve() == (repo / ".research").resolve()
         assert (wt_research / "idea_pool.json").exists()
         assert (wt_research / "config.yaml").exists()
         assert (wt_research / "experiment_program.md").exists()
         assert (wt_research / "results.tsv").exists()
         assert (wt_research / "scripts").exists()
-
-        # Excluded items should NOT be symlinked
-        assert not (wt_research / "worktrees").exists()
-        assert not (wt_research / "run.log").exists()
-
-        # Symlinks point to the original files
-        assert os.path.islink(str(wt_research / "idea_pool.json"))
-        original = (repo / ".research" / "idea_pool.json").resolve()
-        linked = (wt_research / "idea_pool.json").resolve()
-        assert original == linked
 
         # Clean up
         remove_worktree(repo, wt_path)
@@ -86,22 +79,39 @@ def test_create_and_remove_worktree():
 
 
 def test_worktree_shares_idea_pool():
-    """Changes to idea_pool.json in worktree are visible from main repo."""
+    """IdeaPool updates in the worktree hit the canonical shared state."""
     with tempfile.TemporaryDirectory() as tmp:
         repo = Path(tmp)
         _init_git_repo(repo)
         research = _setup_research(repo)
 
         wt_path = create_worktree(repo, "share-test")
-        wt_pool = wt_path / ".research" / "idea_pool.json"
+        wt_pool = IdeaPool(wt_path / ".research" / "idea_pool.json")
+        wt_pool.add("shared idea", priority=1)
 
-        # Write from worktree
-        wt_pool.write_text(json.dumps({"ideas": [{"id": "idea-001"}]}))
-
-        # Read from main repo
         main_data = json.loads((research / "idea_pool.json").read_text())
         assert len(main_data["ideas"]) == 1
-        assert main_data["ideas"][0]["id"] == "idea-001"
+        assert main_data["ideas"][0]["description"] == "shared idea"
+
+        remove_worktree(repo, wt_path)
+
+
+def test_worktree_shares_atomic_progress_updates():
+    """Atomic writes in a worktree update the canonical progress file."""
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        _init_git_repo(repo)
+        research = _setup_research(repo)
+        progress = research / "experiment_progress.json"
+        progress.write_text(json.dumps({"phase": "init"}))
+
+        wt_path = create_worktree(repo, "progress-test")
+        wt_progress = wt_path / ".research" / "experiment_progress.json"
+
+        atomic_write_json(wt_progress, {"phase": "experimenting"})
+
+        assert json.loads(progress.read_text()) == {"phase": "experimenting"}
+        assert wt_progress.resolve() == progress.resolve()
 
         remove_worktree(repo, wt_path)
 
@@ -157,7 +167,6 @@ def test_worker_uses_worktree_isolation():
         _init_git_repo(repo)
         research = _setup_research(repo)
 
-        from open_researcher.idea_pool import IdeaPool
         from open_researcher.worker import WorkerManager
 
         ideas = [
@@ -202,12 +211,13 @@ def test_worker_uses_worktree_isolation():
         # Agent should have run in a worktree, not the main repo
         assert len(workdirs_used) == 1
         assert workdirs_used[0] != str(repo)
-        assert "worktrees" in workdirs_used[0]
+        assert str(worktrees_root(repo)) in workdirs_used[0]
 
         # Worktree should be cleaned up
-        worktrees_dir = research / "worktrees"
-        remaining = list(worktrees_dir.iterdir())
-        assert len(remaining) == 0, f"Stale worktrees: {remaining}"
+        root = worktrees_root(repo)
+        if root.exists():
+            remaining = list(root.iterdir())
+            assert len(remaining) == 0, f"Stale worktrees: {remaining}"
 
         # Idea should be marked done
         summary = idea_pool.summary()

@@ -1,28 +1,37 @@
 """Git worktree helpers for parallel experiment isolation."""
 
+import hashlib
 import logging
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Files/dirs inside .research/ that should NOT be symlinked into worktrees
-# (worktrees itself would create circular symlinks; run.log is shared)
-_EXCLUDE = {"worktrees", "run.log"}
+_WORKTREE_ROOT_PREFIX = ".open-researcher-worktrees-"
+
+
+def worktrees_root(repo_path: Path) -> Path:
+    """Return the external root used for isolated experiment worktrees."""
+    resolved_repo = repo_path.resolve()
+    digest = hashlib.sha1(str(resolved_repo).encode("utf-8")).hexdigest()[:10]
+    dirname = f"{_WORKTREE_ROOT_PREFIX}{resolved_repo.name}-{digest}"
+    return resolved_repo.parent / dirname
 
 
 def create_worktree(repo_path: Path, worktree_name: str) -> Path:
     """Create an isolated git worktree for a parallel worker.
 
-    Creates a new branch and worktree under .research/worktrees/<name>.
-    Symlinks the shared .research/ contents (except worktrees/) so the agent
-    can access idea_pool, results, config, etc.
+    Creates a new branch and worktree under an external worktree root.
+    Replaces the worktree's `.research/` directory with a directory symlink
+    back to the canonical repo state so atomic writes and lock files stay
+    shared across workers.
 
     Returns the worktree path.
     """
     research_dir = repo_path / ".research"
-    worktrees_dir = research_dir / "worktrees"
+    worktrees_dir = worktrees_root(repo_path)
     worktrees_dir.mkdir(parents=True, exist_ok=True)
     wt_path = worktrees_dir / worktree_name
     branch_name = f"or-worker-{worktree_name}"
@@ -40,28 +49,22 @@ def create_worktree(repo_path: Path, worktree_name: str) -> Path:
         check=True,
     )
 
-    # Symlink shared .research/ contents into the worktree
-    _link_research(wt_path, research_dir)
+    # Replace the checked-out .research tree with a shared directory symlink so
+    # all state files and their companion *.lock files resolve canonically.
+    _replace_research_dir(wt_path, research_dir)
 
     logger.debug("Created worktree %s (branch %s)", wt_path, branch_name)
     return wt_path
 
 
-def _link_research(worktree_path: Path, research_dir: Path) -> None:
-    """Create .research/ in the worktree with symlinks to shared state files.
-
-    Individual files/dirs from the main .research/ are symlinked, except for
-    the worktrees/ directory itself (avoids circular symlinks) and run.log.
-    """
+def _replace_research_dir(worktree_path: Path, research_dir: Path) -> None:
+    """Replace the worktree's .research directory with a shared symlink."""
     wt_research = worktree_path / ".research"
-    wt_research.mkdir(exist_ok=True)
-
-    for item in research_dir.iterdir():
-        if item.name in _EXCLUDE:
-            continue
-        target = wt_research / item.name
-        if not target.exists():
-            os.symlink(str(item.resolve()), str(target))
+    if wt_research.is_symlink() or wt_research.is_file():
+        wt_research.unlink()
+    elif wt_research.is_dir():
+        shutil.rmtree(wt_research)
+    os.symlink(str(research_dir.resolve()), str(wt_research))
 
 
 def remove_worktree(repo_path: Path, worktree_path: Path) -> None:
@@ -69,16 +72,12 @@ def remove_worktree(repo_path: Path, worktree_path: Path) -> None:
     wt_name = worktree_path.name
     branch_name = f"or-worker-{wt_name}"
 
-    # Remove the .research symlinks first (git worktree remove dislikes them)
+    # Remove the shared .research symlink first (git worktree remove dislikes it)
     wt_research = worktree_path / ".research"
-    if wt_research.is_dir():
-        for item in wt_research.iterdir():
-            if item.is_symlink():
-                item.unlink()
-        try:
-            wt_research.rmdir()
-        except OSError:
-            pass
+    if wt_research.is_symlink() or wt_research.is_file():
+        wt_research.unlink()
+    elif wt_research.is_dir():
+        shutil.rmtree(wt_research, ignore_errors=True)
 
     # Remove worktree
     subprocess.run(
@@ -95,5 +94,12 @@ def remove_worktree(repo_path: Path, worktree_path: Path) -> None:
         capture_output=True,
         text=True,
     )
+
+    root = worktree_path.parent
+    if root.exists() and root.name.startswith(_WORKTREE_ROOT_PREFIX):
+        try:
+            next(root.iterdir())
+        except StopIteration:
+            root.rmdir()
 
     logger.debug("Removed worktree %s", worktree_path)

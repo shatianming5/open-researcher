@@ -158,6 +158,23 @@ def test_init_creates_worktrees_dir(init_dir):
     assert worktrees.is_dir()
 
 
+def test_init_excludes_research_from_git(init_dir):
+    """init should keep .research out of git history by default."""
+    repo = init_dir.parent
+    exclude = subprocess.run(
+        ["git", "rev-parse", "--git-dir"],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    exclude_path = Path(exclude)
+    if not exclude_path.is_absolute():
+        exclude_path = (repo / exclude_path).resolve()
+    contents = (exclude_path / "info" / "exclude").read_text()
+    assert "/.research/" in contents
+
+
 def test_scout_program_template():
     """scout_program.md.j2 should render with goal variable."""
     from jinja2 import Environment, PackageLoader

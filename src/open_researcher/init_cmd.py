@@ -3,6 +3,7 @@
 import json
 import shutil
 import stat
+import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -11,6 +12,39 @@ from jinja2 import Environment, PackageLoader
 
 from open_researcher.research_graph import ResearchGraphStore
 from open_researcher.research_memory import ResearchMemoryStore
+
+
+def _git_info_exclude_path(repo_path: Path) -> Path | None:
+    result = subprocess.run(
+        ["git", "rev-parse", "--git-dir"],
+        cwd=str(repo_path),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    git_dir = Path(result.stdout.strip())
+    if not git_dir.is_absolute():
+        git_dir = (repo_path / git_dir).resolve()
+    return git_dir / "info" / "exclude"
+
+
+def _ensure_git_exclude_patterns(repo_path: Path, patterns: list[str]) -> None:
+    exclude_path = _git_info_exclude_path(repo_path)
+    if exclude_path is None:
+        return
+    exclude_path.parent.mkdir(parents=True, exist_ok=True)
+    existing_text = exclude_path.read_text(encoding="utf-8") if exclude_path.exists() else ""
+    existing_lines = existing_text.splitlines()
+    existing = {line.strip() for line in existing_lines if line.strip()}
+    missing = [pattern for pattern in patterns if pattern not in existing]
+    if not missing:
+        return
+    with exclude_path.open("a", encoding="utf-8") as f:
+        if existing_text and not existing_text.endswith("\n"):
+            f.write("\n")
+        for pattern in missing:
+            f.write(f"{pattern}\n")
 
 
 def do_init(repo_path: Path, tag: str | None = None) -> None:
@@ -69,7 +103,8 @@ def do_init(repo_path: Path, tag: str | None = None) -> None:
     # Create GPU status file for parallel experiments
     (research_dir / "gpu_status.json").write_text(json.dumps({"gpus": []}, indent=2))
 
-    # Create worktrees directory for parallel experiments
+    # Keep the legacy directory for compatibility, but active worker worktrees
+    # now live outside .research to avoid recursive shared-state symlinks.
     (research_dir / "worktrees").mkdir()
 
     # Copy helper scripts
@@ -85,6 +120,10 @@ def do_init(repo_path: Path, tag: str | None = None) -> None:
     # Make shell scripts executable
     rollback = scripts_dir / "rollback.sh"
     rollback.chmod(rollback.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+
+    # .research is runtime state; keep it out of git history so parallel
+    # worktrees can safely replace the directory with a shared symlink.
+    _ensure_git_exclude_patterns(repo_path, ["/.research/"])
 
     print(f"[OK] Initialized .research/ with tag '{tag}'")
     print(f"     Branch: research/{tag}")
