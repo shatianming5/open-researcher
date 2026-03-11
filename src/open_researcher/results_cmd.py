@@ -132,7 +132,9 @@ def write_final_results_tsv(repo_path: Path) -> None:
     lines = ["\t".join(header)]
     for row in rows:
         values = [str(row.get(key, "")) for key in header]
-        escaped = ['"' + value.replace('"', '""') + '"' if "\t" in value or "\n" in value else value for value in values]
+        escaped = [
+            '"' + value.replace('"', '""') + '"' if "\t" in value or "\n" in value else value for value in values
+        ]
         lines.append("\t".join(escaped))
     atomic_write_text(repo_path / ".research" / "final_results.tsv", "\n".join(lines) + "\n")
 

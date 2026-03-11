@@ -38,7 +38,6 @@ from open_researcher.research_events import (
     ScoutFailed,
     ScoutStarted,
 )
-from open_researcher.results_cmd import load_results, write_final_results_tsv
 from open_researcher.research_graph import ResearchGraphStore
 from open_researcher.research_memory import ResearchMemoryStore
 from open_researcher.results_cmd import load_results, write_final_results_tsv
