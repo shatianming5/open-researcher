@@ -10,7 +10,9 @@
   <a href="https://github.com/open-researcher/open-researcher"><img alt="GitHub stars" src="https://img.shields.io/github/stars/open-researcher/open-researcher?style=flat-square&logo=github" /></a>
 </p>
 
-<h3>🔬 Point it at any repo — it scouts, experiments, and improves your code autonomously</h3>
+<h3>🔬 Point it at any repo — sow ideas, run experiments, and harvest better code autonomously</h3>
+
+<p><em>🌱 Sow ideas. 🚜 Run experiments. 🌾 Harvest evidence. 📄</em></p>
 
 [**Quick Start**](#-quick-start) · [**How It Works**](#-how-it-works) · [**Agents**](#-supported-agents) · [**TUI Dashboard**](#-interactive-tui-dashboard) · [**CLI Reference**](#%EF%B8%8F-cli-reference) · [**Configuration**](#%EF%B8%8F-configuration) · [**Examples**](#-examples)
 
@@ -18,7 +20,7 @@
 
 ---
 
-## ✨ Key Features
+## 🌾 Key Features
 
 - **🚀 One `run` Command**: `open-researcher run` bootstraps a new workflow when `.research/` is missing, or resumes an existing workflow when it already exists.
 
@@ -38,7 +40,7 @@
 
 ---
 
-## 🚀 Quick Start
+## 🌱 Quick Start
 
 ### One-Command Workflow (Recommended)
 
@@ -51,10 +53,12 @@ open-researcher run
 
 This launches a **4-phase flow**:
 
-1. **Scout** — AI agent analyzes your codebase, searches related work, designs evaluation metrics
-2. **Prepare** — Open Researcher resolves a local Python env, install command, data/setup step, and a readiness smoke check
-3. **Review** — You review the analysis and prepare results in an interactive TUI, then confirm or edit the plan
-4. **Experiment** — `Manager -> Critic -> Experiment` runs the research loop autonomously, keeping what improves metrics
+Plant the first seed with `open-researcher run`, then let the field work:
+
+1. **Scout** — survey the field: analyze your codebase, search related work, and design evaluation metrics
+2. **Prepare** — prepare the soil: resolve a local Python env, install command, data/setup step, and a readiness smoke check
+3. **Review** — inspect the crop plan: review the analysis and prepare results in an interactive TUI, then confirm or edit the plan
+4. **Experiment** — plant, test, and harvest: `Manager -> Critic -> Experiment` runs the research loop autonomously, keeping what improves metrics
 
 If you want to inspect exactly what `run` will use before it touches the repo, use:
 
@@ -99,7 +103,7 @@ open-researcher results --chart primary
 
 ---
 
-## 🔬 How It Works
+## 🚜 How It Works
 
 Open Researcher generates a `.research/` directory in your repo with everything needed for autonomous research.
 
@@ -187,7 +191,7 @@ If a command cannot be resolved safely, `run` stops before the review/runtime st
 
 ---
 
-## 🛡️ Safety & Runtime Controls
+## 🛡️ Field Safety & Runtime Controls
 
 | Feature | Description |
 |:---|:---|
@@ -251,12 +255,12 @@ The interactive UI is now a **research-v1 command center**, not a generic tabbed
 <p align="center">
   <img src="imgs/overview.png" alt="Open Researcher overview dashboard" width="100%" />
 </p>
-<p align="center"><em>Overview</em>: research command center with frontier focus, lineage, and live role activity.</p>
+<p align="center"><em>Field Overview</em>: research command center with frontier focus, lineage, and live role activity.</p>
 
 <p align="center">
   <img src="imgs/execution.png" alt="Open Researcher execution dashboard" width="100%" />
 </p>
-<p align="center"><em>Execution</em>: metric trend, run summary, and recent experiment results.</p>
+<p align="center"><em>Harvest In Progress</em>: metric trend, run summary, and recent experiment results.</p>
 
 <p align="center">
   <img src="imgs/docs.png" alt="Open Researcher docs dashboard" width="100%" />
@@ -318,7 +322,7 @@ The interactive UI is now a **research-v1 command center**, not a generic tabbed
 
 ---
 
-## 📦 Installation
+## 🚜 Installation
 
 Open Researcher supports **Linux**, **macOS**, and **Windows**. Python 3.10+ required.
 
@@ -476,7 +480,7 @@ agents:                       # per-agent overrides (optional)
 
 ---
 
-## 📁 Project Structure
+## 🏡 Project Structure
 
 <details>
 <summary>🎯 <b>Core System</b></summary>
@@ -546,7 +550,7 @@ agents:                       # per-agent overrides (optional)
 
 ---
 
-## 📚 Examples
+## 🌽 Examples
 
 See [`examples/`](examples/) for complete setups:
 
@@ -561,7 +565,7 @@ See [`examples/`](examples/) for complete setups:
 
 ---
 
-## 🤝 Contributing
+## 🧑‍🌾 Contributing
 
 Contributions are welcome! Please follow these steps:
 
