@@ -28,7 +28,7 @@ open-researcher init --tag whisper
 open-researcher run --agent claude-code
 
 # Or run headless with a specific goal
-open-researcher start --headless \
+open-researcher start --mode headless \
   --goal "Reduce Whisper word error rate (WER) on speech recognition by optimizing fine-tuning hyperparameters, data preprocessing, and training strategies" \
   --max-experiments 20
 ```

@@ -83,6 +83,7 @@ def _dispatch_workflow(
     agent: str | None,
     workers: Optional[int],
     mode: str = "interactive",
+    headless: bool = False,
     tag: str | None = None,
     goal: str | None = None,
     max_experiments: int = 0,
@@ -93,6 +94,7 @@ def _dispatch_workflow(
         selection = build_workflow_selection(
             agent=agent,
             mode=mode,
+            headless=headless,
             workers=workers,
         )
     except ValueError as exc:
@@ -268,6 +270,7 @@ def run(
     agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode)."),
     tag: str = typer.Option(None, help="Experiment tag when bootstrapping a new workflow."),
     mode: str = typer.Option("interactive", "--mode", help="Run mode: `interactive` or `headless`."),
+    headless: bool = typer.Option(False, "--headless", hidden=True, help="Deprecated; use `--mode headless`."),
     workers: Optional[int] = typer.Option(
         None,
         "--workers",
@@ -283,6 +286,7 @@ def run(
         agent=agent,
         tag=tag,
         mode=mode,
+        headless=headless,
         workers=workers,
         goal=goal,
         max_experiments=max_experiments,
@@ -295,6 +299,7 @@ def start(
     agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode)."),
     tag: str = typer.Option(None, help="Experiment tag (e.g. mar10). Defaults to today's date."),
     mode: str = typer.Option("interactive", "--mode", help="Run mode: `interactive` or `headless`."),
+    headless: bool = typer.Option(False, "--headless", hidden=True, help="Deprecated; use `--mode headless`."),
     workers: Optional[int] = typer.Option(
         None,
         "--workers",
@@ -309,6 +314,7 @@ def start(
         agent=agent,
         tag=tag,
         mode=mode,
+        headless=headless,
         workers=workers,
         goal=goal,
         max_experiments=max_experiments,

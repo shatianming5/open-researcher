@@ -163,6 +163,24 @@ def test_run_mode_headless_routes_to_headless_bootstrap():
         assert kwargs["workers"] == 2
 
 
+def test_run_deprecated_headless_flag_routes_to_headless_bootstrap():
+    with runner.isolated_filesystem():
+        Path(".git").mkdir()
+        from unittest.mock import patch
+
+        with patch("open_researcher.headless.do_start_headless", return_value=None) as mock_headless:
+            result = runner.invoke(
+                app,
+                ["run", "--headless", "--goal", "test goal", "--workers", "2"],
+            )
+
+        assert result.exit_code == 0
+        assert "--headless` is deprecated" in result.stdout
+        mock_headless.assert_called_once()
+        kwargs = mock_headless.call_args.kwargs
+        assert kwargs["workers"] == 2
+
+
 def test_run_existing_research_headless_routes_to_continue_flow():
     with runner.isolated_filesystem():
         Path(".git").mkdir()
@@ -243,6 +261,24 @@ def test_start_mode_headless_routes_to_headless_entrypoint():
             )
 
         assert result.exit_code == 0
+        mock_headless.assert_called_once()
+        kwargs = mock_headless.call_args.kwargs
+        assert kwargs["workers"] == 2
+
+
+def test_start_deprecated_headless_flag_routes_to_headless_entrypoint():
+    with runner.isolated_filesystem():
+        Path(".git").mkdir()
+        from unittest.mock import patch
+
+        with patch("open_researcher.headless.do_start_headless", return_value=None) as mock_headless:
+            result = runner.invoke(
+                app,
+                ["start", "--headless", "--goal", "test goal", "--workers", "2"],
+            )
+
+        assert result.exit_code == 0
+        assert "--headless` is deprecated" in result.stdout
         mock_headless.assert_called_once()
         kwargs = mock_headless.call_args.kwargs
         assert kwargs["workers"] == 2
