@@ -92,11 +92,121 @@ def test_opencode_build_command():
     from open_researcher.agents.opencode import OpencodeAdapter
 
     agent = OpencodeAdapter()
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-        f.write("test prompt")
-        f.flush()
-        cmd = agent.build_command(Path(f.name), Path("/tmp/work"))
-    assert cmd[0] == "opencode"
+    agent._supports_run_subcommand = True
+    cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
+    assert cmd == ["opencode", "run", "<prompt>"]
+
+
+def test_opencode_build_command_falls_back_to_top_level_prompt():
+    from open_researcher.agents.opencode import OpencodeAdapter
+
+    agent = OpencodeAdapter()
+    agent._supports_run_subcommand = False
+    cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
+    assert cmd == ["opencode", "--prompt", "<prompt>"]
+
+
+def test_opencode_probe_detects_run_subcommand(monkeypatch):
+    from open_researcher.agents.opencode import OpencodeAdapter
+
+    class Result:
+        returncode = 0
+
+    calls = []
+
+    def fake_run(cmd, cwd=None, capture_output=True, text=True):
+        calls.append((cmd, cwd))
+        return Result()
+
+    monkeypatch.setattr("open_researcher.agents.opencode.subprocess.run", fake_run)
+
+    agent = OpencodeAdapter()
+    cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
+
+    assert calls == [(["opencode", "run", "--help"], "/tmp/work")]
+    assert cmd == ["opencode", "run", "<prompt>"]
+
+
+def test_opencode_config_includes_model_agent_and_extra_flags():
+    from open_researcher.agents.opencode import OpencodeAdapter
+
+    agent = OpencodeAdapter(config={"model": "openai/gpt-5", "agent": "builder", "extra_flags": ["--share"]})
+    agent._supports_run_subcommand = True
+    cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
+    assert cmd == ["opencode", "run", "--model", "openai/gpt-5", "--agent", "builder", "--share", "<prompt>"]
+
+
+def test_opencode_run_prefers_run_subcommand(tmp_path, monkeypatch):
+    from open_researcher.agents.opencode import OpencodeAdapter
+
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "program.md").write_text("test prompt", encoding="utf-8")
+
+    agent = OpencodeAdapter(config={"model": "openai/gpt-5", "agent": "builder", "extra_flags": ["--share"]})
+    agent._supports_run_subcommand = True
+    calls = {}
+
+    def fake_run_process(cmd, workdir, on_output=None, stdin_text=None, env=None):
+        calls["cmd"] = cmd
+        calls["workdir"] = workdir
+        calls["env"] = env
+        calls["stdin_text"] = stdin_text
+        return 0
+
+    monkeypatch.setattr(agent, "_run_process", fake_run_process)
+
+    result = agent.run(tmp_path, env={"OPEN_RESEARCHER_PROTOCOL": "research-v1"})
+
+    assert result == 0
+    assert calls["workdir"] == tmp_path
+    assert calls["stdin_text"] is None
+    assert calls["env"] == {"OPEN_RESEARCHER_PROTOCOL": "research-v1"}
+    assert calls["cmd"] == [
+        "opencode",
+        "run",
+        "--model",
+        "openai/gpt-5",
+        "--agent",
+        "builder",
+        "--share",
+        "test prompt",
+    ]
+
+
+def test_opencode_run_falls_back_to_top_level_prompt(tmp_path, monkeypatch):
+    from open_researcher.agents.opencode import OpencodeAdapter
+
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "program.md").write_text("test prompt", encoding="utf-8")
+
+    agent = OpencodeAdapter()
+    agent._supports_run_subcommand = False
+    calls = {}
+
+    def fake_run_process(cmd, workdir, on_output=None, stdin_text=None, env=None):
+        calls["cmd"] = cmd
+        return 0
+
+    monkeypatch.setattr(agent, "_run_process", fake_run_process)
+
+    result = agent.run(tmp_path)
+
+    assert result == 0
+    assert calls["cmd"] == ["opencode", "--prompt", "test prompt"]
+
+
+def test_opencode_run_reports_missing_program_file(tmp_path):
+    from open_researcher.agents.opencode import OpencodeAdapter
+
+    agent = OpencodeAdapter()
+    output = []
+
+    result = agent.run(tmp_path, on_output=output.append)
+
+    assert result == 1
+    assert output == [f"[opencode] program file not found: {tmp_path / '.research' / 'program.md'}"]
 
 
 def test_check_installed_uses_shutil_which(monkeypatch):

@@ -2,6 +2,7 @@
 
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -34,6 +35,38 @@ def _require_list_field(payload: dict, key: str) -> str | None:
     if not isinstance(value, list):
         return f"{key} must be a list"
     return None
+
+
+def _check_opencode_cli() -> dict:
+    binary = shutil.which("opencode")
+    if not binary:
+        return {"check": "OpenCode CLI", "status": "WARN", "detail": "opencode not found on PATH"}
+    try:
+        version = subprocess.run(
+            ["opencode", "--version"],
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        return {"check": "OpenCode CLI", "status": "FAIL", "detail": f"Version probe failed: {exc}"}
+    if version.returncode != 0:
+        detail = version.stderr.strip() or version.stdout.strip() or "unknown error"
+        return {"check": "OpenCode CLI", "status": "FAIL", "detail": f"Version probe failed: {detail}"}
+
+    run_help = subprocess.run(
+        ["opencode", "run", "--help"],
+        capture_output=True,
+        text=True,
+    )
+    if run_help.returncode != 0:
+        detail = run_help.stderr.strip() or run_help.stdout.strip() or "unknown error"
+        return {"check": "OpenCode CLI", "status": "FAIL", "detail": f"`opencode run --help` failed: {detail}"}
+
+    return {
+        "check": "OpenCode CLI",
+        "status": "OK",
+        "detail": f"{version.stdout.strip()} with `run` subcommand available",
+    }
 
 
 def run_doctor(repo_path: Path) -> list[dict]:
@@ -309,6 +342,7 @@ def run_doctor(repo_path: Path) -> list[dict]:
         results.append({"check": "Agent binaries", "status": status, "detail": detail})
     else:
         results.append({"check": "Agent binaries", "status": "WARN", "detail": "No agents found on PATH"})
+    results.append(_check_opencode_cli())
 
     # 15. Python >= 3.10
     major, minor = sys.version_info[:2]

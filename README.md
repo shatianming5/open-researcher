@@ -232,6 +232,10 @@ agents:
   aider:
     model: "gpt-4o"
     extra_flags: ["--no-git"]
+  opencode:
+    model: "openai/gpt-5"
+    agent: "builder"
+    extra_flags: ["--share"]
 ```
 
 </details>

@@ -172,7 +172,7 @@ def test_doctor_events_require_monotonic_positive_seq(valid_repo):
 def test_doctor_returns_all_checks(valid_repo):
     """Doctor should return the expanded research-v1 health surface."""
     checks = run_doctor(valid_repo)
-    assert len(checks) == 17
+    assert len(checks) == 18
     names = [c["check"] for c in checks]
     assert "Git repository" in names
     assert ".research/ directory" in names
@@ -190,4 +190,34 @@ def test_doctor_returns_all_checks(valid_repo):
     assert "bootstrap expected paths" in names
     assert "events.jsonl" in names
     assert "Agent binaries" in names
+    assert "OpenCode CLI" in names
     assert "Python >= 3.10" in names
+
+
+def test_doctor_reports_opencode_run_capability(valid_repo, monkeypatch):
+    import open_researcher.doctor_cmd as doctor_cmd
+
+    def fake_which(binary: str) -> str | None:
+        return f"/usr/bin/{binary}"
+
+    class Result:
+        def __init__(self, returncode: int, stdout: str = "", stderr: str = ""):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def fake_run(cmd, capture_output=True, text=True):
+        if cmd == ["opencode", "--version"]:
+            return Result(0, stdout="1.1.48\n")
+        if cmd == ["opencode", "run", "--help"]:
+            return Result(0, stdout="opencode run [message..]\n")
+        raise AssertionError(f"Unexpected subprocess call: {cmd}")
+
+    monkeypatch.setattr(doctor_cmd.shutil, "which", fake_which)
+    monkeypatch.setattr(doctor_cmd.subprocess, "run", fake_run)
+
+    checks = run_doctor(valid_repo)
+    check_map = {c["check"]: c for c in checks}
+    assert check_map["OpenCode CLI"]["status"] == "OK"
+    assert "1.1.48" in check_map["OpenCode CLI"]["detail"]
+    assert "`run` subcommand available" in check_map["OpenCode CLI"]["detail"]
