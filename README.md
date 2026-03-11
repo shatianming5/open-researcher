@@ -1,6 +1,6 @@
 <div align="center">
 
-# Nongmin-Researcher: Planting Seeds, Harvesting Papers
+# 🧑‍🌾 Nongmin-Researcher: Planting Seeds 🌱, Harvesting Papers 🌾
 
 <p>
   <a href="https://pypi.org/project/open-researcher/"><img alt="PyPI" src="https://img.shields.io/pypi/v/open-researcher?style=flat-square&logo=pypi&logoColor=white" /></a>
