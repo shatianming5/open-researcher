@@ -1,5 +1,6 @@
 """Tests for the WorkerManager."""
 
+import csv
 import json
 import tempfile
 import threading
@@ -411,3 +412,206 @@ def test_worker_manager_can_disable_advanced_plugins():
         wm.join(timeout=5)
 
         assert workdirs_used == [str(tmp_path)]
+
+
+def test_worker_manager_requeues_research_v1_run_without_result():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        research = _make_research_dir(tmp_path)
+        idea_pool = _make_idea_pool(
+            research,
+            [
+                {
+                    "id": "idea-001",
+                    "description": "Research-v1 no-op",
+                    "status": "pending",
+                    "priority": 1,
+                    "claimed_by": None,
+                    "assigned_experiment": None,
+                    "result": None,
+                    "source": "graph",
+                    "category": "graph",
+                    "gpu_hint": "auto",
+                    "created_at": "2026-01-01T00:00:00",
+                    "protocol": "research-v1",
+                    "frontier_id": "frontier-001",
+                    "execution_id": "exec-001",
+                    "hypothesis_id": "hyp-001",
+                    "experiment_spec_id": "spec-001",
+                }
+            ],
+        )
+
+        def mock_agent_factory():
+            agent = MagicMock()
+            agent.run.return_value = 0
+            agent.terminate = MagicMock()
+            return agent
+
+        output_lines = []
+        wm = WorkerManager(
+            repo_path=tmp_path,
+            research_dir=research,
+            gpu_manager=None,
+            idea_pool=idea_pool,
+            agent_factory=mock_agent_factory,
+            max_workers=1,
+            max_claims=1,
+            on_output=output_lines.append,
+        )
+
+        wm.start()
+        wm.join(timeout=5)
+
+        summary = idea_pool.summary()
+        assert summary["pending"] == 1
+        assert summary["done"] == 0
+        assert any("released claim back to pending" in line for line in output_lines)
+
+
+def test_worker_manager_finalizes_research_v1_idea_from_matching_result_row():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        research = _make_research_dir(tmp_path)
+        results_path = research / "results.tsv"
+        results_path.write_text(
+            "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
+        )
+        idea_pool = _make_idea_pool(
+            research,
+            [
+                {
+                    "id": "idea-001",
+                    "description": "Research-v1 success",
+                    "status": "pending",
+                    "priority": 1,
+                    "claimed_by": None,
+                    "assigned_experiment": None,
+                    "result": None,
+                    "source": "graph",
+                    "category": "graph",
+                    "gpu_hint": "auto",
+                    "created_at": "2026-01-01T00:00:00",
+                    "protocol": "research-v1",
+                    "frontier_id": "frontier-001",
+                    "execution_id": "exec-001",
+                    "hypothesis_id": "hyp-001",
+                    "experiment_spec_id": "spec-001",
+                }
+            ],
+        )
+
+        def mock_agent_factory():
+            agent = MagicMock()
+
+            def run_side_effect(workdir, on_output=None, program_file="program.md", env=None, **kwargs):
+                secondary = json.dumps(
+                    {
+                        "_open_researcher_trace": {
+                            "frontier_id": env["OPEN_RESEARCHER_FRONTIER_ID"],
+                            "idea_id": env["OPEN_RESEARCHER_IDEA_ID"],
+                            "execution_id": env["OPEN_RESEARCHER_EXECUTION_ID"],
+                            "hypothesis_id": env["OPEN_RESEARCHER_HYPOTHESIS_ID"],
+                            "experiment_spec_id": env["OPEN_RESEARCHER_EXPERIMENT_SPEC_ID"],
+                        }
+                    }
+                )
+                with results_path.open("a", newline="") as handle:
+                    writer = csv.writer(handle, delimiter="\t")
+                    writer.writerow(
+                        [
+                            "2026-03-11T12:00:00Z",
+                            "abc1234",
+                            "speedup_ratio",
+                            "1.250000",
+                            secondary,
+                            "keep",
+                            "idea-001",
+                        ]
+                    )
+                return 0
+
+            agent.run.side_effect = run_side_effect
+            agent.terminate = MagicMock()
+            return agent
+
+        wm = WorkerManager(
+            repo_path=tmp_path,
+            research_dir=research,
+            gpu_manager=None,
+            idea_pool=idea_pool,
+            agent_factory=mock_agent_factory,
+            max_workers=1,
+            on_output=lambda line: None,
+        )
+
+        wm.start()
+        wm.join(timeout=5)
+
+        summary = idea_pool.summary()
+        assert summary["done"] == 1
+        state = next(item for item in idea_pool.all_ideas() if item["id"] == "idea-001")
+        assert state["result"] == {"metric_value": 1.25, "verdict": "kept"}
+
+
+def test_worker_manager_times_out_parallel_run_and_marks_item_skipped():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        research = _make_research_dir(tmp_path)
+        idea_pool = _make_idea_pool(
+            research,
+            [
+                {
+                    "id": "idea-001",
+                    "description": "Research-v1 timeout",
+                    "status": "pending",
+                    "priority": 1,
+                    "claimed_by": None,
+                    "assigned_experiment": None,
+                    "result": None,
+                    "source": "graph",
+                    "category": "graph",
+                    "gpu_hint": "auto",
+                    "created_at": "2026-01-01T00:00:00",
+                    "protocol": "research-v1",
+                    "frontier_id": "frontier-001",
+                    "execution_id": "exec-001",
+                    "hypothesis_id": "hyp-001",
+                    "experiment_spec_id": "spec-001",
+                }
+            ],
+        )
+        stop_run = threading.Event()
+
+        def mock_agent_factory():
+            agent = MagicMock()
+
+            def terminate():
+                stop_run.set()
+
+            def run_side_effect(*args, **kwargs):
+                stop_run.wait(timeout=2)
+                return 1
+
+            agent.run.side_effect = run_side_effect
+            agent.terminate.side_effect = terminate
+            return agent
+
+        output_lines = []
+        wm = WorkerManager(
+            repo_path=tmp_path,
+            research_dir=research,
+            gpu_manager=None,
+            idea_pool=idea_pool,
+            agent_factory=mock_agent_factory,
+            max_workers=1,
+            timeout_seconds=0.1,
+            on_output=output_lines.append,
+        )
+
+        wm.start()
+        wm.join(timeout=5)
+
+        summary = idea_pool.summary()
+        assert summary["skipped"] == 1
+        assert any("Experiment timeout" in line for line in output_lines)

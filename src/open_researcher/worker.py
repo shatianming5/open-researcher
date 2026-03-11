@@ -1,5 +1,6 @@
 """Parallel worker manager -- run experiments across multiple GPUs."""
 
+import json
 import logging
 import threading
 import time
@@ -10,6 +11,8 @@ from open_researcher.activity import ActivityMonitor
 from open_researcher.control_plane import consume_skip_current, read_control
 from open_researcher.gpu_manager import GPUManager
 from open_researcher.idea_pool import IdeaPool
+from open_researcher.results_cmd import load_results
+from open_researcher.watchdog import TimeoutWatchdog
 from open_researcher.worker_plugins import (
     WorkerRuntimePlugins,
     build_default_worker_plugins,
@@ -33,6 +36,7 @@ class WorkerManager:
         runtime_plugins: WorkerRuntimePlugins | None = None,
         stop_event: threading.Event | None = None,
         max_claims: int | None = None,
+        timeout_seconds: int = 0,
         on_experiment_started: Callable[[dict], None] | None = None,
         on_experiment_finished: Callable[[dict], bool | None] | None = None,
     ):
@@ -52,6 +56,7 @@ class WorkerManager:
             gpu_manager=gpu_manager,
         )
         self._max_claims = max_claims if max_claims and max_claims > 0 else None
+        self._timeout_seconds = max(float(timeout_seconds or 0), 0.0)
         self._claims_started = 0
         self._claim_lock = threading.Lock()
         self._on_experiment_started = on_experiment_started
@@ -99,6 +104,80 @@ class WorkerManager:
             return
         with self._claim_lock:
             self._claims_started = max(self._claims_started - 1, 0)
+
+    @staticmethod
+    def _safe_float(value) -> float | None:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _parse_secondary_metrics(row: dict) -> dict:
+        raw = row.get("secondary_metrics", "{}") if isinstance(row, dict) else "{}"
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+
+    def _current_idea_state(self, idea_id: str) -> dict:
+        return next(
+            (item for item in self.idea_pool.all_ideas() if item.get("id") == idea_id),
+            {},
+        )
+
+    def _find_matching_result_row(
+        self,
+        repo_path: Path,
+        *,
+        results_before_count: int,
+        idea: dict,
+    ) -> dict | None:
+        rows = load_results(repo_path)
+        expected_idea_id = str(idea.get("id", "")).strip()
+        expected_execution_id = str(idea.get("execution_id", "")).strip()
+        expected_frontier_id = str(idea.get("frontier_id", "")).strip()
+        if not expected_idea_id:
+            return None
+        for row in reversed(rows[max(results_before_count, 0):]):
+            secondary = self._parse_secondary_metrics(row)
+            trace = secondary.get("_open_researcher_trace", {})
+            if not isinstance(trace, dict):
+                continue
+            if str(trace.get("idea_id", "")).strip() != expected_idea_id:
+                continue
+            if expected_execution_id and str(trace.get("execution_id", "")).strip() != expected_execution_id:
+                continue
+            if expected_frontier_id and str(trace.get("frontier_id", "")).strip() != expected_frontier_id:
+                continue
+            return row
+        return None
+
+    @staticmethod
+    def _terminal_result_present(idea_state: dict) -> bool:
+        status = str(idea_state.get("status", "")).strip()
+        if status == "skipped":
+            return True
+        if status != "done":
+            return False
+        result = idea_state.get("result")
+        if not isinstance(result, dict):
+            return False
+        verdict = str(result.get("verdict", "")).strip()
+        metric = WorkerManager._safe_float(result.get("metric_value"))
+        return verdict in {"kept", "discarded", "crash"} or metric is not None
+
+    @staticmethod
+    def _result_payload_from_row(row: dict) -> tuple[float | None, str]:
+        status = str(row.get("status", "")).strip()
+        metric_value = WorkerManager._safe_float(row.get("metric_value"))
+        verdict = {
+            "keep": "kept",
+            "discard": "discarded",
+            "crash": "crash",
+        }.get(status, "completed")
+        return metric_value, verdict
 
     def join(self, timeout: float | None = None) -> None:
         """Wait for all worker threads to finish."""
@@ -223,6 +302,24 @@ class WorkerManager:
                         self.on_output(line)
 
                     agent = self.agent_factory()
+                    results_before_count = len(load_results(workdir))
+                    timed_out = False
+
+                    def _on_timeout() -> None:
+                        nonlocal timed_out
+                        timed_out = True
+                        self.on_output(
+                            f"[{wid}] Experiment timeout after {self._timeout_seconds}s; terminating agent"
+                        )
+                        try:
+                            agent.terminate()
+                        except Exception:
+                            logger.debug("Agent terminate failed after timeout", exc_info=True)
+
+                    watchdog = TimeoutWatchdog(
+                        self._timeout_seconds,
+                        on_timeout=_on_timeout,
+                    )
                     run_env = {
                         **gpu_env,
                         "OPEN_RESEARCHER_MEMORY_POLICY": (
@@ -239,32 +336,77 @@ class WorkerManager:
                         "OPEN_RESEARCHER_EXPERIMENT_SPEC_ID": str(idea.get("experiment_spec_id", "")).strip(),
                     }
                     run_env = {key: value for key, value in run_env.items() if value}
-                    code = agent.run(
-                        workdir,
-                        on_output=self.on_output,
-                        program_file="experiment_program.md",
-                        env=run_env,
-                    )
+                    watchdog.reset()
+                    try:
+                        code = agent.run(
+                            workdir,
+                            on_output=self.on_output,
+                            program_file="experiment_program.md",
+                            env=run_env,
+                        )
+                    finally:
+                        watchdog.stop()
                     run_code = int(code)
+                    strict_result_tracking = str(idea.get("protocol", "")).strip() == "research-v1"
+                    current_state = self._current_idea_state(str(idea.get("id", "")))
                     if code == 0:
-                        applied = self.idea_pool.mark_done(
-                            idea["id"],
-                            metric_value=None,
-                            verdict="completed",
-                            claim_token=claim_token or None,
-                        )
-                        if not applied:
-                            self.on_output(
-                                f"[{wid}] Claim race detected for {idea['id']}; winner already finalized, cleanup applied"
+                        if strict_result_tracking:
+                            matched_row = self._find_matching_result_row(
+                                workdir,
+                                results_before_count=results_before_count,
+                                idea=idea,
                             )
+                            if matched_row is not None:
+                                metric_value, verdict = self._result_payload_from_row(matched_row)
+                                if not self._terminal_result_present(current_state):
+                                    applied = self.idea_pool.mark_done(
+                                        idea["id"],
+                                        metric_value=metric_value,
+                                        verdict=verdict,
+                                        claim_token=claim_token or None,
+                                    )
+                                    if not applied:
+                                        self.on_output(
+                                            f"[{wid}] Claim race detected for {idea['id']}; winner already finalized, cleanup applied"
+                                        )
+                            elif self._terminal_result_present(current_state):
+                                pass
+                            else:
+                                reapplied = self.idea_pool.update_status(
+                                    idea["id"],
+                                    "pending",
+                                    claim_token=claim_token or None,
+                                )
+                                if reapplied:
+                                    self.on_output(
+                                        f"[{wid}] No recorded result for {idea['id']} despite zero exit; released claim back to pending"
+                                    )
+                                else:
+                                    self.on_output(
+                                        f"[{wid}] Claim race detected for {idea['id']}; pending release suppressed, cleanup applied"
+                                    )
+                                if timed_out:
+                                    run_code = 124
+                        else:
+                            applied = self.idea_pool.mark_done(
+                                idea["id"],
+                                metric_value=None,
+                                verdict="completed",
+                                claim_token=claim_token or None,
+                            )
+                            if not applied:
+                                self.on_output(
+                                    f"[{wid}] Claim race detected for {idea['id']}; winner already finalized, cleanup applied"
+                                )
                     else:
-                        applied = self.idea_pool.update_status(
-                            idea["id"], "skipped", claim_token=claim_token or None
-                        )
-                        if not applied:
-                            self.on_output(
-                                f"[{wid}] Claim race detected for {idea['id']}; skip write suppressed, cleanup applied"
+                        if not self._terminal_result_present(current_state):
+                            applied = self.idea_pool.update_status(
+                                idea["id"], "skipped", claim_token=claim_token or None
                             )
+                            if not applied:
+                                self.on_output(
+                                    f"[{wid}] Claim race detected for {idea['id']}; skip write suppressed, cleanup applied"
+                                )
                 except Exception as exc:
                     self.on_output(f"[{wid}] Error: {exc}")
                     applied = self.idea_pool.update_status(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from pathlib import Path
@@ -307,6 +308,16 @@ class ResearchLoop:
             "selection_reason_code": str(item.get("selection_reason_code", "")).strip(),
         }
 
+    def _read_experiment_phase(self) -> str:
+        progress_path = self.research_dir / "experiment_progress.json"
+        if not progress_path.exists():
+            return "init"
+        try:
+            payload = json.loads(progress_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            return "init"
+        return str(payload.get("phase", "init") or "init").strip() or "init"
+
     def _read_control_state(self) -> dict:
         from open_researcher.control_plane import read_control
 
@@ -485,6 +496,58 @@ class ResearchLoop:
 
         return experiments_completed, last_code, None
 
+    def _ensure_parallel_experiment_ready(
+        self,
+        exp_agent,
+        *,
+        stop_event: threading.Event,
+        phase_gate: PhaseGate,
+    ) -> tuple[int | None, str | None]:
+        phase = self._read_experiment_phase()
+        if phase == "experimenting":
+            return None, None
+        if not self._wait_until_unpaused(stop_event):
+            return None, "stopped"
+        self.emit(
+            AgentOutput(
+                phase="experimenting",
+                detail=(
+                    "Bootstrapping shared experiment setup/baseline before parallel "
+                    f"worker fan-out (current phase: {phase})."
+                ),
+            )
+        )
+        watchdog = TimeoutWatchdog(self.cfg.timeout, on_timeout=lambda: exp_agent.terminate())
+        watchdog.reset()
+        try:
+            code = self._run_agent(
+                exp_agent,
+                phase="experimenting",
+                program_file="experiment_program.md",
+                error_tag="exp",
+            )
+        finally:
+            watchdog.stop()
+        if code != 0:
+            return code, "experiment_failed"
+        phase_after = self._read_experiment_phase()
+        if phase_after != "experimenting":
+            self.emit(
+                AgentOutput(
+                    phase="experimenting",
+                    detail=(
+                        "Parallel bootstrap exited without error but did not advance "
+                        f"experiment_progress.json to 'experimenting' (still {phase_after!r})."
+                    ),
+                )
+            )
+            return 1, "experiment_failed"
+        phase_transition = phase_gate.check()
+        if phase_transition:
+            self.emit(PhaseTransition(next_phase=phase_transition))
+            return 0, "phase_transition"
+        return 0, None
+
     def _make_parallel_callbacks(
         self,
         *,
@@ -536,8 +599,18 @@ class ResearchLoop:
                 )
             )
 
-            latest_status = self._read_latest_status(self.research_dir)
-            status_for_crash = latest_status or ("crash" if exit_code != 0 else "")
+            item_status = str(item.get("status", "")).strip()
+            result = item.get("result") if isinstance(item.get("result"), dict) else {}
+            verdict = str(result.get("verdict", "")).strip()
+            status_for_crash = ""
+            if exit_code != 0 or item_status == "skipped":
+                status_for_crash = "crash"
+            elif verdict in {"discarded", "discard"}:
+                status_for_crash = "discard"
+            elif verdict in {"kept", "keep"}:
+                status_for_crash = "keep"
+            elif verdict == "completed":
+                status_for_crash = self._read_latest_status(self.research_dir)
             if exit_code != 0:
                 self.had_experiment_failure = True
                 self.last_experiment_failure_code = exit_code
@@ -693,6 +766,27 @@ class ResearchLoop:
                             items=rejected_items,
                         )
                     )
+
+            if parallel_batch_runner is not None:
+                bootstrap_code, bootstrap_stop_reason = self._ensure_parallel_experiment_ready(
+                    exp_agent,
+                    stop_event=stop_event,
+                    phase_gate=phase_gate,
+                )
+                if bootstrap_code not in {None, 0}:
+                    exit_codes["exp"] = int(bootstrap_code)
+                    self.had_experiment_failure = True
+                    self.last_experiment_failure_code = int(bootstrap_code)
+                    self.emit(RoleFailed(role="experiment", exit_code=int(bootstrap_code)))
+                    self.last_failed_role = "experiment"
+                    self.last_stop_reason = bootstrap_stop_reason or "experiment_failed"
+                    break
+                if bootstrap_stop_reason == "stopped":
+                    self.last_stop_reason = "stopped"
+                    break
+                if bootstrap_stop_reason == "phase_transition":
+                    self.last_stop_reason = "phase_transition"
+                    break
 
             frontier_sync = graph_store.sync_idea_pool(
                 self.research_dir / "idea_pool.json",

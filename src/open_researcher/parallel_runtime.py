@@ -31,10 +31,15 @@ class ParallelRuntimeProfile:
 
 def resolve_parallel_runtime_profile(cfg: ResearchConfig) -> ParallelRuntimeProfile:
     """Resolve which advanced runtime plugins are enabled for parallel execution."""
+    worktree_isolation = bool(cfg.enable_worktree_isolation)
+    if cfg.max_workers > 1:
+        # Parallel experiments need isolated code workspaces even if the shared
+        # .research state remains centralized.
+        worktree_isolation = True
     enabled = [
         cfg.enable_gpu_allocation,
         cfg.enable_failure_memory,
-        cfg.enable_worktree_isolation,
+        worktree_isolation,
     ]
     if all(enabled):
         name = "advanced"
@@ -46,7 +51,7 @@ def resolve_parallel_runtime_profile(cfg: ResearchConfig) -> ParallelRuntimeProf
         name=name,
         gpu_allocation=cfg.enable_gpu_allocation,
         failure_memory=cfg.enable_failure_memory,
-        worktree_isolation=cfg.enable_worktree_isolation,
+        worktree_isolation=worktree_isolation,
     )
 
 
@@ -126,6 +131,7 @@ def run_parallel_experiment_batch(
         runtime_plugins=plugins,
         stop_event=stop,
         max_claims=max_claims,
+        timeout_seconds=cfg.timeout,
         on_experiment_started=_on_started,
         on_experiment_finished=_on_finished,
     )

@@ -378,3 +378,92 @@ def test_run_graph_protocol_waits_for_resume_before_manager_cycle(tmp_path):
     issue_control_command(research / "control.json", command="resume", source="test")
     thread.join(timeout=5)
     assert manager_started.is_set() is True
+
+
+def test_run_graph_protocol_bootstraps_parallel_baseline_before_worker_batch(tmp_path):
+    repo_path, research = _setup_repo(tmp_path)
+    (research / "manager_program.md").write_text("# manager")
+    (research / "critic_program.md").write_text("# critic")
+    (research / "experiment_progress.json").write_text(json.dumps({"phase": "init"}))
+    graph_store = ResearchGraphStore(research / "research_graph.json")
+    graph_store.ensure_exists()
+
+    cfg = ResearchConfig(
+        protocol="research-v1",
+        max_workers=4,
+        primary_metric="speedup_ratio",
+        direction="higher_is_better",
+    )
+    events = []
+
+    manager_agent = MagicMock()
+    critic_agent = MagicMock()
+    exp_agent = MagicMock()
+    parallel_calls = []
+
+    def manager_run(workdir, on_output=None, program_file="program.md", **kwargs):
+        graph = graph_store.read()
+        if not graph["frontier"]:
+            graph["hypotheses"] = [{"id": "hyp-001", "summary": "Bootstrap parallel baseline"}]
+            graph["experiment_specs"] = [
+                {
+                    "id": "spec-001",
+                    "hypothesis_id": "hyp-001",
+                    "summary": "Bootstrap parallel baseline",
+                }
+            ]
+            graph["frontier"] = [
+                {
+                    "id": "frontier-001",
+                    "hypothesis_id": "hyp-001",
+                    "experiment_spec_id": "spec-001",
+                    "description": "Bootstrap parallel baseline",
+                    "priority": 1,
+                    "status": "draft",
+                    "claim_state": "candidate",
+                }
+            ]
+            graph_store.path.write_text(json.dumps(graph, indent=2))
+        return 0
+
+    def critic_run(workdir, on_output=None, program_file="program.md", **kwargs):
+        graph = graph_store.read()
+        if graph["frontier"] and graph["frontier"][0]["status"] == "draft":
+            graph["frontier"][0]["status"] = "approved"
+            graph_store.path.write_text(json.dumps(graph, indent=2))
+        return 0
+
+    def exp_run(workdir, on_output=None, program_file="program.md", **kwargs):
+        progress = research / "experiment_progress.json"
+        payload = json.loads(progress.read_text())
+        if payload.get("phase") != "experimenting":
+            progress.write_text(json.dumps({"phase": "experimenting"}))
+        return 0
+
+    def parallel_batch_runner(**kwargs):
+        parallel_calls.append(json.loads((research / "experiment_progress.json").read_text())["phase"])
+        return {
+            "experiments_completed": 1,
+            "exit_code": 0,
+            "failed_runs": 0,
+            "started_runs": 1,
+            "fatal_errors": 0,
+            "running_after": 0,
+        }
+
+    manager_agent.run.side_effect = manager_run
+    critic_agent.run.side_effect = critic_run
+    exp_agent.run.side_effect = exp_run
+
+    loop = ResearchLoop(repo_path, research, cfg, events.append)
+    exit_codes = loop.run_graph_protocol(
+        manager_agent,
+        critic_agent,
+        exp_agent,
+        max_experiments=1,
+        parallel_batch_runner=parallel_batch_runner,
+    )
+
+    assert exit_codes == {"manager": 0, "critic": 0, "exp": 0}
+    assert parallel_calls == ["experimenting"]
+    assert exp_agent.run.call_count == 1
