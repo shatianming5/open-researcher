@@ -11,21 +11,22 @@ Improve [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT) validation loss 
 ## Quick Start (15 minutes)
 
 ```bash
-# 1. Clone nanoGPT and prepare data
+# 1. Clone nanoGPT
 git clone https://github.com/karpathy/nanoGPT.git
 cd nanoGPT
-pip install -r requirements.txt
-python data/shakespeare_char/prepare.py
 
-# 2. Initialize Open Researcher
+# 2. Install Open Researcher
 pip install open-researcher
-open-researcher init --tag nanogpt
 
-# 3. Launch — the agent will understand the project, design evaluation,
-#    establish a baseline, and start the experiment loop automatically
+# 3. Optional: inspect what bootstrap will do
+open-researcher run --dry-run
+
+# 4. Launch — Scout will fill bootstrap.*, then Open Researcher will
+#    install deps, prepare Shakespeare data, run a smoke check, and
+#    enter the research-v1 loop automatically
 open-researcher run --agent claude-code
 
-# 4. Check progress in the morning
+# 5. Check progress in the morning
 open-researcher status --sparkline
 open-researcher results --chart primary
 open-researcher export --output report.md
@@ -33,12 +34,13 @@ open-researcher export --output report.md
 
 ## What Happens
 
-| Phase | Time | What the agent does |
-|-------|------|---------------------|
-| 1. Understand | ~2 min | Reads `train.py`, `model.py`, configs. Writes `project-understanding.md` |
-| 2. Evaluate | ~2 min | Defines val_loss as primary metric, sets up eval command |
-| 3. Baseline | ~5 min | Runs training, records baseline val_loss (~0.41) |
-| 4. Experiment | ~5 min each | Proposes changes, implements, tests, keeps or discards |
+| Phase | Time | What the system does |
+|-------|------|----------------------|
+| 1. Scout | ~2 min | Reads `train.py`, `model.py`, configs. Writes understanding, strategy, evaluation, and `bootstrap.*` hints |
+| 2. Prepare | ~2 min | Installs `requirements.txt`, runs `data/shakespeare_char/prepare.py`, then smoke-checks the repo |
+| 3. Review | ~1 min | Lets you inspect scout + prepare outputs in the TUI |
+| 4. Baseline | ~5 min | Runs training, records baseline val_loss (~0.41) |
+| 5. Experiment | ~5 min each | Manager/Critic/Experiment iterate on changes, tests, and evidence |
 
 Each experiment is a git commit. Failed experiments are automatically rolled back.
 
@@ -69,15 +71,27 @@ metrics:
     direction: lower_is_better
 ```
 
-## Dual-Agent Mode
+## Bootstrap Overrides
 
-For faster idea generation, use two agents:
+If scout does not resolve the repo correctly on the first pass, edit `.research/config.yaml`:
 
-```bash
-open-researcher run --multi --agent claude-code
+```yaml
+bootstrap:
+  working_dir: "."
+  install_command: "python -m pip install -r requirements.txt"
+  data_command: "python data/shakespeare_char/prepare.py"
+  smoke_command: "python train.py config/train_shakespeare_char.py --eval_only"
+  expected_paths:
+    - "data/shakespeare_char/train.bin"
+    - "data/shakespeare_char/val.bin"
 ```
 
-This runs an Idea Agent (generates experiment ideas) and an Experiment Agent (implements and tests them) in alternating cycles.
+Then rerun:
+
+```bash
+open-researcher doctor
+open-researcher run
+```
 
 ## Metrics
 

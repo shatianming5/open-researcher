@@ -11,6 +11,11 @@ from rich.console import Console
 
 from open_researcher.agent_runtime import resolve_agent
 from open_researcher.agents import detect_agent, get_agent
+from open_researcher.bootstrap import (
+    ensure_bootstrap_state,
+    format_bootstrap_dry_run,
+    run_bootstrap_prepare,
+)
 from open_researcher.config import load_config, require_supported_protocol
 from open_researcher.graph_protocol import (
     initialize_graph_runtime_state,
@@ -53,7 +58,7 @@ def _resolve_agent(agent_name: str | None, agent_configs: dict | None = None):
 def _overall_exit_code(exit_codes: dict[str, int], *, crash_limited: bool = False) -> int:
     if crash_limited:
         return int(exit_codes.get("exp", 1) or 1)
-    for key in ("scout", "manager", "critic", "exp"):
+    for key in ("prepare", "scout", "manager", "critic", "exp"):
         code = int(exit_codes.get(key, 0) or 0)
         if code != 0:
             return code
@@ -116,11 +121,64 @@ def _build_parallel_runner(
     )
 
 
+def _load_runtime_config(research: Path, *, workers: int | None, max_experiments: int = 0):
+    cfg = apply_worker_override(load_config(research, strict=True), workers)
+    require_supported_protocol(cfg)
+    if max_experiments > 0:
+        cfg.max_experiments = max_experiments
+    return cfg
+
+
+def _run_prepare_then_graph(
+    *,
+    app,
+    loop: ResearchLoop,
+    repo_path: Path,
+    research: Path,
+    cfg,
+    exit_codes: dict[str, int],
+    stop: threading.Event,
+    manager_agent,
+    critic_agent,
+    exp_agent,
+    parallel_runner,
+    event_handler,
+) -> None:
+    prepare_code, _state = run_bootstrap_prepare(
+        repo_path,
+        research,
+        cfg,
+        on_prepare_event=event_handler,
+    )
+    exit_codes["prepare"] = prepare_code
+    if prepare_code != 0:
+        try:
+            app.call_from_thread(
+                app.notify,
+                f"Prepare failed (code={prepare_code}). See .research/prepare.log.",
+                severity="error",
+            )
+            app.call_from_thread(app.exit)
+        except RuntimeError:
+            pass
+        return
+    exit_codes.update(
+        loop.run_graph_protocol(
+            manager_agent,
+            critic_agent,
+            exp_agent,
+            stop=stop,
+            parallel_batch_runner=parallel_runner,
+        )
+    )
+
+
 def do_start_init(repo_path: Path, tag: str | None = None) -> Path:
     """Auto-initialize .research/ if needed, return research dir path."""
     research = repo_path / ".research"
     if research.is_dir():
         console.print("[dim]Using existing .research/ directory.[/dim]")
+        ensure_bootstrap_state(research / "bootstrap_state.json")
         return research
 
     from open_researcher.init_cmd import do_init
@@ -129,6 +187,7 @@ def do_start_init(repo_path: Path, tag: str | None = None) -> Path:
         tag = date.today().strftime("%b%d").lower()
 
     do_init(repo_path, tag=tag)
+    ensure_bootstrap_state(research / "bootstrap_state.json")
     return research
 
 
@@ -145,11 +204,9 @@ def do_run(
         console.print("[red]Error:[/red] .research/ not found. Run 'open-researcher init' first.")
         raise SystemExit(1)
 
-    cfg = apply_worker_override(load_config(research, strict=True), workers)
-    require_supported_protocol(cfg)
-    if max_experiments > 0:
-        cfg.max_experiments = max_experiments
+    cfg = _load_runtime_config(research, workers=workers, max_experiments=max_experiments)
     initialize_graph_runtime_state(research, cfg)
+    ensure_bootstrap_state(research / "bootstrap_state.json")
     manager_agent, critic_agent, exp_agent = _resolve_research_agents(
         cfg,
         primary_agent_name=agent_name,
@@ -159,6 +216,8 @@ def do_run(
         console.print(f"[bold]Manager Agent:[/bold] {manager_agent.name}")
         console.print(f"[bold]Critic Agent:[/bold] {critic_agent.name}")
         console.print(f"[bold]Experiment Agent:[/bold] {exp_agent.name}")
+        for line in format_bootstrap_dry_run(repo_path, research, cfg):
+            console.print(line)
         console.print(
             f"[bold]Command:[/bold] {' '.join(exp_agent.build_command(research / 'experiment_program.md', repo_path))}"
         )
@@ -171,7 +230,6 @@ def do_run(
     loop_ref: dict[str, ResearchLoop] = {}
 
     def setup(app, renderer):
-        del app
         assert renderer is not None
         loop = ResearchLoop(
             repo_path,
@@ -191,14 +249,19 @@ def do_run(
             renderer=renderer,
         )
         start_daemon(
-            lambda: exit_codes.update(
-                loop.run_graph_protocol(
-                    manager_agent,
-                    critic_agent,
-                    exp_agent,
-                    stop=stop,
-                    parallel_batch_runner=parallel_runner,
-                )
+            lambda: _run_prepare_then_graph(
+                app=app,
+                loop=loop,
+                repo_path=repo_path,
+                research=research,
+                cfg=cfg,
+                exit_codes=exit_codes,
+                stop=stop,
+                manager_agent=manager_agent,
+                critic_agent=critic_agent,
+                exp_agent=exp_agent,
+                parallel_runner=parallel_runner,
+                event_handler=renderer.on_event,
             )
         )
         return [stop.set, manager_agent.terminate, critic_agent.terminate, exp_agent.terminate]
@@ -208,6 +271,7 @@ def do_run(
         console,
         exit_codes,
         [
+            ("prepare", "Prepare"),
             ("manager", "Research Manager"),
             ("critic", "Research Critic"),
             ("exp", "Experiment Agent"),
@@ -240,11 +304,9 @@ def do_start(
     if tag is None:
         tag = date.today().strftime("%b%d").lower()
     research = do_start_init(repo_path, tag=tag)
-    cfg = apply_worker_override(load_config(research, strict=True), workers)
-    require_supported_protocol(cfg)
-    if max_experiments > 0:
-        cfg.max_experiments = max_experiments
+    cfg = _load_runtime_config(research, workers=workers, max_experiments=max_experiments)
     initialize_graph_runtime_state(research, cfg)
+    ensure_bootstrap_state(research / "bootstrap_state.json")
 
     scout_agent = _resolve_scout_agent(cfg, primary_agent_name=agent_name)
     manager_agent, critic_agent, exp_agent = _resolve_research_agents(
@@ -255,10 +317,11 @@ def do_start(
     stop = threading.Event()
     exit_codes: dict[str, int] = {}
     loop_ref: dict[str, ResearchLoop] = {}
+    cfg_ref = {"cfg": cfg}
 
     def setup(app, renderer):
         assert renderer is not None
-        loop = ResearchLoop(repo_path, research, cfg, renderer.on_event)
+        loop = ResearchLoop(repo_path, research, cfg_ref["cfg"], renderer.on_event)
         loop_ref["loop"] = loop
 
         def _show_review() -> None:
@@ -280,6 +343,29 @@ def do_start(
                     except RuntimeError:
                         pass
                     return
+                refreshed_cfg = _load_runtime_config(research, workers=workers, max_experiments=max_experiments)
+                initialize_graph_runtime_state(research, refreshed_cfg)
+                ensure_bootstrap_state(research / "bootstrap_state.json")
+                cfg_ref["cfg"] = refreshed_cfg
+                loop.cfg = refreshed_cfg
+                prepare_code, _ = run_bootstrap_prepare(
+                    repo_path,
+                    research,
+                    refreshed_cfg,
+                    on_prepare_event=renderer.on_event,
+                )
+                exit_codes["prepare"] = prepare_code
+                if prepare_code != 0:
+                    try:
+                        app.call_from_thread(
+                            app.notify,
+                            f"Prepare failed (code={prepare_code}). See .research/prepare.log.",
+                            severity="error",
+                        )
+                        app.call_from_thread(app.exit)
+                    except RuntimeError:
+                        pass
+                    return
                 try:
                     app.call_from_thread(setattr, app, "app_phase", "reviewing")
                     app.call_from_thread(_show_review)
@@ -292,7 +378,7 @@ def do_start(
             parallel_runner = _build_parallel_runner(
                 repo_path=repo_path,
                 research_dir=research,
-                cfg=cfg,
+                cfg=cfg_ref["cfg"],
                 exp_agent=exp_agent,
                 renderer=renderer,
             )
@@ -348,6 +434,7 @@ def do_start(
         exit_codes,
         [
             ("scout", "Scout"),
+            ("prepare", "Prepare"),
             ("manager", "Research Manager"),
             ("critic", "Research Critic"),
             ("exp", "Experiment Agent"),

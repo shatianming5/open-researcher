@@ -12,7 +12,7 @@ def _setup_research_dir(repo: Path) -> Path:
     research = repo / ".research"
     research.mkdir()
     (research / "config.yaml").write_text(
-        "mode: autonomous\nresearch:\n  protocol: research-v1\nmetrics:\n"
+        "mode: autonomous\nresearch:\n  protocol: research-v1\nbootstrap:\n  auto_prepare: false\nmetrics:\n"
         "  primary:\n    name: accuracy\n    direction: higher_is_better\n"
     )
     (research / "results.tsv").write_text(

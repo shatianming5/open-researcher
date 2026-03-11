@@ -1,6 +1,7 @@
 """Tests for Textual TUI components."""
 
 from open_researcher.tui.widgets import (
+    BootstrapStatusPanel,
     DocsSidebarPanel,
     ExperimentStatusPanel,
     FrontierDetailPanel,
@@ -15,6 +16,7 @@ from open_researcher.tui.widgets import (
     render_ideas_markdown,
 )
 from open_researcher.tui.view_model import (
+    BootstrapSummary,
     ClaimItem,
     DocNavItem,
     EvidenceItem,
@@ -133,6 +135,26 @@ def test_session_chrome_bar_renders_protocol_and_metric():
     assert "research-v1" in widget.chrome_text
     assert "main" in widget.chrome_text
     assert "0.8500" in widget.chrome_text
+
+
+def test_bootstrap_status_panel_renders_prepare_summary():
+    panel = BootstrapStatusPanel()
+    panel.update_summary(
+        BootstrapSummary(
+            status="running",
+            working_dir=".",
+            python_executable="/tmp/demo/.venv/bin/python",
+            install_status="completed",
+            data_status="running",
+            smoke_status="pending",
+            log_path=".research/prepare.log",
+            unresolved=["Smoke command inferred from evaluation.md"],
+            missing_paths=["data/ready.txt"],
+        )
+    )
+    assert "Repository Prepare" in panel.summary_text
+    assert "prepare.log" in panel.summary_text
+    assert "data/ready.txt" in panel.summary_text
 
 
 def test_trace_banner_renders_latest_trace():

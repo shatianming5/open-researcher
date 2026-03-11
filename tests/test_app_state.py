@@ -88,6 +88,8 @@ async def test_docs_sidebar_selection_switches_doc(tmp_path: Path):
         option_list = app.query_one("#docs-options", OptionList)
         option_list.focus()
         assert option_list.option_count >= 5
+        initial_option_ids = [option.id for option in option_list.options]
+        assert "bootstrap_state.md" in initial_option_ids
         for index, option in enumerate(option_list.options):
             if option.id == "evaluation.md":
                 option_list.highlighted = index

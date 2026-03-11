@@ -10,6 +10,7 @@ from pathlib import Path
 
 from jinja2 import Environment, PackageLoader
 
+from open_researcher.bootstrap import ensure_bootstrap_state
 from open_researcher.research_graph import ResearchGraphStore
 from open_researcher.research_memory import ResearchMemoryStore
 
@@ -97,6 +98,7 @@ def do_init(repo_path: Path, tag: str | None = None) -> None:
     (research_dir / "control.json").write_text(json.dumps({"paused": False, "skip_current": False}, indent=2))
     (research_dir / "events.jsonl").write_text("")
     (research_dir / "experiment_progress.json").write_text(json.dumps({"phase": "init"}, indent=2))
+    ensure_bootstrap_state(research_dir / "bootstrap_state.json")
     ResearchGraphStore(research_dir / "research_graph.json").ensure_exists()
     ResearchMemoryStore(research_dir / "research_memory.json").ensure_exists()
 

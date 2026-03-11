@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from open_researcher.agent_runtime import resolve_agent
+from open_researcher.bootstrap import ensure_bootstrap_state, run_bootstrap_prepare
 from open_researcher.config import load_config, require_supported_protocol
 from open_researcher.event_journal import EventJournal
 from open_researcher.graph_protocol import (
@@ -161,6 +162,7 @@ def do_run_headless(
     cfg = apply_worker_override(load_config(research, strict=True), workers)
     require_supported_protocol(cfg)
     initialize_graph_runtime_state(research, cfg)
+    ensure_bootstrap_state(research / "bootstrap_state.json")
     if max_experiments > 0:
         cfg.max_experiments = max_experiments
     effective_max = cfg.max_experiments
@@ -195,6 +197,16 @@ def do_run_headless(
             exp_agent=exp_agent,
             logger=logger,
         )
+        prepare_code, _state = run_bootstrap_prepare(
+            repo_path,
+            research,
+            cfg,
+            on_prepare_event=logger.on_event,
+        )
+        if prepare_code != 0:
+            logger.on_event(RoleFailed(role="prepare", exit_code=prepare_code))
+            logger.on_event(SessionFailed(failed_role="prepare", exit_code=prepare_code))
+            return prepare_code
         loop.run_graph_protocol(
             manager_agent,
             critic_agent,
@@ -231,6 +243,7 @@ def do_start_headless(
     cfg = apply_worker_override(load_config(research, strict=True), workers)
     require_supported_protocol(cfg)
     initialize_graph_runtime_state(research, cfg)
+    ensure_bootstrap_state(research / "bootstrap_state.json")
 
     if max_experiments > 0:
         cfg.max_experiments = max_experiments
@@ -269,6 +282,22 @@ def do_start_headless(
         if code != 0:
             _finalize_headless_session(logger, loop, scout_code=code)
             return code
+
+        cfg = apply_worker_override(load_config(research, strict=True), workers)
+        require_supported_protocol(cfg)
+        if max_experiments > 0:
+            cfg.max_experiments = max_experiments
+        initialize_graph_runtime_state(research, cfg)
+        prepare_code, _state = run_bootstrap_prepare(
+            repo_path,
+            research,
+            cfg,
+            on_prepare_event=logger.on_event,
+        )
+        if prepare_code != 0:
+            logger.on_event(RoleFailed(role="prepare", exit_code=prepare_code))
+            logger.on_event(SessionFailed(failed_role="prepare", exit_code=prepare_code))
+            return prepare_code
 
         logger.on_event(ReviewAutoConfirmed())
 

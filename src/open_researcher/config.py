@@ -37,6 +37,15 @@ class ResearchConfig:
     enable_ideation_memory: bool = True
     enable_experiment_memory: bool = True
     enable_repo_type_prior: bool = True
+    environment_text: str = ""
+    bootstrap_auto_prepare: bool = True
+    bootstrap_working_dir: str = "."
+    bootstrap_python: str = ""
+    bootstrap_install_command: str = ""
+    bootstrap_data_command: str = ""
+    bootstrap_smoke_command: str = ""
+    bootstrap_expected_paths: list[str] = field(default_factory=list)
+    bootstrap_requires_gpu: bool = False
     role_agents: dict = field(default_factory=dict)
     agent_config: dict = field(default_factory=dict)
 
@@ -69,6 +78,7 @@ def load_config(research_dir: Path, *, strict: bool = False) -> ResearchConfig:
     runtime = raw.get("runtime", {})
     roles = raw.get("roles", {})
     memory = raw.get("memory", {})
+    bootstrap = raw.get("bootstrap", {})
     raw_protocol = str(research.get("protocol", RESEARCH_PROTOCOL) or RESEARCH_PROTOCOL).strip()
     protocol = PROTOCOL_ALIASES.get(raw_protocol, raw_protocol)
     return ResearchConfig(
@@ -94,6 +104,17 @@ def load_config(research_dir: Path, *, strict: bool = False) -> ResearchConfig:
         enable_ideation_memory=bool(memory.get("ideation", True)),
         enable_experiment_memory=bool(memory.get("experiment", True)),
         enable_repo_type_prior=bool(memory.get("repo_type_prior", True)),
+        environment_text=str(raw.get("environment", "") or ""),
+        bootstrap_auto_prepare=bool(bootstrap.get("auto_prepare", True)),
+        bootstrap_working_dir=str(bootstrap.get("working_dir", ".") or "."),
+        bootstrap_python=str(bootstrap.get("python", "") or ""),
+        bootstrap_install_command=str(bootstrap.get("install_command", "") or ""),
+        bootstrap_data_command=str(bootstrap.get("data_command", "") or ""),
+        bootstrap_smoke_command=str(bootstrap.get("smoke_command", "") or ""),
+        bootstrap_expected_paths=bootstrap.get("expected_paths", [])
+        if isinstance(bootstrap.get("expected_paths", []), list)
+        else [],
+        bootstrap_requires_gpu=bool(bootstrap.get("requires_gpu", False)),
         role_agents=roles if isinstance(roles, dict) else {},
         agent_config=raw.get("agents", {}),
     )

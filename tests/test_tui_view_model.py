@@ -58,6 +58,20 @@ def test_build_dashboard_state_aggregates_graph_and_roles(tmp_path: Path):
             "frontier_runnable": 1,
             "frontier_status_counts": {"approved": 1},
         },
+        "bootstrap": {
+            "status": "completed",
+            "working_dir": ".",
+            "python_executable": "/tmp/demo/.venv/bin/python",
+            "steps": {
+                "install": {"status": "completed"},
+                "data": {"status": "completed"},
+                "smoke": {"status": "completed"},
+            },
+            "errors": [],
+            "unresolved": [],
+            "expected_path_status": [{"path": "data/ready.txt", "exists": True}],
+            "log_path": ".research/prepare.log",
+        },
     }
     ideas = [
         {
@@ -96,6 +110,8 @@ def test_build_dashboard_state_aggregates_graph_and_roles(tmp_path: Path):
     )
 
     assert dashboard.session.paused is True
+    assert dashboard.bootstrap.status == "completed"
+    assert dashboard.bootstrap.smoke_status == "completed"
     assert dashboard.graph.ideation_memory == 1
     assert dashboard.graph.experiment_memory == 2
     assert dashboard.frontiers[0].frontier_id == "frontier-001"
@@ -113,19 +129,23 @@ def test_build_docs_workbench_collects_availability_and_preview(tmp_path: Path):
     research = tmp_path / ".research"
     research.mkdir()
     (research / "research_graph.json").write_text('{"version":"research-v1"}', encoding="utf-8")
+    (research / "bootstrap_state.json").write_text('{"status":"completed"}', encoding="utf-8")
     (research / "evaluation.md").write_text("# Evaluation\n\nCheck reproducibility first.", encoding="utf-8")
 
     docs = build_docs_workbench(
         research,
         current_file="evaluation.md",
-        doc_files=["research_graph.md", "evaluation.md", "literature.md"],
-        dynamic_files={"research_graph.md"},
+        doc_files=["research_graph.md", "bootstrap_state.md", "evaluation.md", "literature.md"],
+        dynamic_files={"research_graph.md", "bootstrap_state.md"},
     )
 
     assert docs.current_file == "evaluation.md"
     assert docs.items[0].available is True
     assert docs.items[0].dynamic is True
     assert docs.items[0].group == "Research State"
-    assert docs.items[1].preview == "Check reproducibility first."
-    assert docs.items[1].group == "Research Notes"
-    assert docs.items[2].available is False
+    assert docs.items[1].available is True
+    assert docs.items[1].dynamic is True
+    assert docs.items[1].group == "Research State"
+    assert docs.items[2].preview == "Check reproducibility first."
+    assert docs.items[2].group == "Research Notes"
+    assert docs.items[3].available is False

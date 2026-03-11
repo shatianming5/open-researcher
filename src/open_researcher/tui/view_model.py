@@ -88,6 +88,20 @@ class GraphSummary:
 
 
 @dataclass(slots=True)
+class BootstrapSummary:
+    status: str = "pending"
+    working_dir: str = "."
+    python_executable: str = ""
+    install_status: str = "pending"
+    data_status: str = "pending"
+    smoke_status: str = "pending"
+    log_path: str = ""
+    errors: list[str] = field(default_factory=list)
+    unresolved: list[str] = field(default_factory=list)
+    missing_paths: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class FrontierCard:
     frontier_id: str
     execution_id: str
@@ -207,6 +221,7 @@ class DocNavItem:
 @dataclass(slots=True)
 class DashboardState:
     session: SessionChrome
+    bootstrap: BootstrapSummary
     graph: GraphSummary
     frontiers: list[FrontierCard]
     frontier_details: dict[str, FrontierDetail]
@@ -401,7 +416,7 @@ def _doc_title(filename: str) -> str:
 
 
 def _doc_group(filename: str) -> str:
-    if filename in {"research_graph.md", "research_memory.md", "projected_backlog.md"}:
+    if filename in {"research_graph.md", "research_memory.md", "projected_backlog.md", "bootstrap_state.md"}:
         return "Research State"
     if filename in {"manager_program.md", "critic_program.md", "experiment_program.md"}:
         return "Role Programs"
@@ -431,6 +446,7 @@ def build_docs_workbench(research_dir: Path, *, current_file: str, doc_files: li
             "projected_backlog.md": "idea_pool.json",
             "research_graph.md": "research_graph.json",
             "research_memory.md": "research_memory.json",
+            "bootstrap_state.md": "bootstrap_state.json",
         }.get(filename, filename)
         path = research_dir / source
         preview = _doc_preview(path) if not dynamic else (
@@ -470,6 +486,7 @@ def build_dashboard_state(
 
     graph_payload = _load_json_object(research_dir / "research_graph.json")
     memory_payload = _load_json_object(research_dir / "research_memory.json")
+    bootstrap_payload = state.get("bootstrap") if isinstance(state.get("bootstrap"), dict) else {}
     graph_state = state.get("graph") if isinstance(state.get("graph"), dict) else {}
     graph_frontier_rows = [
         row for row in graph_payload.get("frontier", []) if isinstance(row, dict)
@@ -531,6 +548,37 @@ def build_dashboard_state(
         experiment_memory=len(memory_payload.get("experiment_memory", []))
         if isinstance(memory_payload.get("experiment_memory", []), list)
         else 0,
+    )
+
+    bootstrap_errors = [str(item) for item in bootstrap_payload.get("errors", [])[:3]]
+    bootstrap_unresolved = [str(item) for item in bootstrap_payload.get("unresolved", [])[:3]]
+    if bootstrap_payload.get("error"):
+        bootstrap_errors = [str(bootstrap_payload.get("error"))]
+    missing_expected_paths = [
+        str(item.get("path", "")).strip()
+        for item in bootstrap_payload.get("expected_path_status", [])
+        if isinstance(item, dict) and not item.get("exists") and str(item.get("path", "")).strip()
+    ]
+    bootstrap = BootstrapSummary(
+        status=str(bootstrap_payload.get("status", "")).strip() or ("failed" if bootstrap_errors else "pending"),
+        working_dir=str(bootstrap_payload.get("working_dir", ".") or "."),
+        python_executable=str(bootstrap_payload.get("python_executable", "")).strip(),
+        install_status=str(
+            (bootstrap_payload.get("steps", {}) or {}).get("install", {}).get("status", "pending")
+        ).strip()
+        or "pending",
+        data_status=str(
+            (bootstrap_payload.get("steps", {}) or {}).get("data", {}).get("status", "pending")
+        ).strip()
+        or "pending",
+        smoke_status=str(
+            (bootstrap_payload.get("steps", {}) or {}).get("smoke", {}).get("status", "pending")
+        ).strip()
+        or "pending",
+        log_path=str(bootstrap_payload.get("log_path", "")).strip(),
+        errors=bootstrap_errors,
+        unresolved=bootstrap_unresolved,
+        missing_paths=missing_expected_paths[:3],
     )
 
     role_map = {
@@ -717,6 +765,7 @@ def build_dashboard_state(
 
     return DashboardState(
         session=session,
+        bootstrap=bootstrap,
         graph=graph,
         frontiers=frontiers,
         frontier_details=frontier_details,

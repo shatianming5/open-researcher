@@ -6,6 +6,8 @@ from typing import Optional
 import typer
 from rich.console import Console
 
+from open_researcher.bootstrap import format_bootstrap_dry_run
+from open_researcher.config import ResearchConfig, load_config
 from open_researcher.config_cmd import config_app
 from open_researcher.ideas_cmd import ideas_app
 from open_researcher.logs_cmd import logs_app
@@ -36,6 +38,7 @@ def _print_bootstrap_dry_run(
     max_experiments: int,
     workers: int | None,
 ) -> None:
+    cfg = ResearchConfig()
     console.print("[bold]Workflow:[/bold] bootstrap")
     console.print(f"[bold]Frontend:[/bold] {frontend_mode}")
     console.print(f"[bold]Working directory:[/bold] {repo_path}")
@@ -45,6 +48,8 @@ def _print_bootstrap_dry_run(
         console.print(f"[bold]Goal:[/bold] {goal}")
     if max_experiments > 0:
         console.print(f"[bold]Max experiments:[/bold] {max_experiments}")
+    for line in format_bootstrap_dry_run(repo_path, repo_path / ".research", cfg):
+        console.print(line)
     console.print("\n[dim]Dry run -- no bootstrap or agent launch performed.[/dim]")
 
 
@@ -55,6 +60,7 @@ def _print_continue_dry_run(
     workers: int | None,
     max_experiments: int,
 ) -> None:
+    research_dir = repo_path / ".research"
     console.print("[bold]Workflow:[/bold] continue")
     console.print(f"[bold]Frontend:[/bold] {frontend_mode}")
     console.print(f"[bold]Working directory:[/bold] {repo_path}")
@@ -62,6 +68,12 @@ def _print_continue_dry_run(
         console.print(f"[bold]Workers:[/bold] {workers}")
     if max_experiments > 0:
         console.print(f"[bold]Max experiments:[/bold] {max_experiments}")
+    try:
+        cfg = load_config(research_dir, strict=True)
+        for line in format_bootstrap_dry_run(repo_path, research_dir, cfg):
+            console.print(line)
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/red]")
     console.print("\n[dim]Dry run -- no runtime launched.[/dim]")
 
 

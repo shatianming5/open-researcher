@@ -41,6 +41,8 @@ def test_init_creates_research_directory():
         assert (research / "critic_program.md").is_file()
         assert (research / "experiment_program.md").is_file()
         assert (research / "results.tsv").is_file()
+        assert (research / "bootstrap_state.json").is_file()
+        assert not (research / "prepare.log").exists()
         assert (research / "scripts" / "record.py").is_file()
         assert (research / "scripts" / "rollback.sh").is_file()
 
@@ -118,6 +120,7 @@ def test_init_creates_shared_files(tmp_path):
     assert (research / "experiment_program.md").exists()
     assert (research / "research_graph.json").exists()
     assert (research / "research_memory.json").exists()
+    assert (research / "bootstrap_state.json").exists()
 
 
 def test_experiment_program_serial_mode():

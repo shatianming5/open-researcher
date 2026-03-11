@@ -20,6 +20,7 @@ from open_researcher.status_cmd import parse_research_state
 from open_researcher.tui.modals import GPUStatusModal, LogScreen
 from open_researcher.tui.view_model import DashboardState, build_dashboard_state, build_docs_workbench
 from open_researcher.tui.widgets import (
+    BootstrapStatusPanel,
     DocViewer,
     DocsSidebarPanel,
     ExecutionSummaryPanel,
@@ -82,6 +83,7 @@ class ResearchApp(App):
                 with Container(id="command-main"):
                     with Vertical(id="command-left", classes="column"):
                         yield RoleActivityPanel(id="role-activity", classes="panel-card")
+                        yield BootstrapStatusPanel(id="bootstrap-status", classes="panel-card")
                         yield ResearchGraphSummaryPanel(id="graph-summary", classes="panel-card")
                         yield LineageTimelinePanel(id="lineage-timeline", classes="panel-card")
                     with Container(id="command-right", classes="column"):
@@ -282,6 +284,11 @@ class ResearchApp(App):
             )
         except NoMatches:
             logger.debug("Error refreshing role activity", exc_info=True)
+
+        try:
+            self.query_one("#bootstrap-status", BootstrapStatusPanel).update_summary(dashboard.bootstrap)
+        except NoMatches:
+            logger.debug("Error refreshing bootstrap summary", exc_info=True)
 
         try:
             self.query_one("#graph-summary", ResearchGraphSummaryPanel).update_summary(dashboard.graph)

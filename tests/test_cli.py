@@ -67,6 +67,19 @@ def test_run_dry_run():
             result = runner.invoke(app, ["run", "--dry-run"])
             assert result.exit_code == 0
             assert "mock-agent" in result.stdout
+            assert "Bootstrap auto-prepare" in result.stdout
+            assert "Smoke:" in result.stdout
+
+
+def test_run_bootstrap_dry_run_prints_prepare_resolution():
+    with runner.isolated_filesystem():
+        Path(".git").mkdir()
+        result = runner.invoke(app, ["run", "--dry-run", "--mode", "headless", "--goal", "speed up eval"])
+
+        assert result.exit_code == 0
+        assert "Workflow:" in result.stdout
+        assert "Bootstrap auto-prepare" in result.stdout
+        assert "Dry run" in result.stdout
 
 
 def test_start_without_git():

@@ -14,6 +14,7 @@ from textual.widgets import Collapsible, Input, OptionList, Static
 from textual.widgets._option_list import Option
 
 from open_researcher.tui.view_model import (
+    BootstrapSummary,
     ClaimItem,
     DocNavItem,
     EvidenceItem,
@@ -65,15 +66,22 @@ def _status_color(status: str) -> str:
     return {
         "running": C_INFO,
         "approved": C_SUCCESS,
+        "completed": C_SUCCESS,
+        "resolved": C_SUCCESS,
+        "cached": C_SUCCESS,
         "pending": C_DIM,
+        "disabled": C_DIM,
+        "skipped": C_DIM,
         "draft": C_WARNING,
         "needs_post_review": C_WARNING,
         "needs_repro": C_WARNING,
+        "unresolved": C_WARNING,
         "promoted": C_SUCCESS,
         "under_review": C_INFO,
         "discard": C_WARNING,
         "discarded": C_WARNING,
         "crash": C_ERROR,
+        "failed": C_ERROR,
         "rejected": C_ERROR,
         "downgraded": C_WARNING,
     }.get(value, C_DIM)
@@ -140,6 +148,7 @@ class StatsBar(Static):
 
         phase_badges = {
             "scouting": _chip("Scout", fg="#08111a", bg=C_PRIMARY),
+            "preparing": _chip("Prepare", fg="#08111a", bg=C_WARNING),
             "reviewing": _chip("Review", fg="#08111a", bg=C_WARNING),
             "experimenting": _chip("Research", fg="#08111a", bg=C_SUCCESS),
         }
@@ -205,6 +214,40 @@ class SessionChromeBar(Static):
         if chrome.graph_error:
             lines.append(f"[{C_CORAL}]Graph:[/] {escape(chrome.graph_error)}")
         self.chrome_text = "\n".join(lines)
+
+
+class BootstrapStatusPanel(Static):
+    """Repository prepare/bootstrap status."""
+
+    summary_text = reactive("", layout=True)
+
+    def render(self) -> str:
+        return self.summary_text or "[dim]Bootstrap state unavailable[/dim]"
+
+    def update_summary(self, summary: BootstrapSummary) -> None:
+        status_chip = _chip(summary.status.replace("_", " "), fg="#08111a", bg=_status_color(summary.status))
+        step_line = (
+            f"[{C_DIM}]install[/] {_chip(summary.install_status, fg='#08111a', bg=_status_color(summary.install_status))}  "
+            f"[{C_DIM}]data[/] {_chip(summary.data_status, fg='#08111a', bg=_status_color(summary.data_status))}  "
+            f"[{C_DIM}]smoke[/] {_chip(summary.smoke_status, fg='#08111a', bg=_status_color(summary.smoke_status))}"
+        )
+        lines = [
+            f"[bold {C_TEXT}]Repository Prepare[/]  {status_chip}",
+            f"[{C_DIM}]working dir[/] [{C_TEXT}]{escape(summary.working_dir)}[/]  "
+            f"[{C_DIM}]python[/] [{C_INFO}]{escape(summary.python_executable or 'unresolved')}[/]",
+            step_line,
+        ]
+        if summary.missing_paths:
+            lines.append(f"[{C_WARNING}]missing paths:[/] {escape(', '.join(summary.missing_paths))}")
+        if summary.unresolved:
+            for item in summary.unresolved:
+                lines.append(f"[{C_WARNING}]unresolved:[/] {escape(item)}")
+        if summary.errors:
+            for item in summary.errors:
+                lines.append(f"[{C_CORAL}]error:[/] {escape(item)}")
+        if summary.log_path:
+            lines.append(f"[{C_DIM}]log[/] {escape(summary.log_path)}")
+        self.summary_text = "\n".join(lines)
 
 
 class RoleActivityPanel(Static):
@@ -1052,6 +1095,15 @@ class ExperimentStatusPanel(Static):
             )
             return
 
+        if phase == "preparing":
+            detail = escape((activity or {}).get("detail", "Installing dependencies, preparing data, and running smoke."))
+            self.status_text = (
+                f"[bold {C_WARNING}]Repo Prepare[/]\n"
+                f"[{C_DIM}]Resolving environment, data, and smoke readiness before research starts.[/]\n"
+                f"[{C_TEXT}]{detail}[/]"
+            )
+            return
+
         if not activity:
             self.status_text = (
                 f"[bold {C_TEXT}]Execution Focus[/]  {_chip('IDLE', fg='#08111a', bg=C_DIM)}\n"
@@ -1313,6 +1365,7 @@ class DocViewer(Static):
 
     DOC_FILES = [
         "research_graph.md",
+        "bootstrap_state.md",
         "research_memory.md",
         "project-understanding.md",
         "literature.md",
@@ -1324,7 +1377,7 @@ class DocViewer(Static):
         "projected_backlog.md",
     ]
 
-    DYNAMIC_FILES = {"projected_backlog.md", "research_graph.md", "research_memory.md"}
+    DYNAMIC_FILES = {"projected_backlog.md", "research_graph.md", "research_memory.md", "bootstrap_state.md"}
     DEFAULT_FILE = "research_graph.md"
 
     def __init__(self, research_dir=None, **kwargs):
@@ -1375,6 +1428,8 @@ class DocViewer(Static):
                 return "# Projected Backlog\n\n*Error loading projected backlog.*\n"
         if filename == "research_graph.md":
             return self._render_json_markdown(title="Research Graph", source_file="research_graph.json")
+        if filename == "bootstrap_state.md":
+            return self._render_json_markdown(title="Bootstrap State", source_file="bootstrap_state.json")
         if filename == "research_memory.md":
             return self._render_json_markdown(title="Research Memory", source_file="research_memory.json")
         return ""
@@ -1397,6 +1452,15 @@ class DocViewer(Static):
                 f"- evidence: {len(payload.get('evidence', []))}",
                 f"- claim_updates: {len(payload.get('claim_updates', []))}",
             ]
+        elif source_file == "bootstrap_state.json":
+            steps = payload if isinstance(payload, dict) else {}
+            summary = [
+                f"- status: {steps.get('status', 'pending')}",
+                f"- working_dir: {steps.get('working_dir', '.')}",
+                f"- install: {steps.get('install', {}).get('status', 'pending') if isinstance(steps.get('install'), dict) else 'pending'}",
+                f"- data: {steps.get('data', {}).get('status', 'pending') if isinstance(steps.get('data'), dict) else 'pending'}",
+                f"- smoke: {steps.get('smoke', {}).get('status', 'pending') if isinstance(steps.get('smoke'), dict) else 'pending'}",
+            ]
         else:
             summary = [
                 f"- repo_type_priors: {len(payload.get('repo_type_priors', []))}",
@@ -1413,6 +1477,8 @@ class DocViewer(Static):
             path = self.research_dir / "idea_pool.json"
         elif filename == "research_graph.md":
             path = self.research_dir / "research_graph.json"
+        elif filename == "bootstrap_state.md":
+            path = self.research_dir / "bootstrap_state.json"
         elif filename == "research_memory.md":
             path = self.research_dir / "research_memory.json"
         else:

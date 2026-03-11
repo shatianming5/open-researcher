@@ -16,7 +16,7 @@ Use this goal to guide your analysis. Focus your strategy on achieving this obje
 - **Write**: `.research/literature.md` — related work and techniques
 - **Write**: `.research/research-strategy.md` — research direction, focus areas, constraints
 - **Write**: `.research/evaluation.md` — primary metric, evaluation command, baseline method
-- **Update**: `.research/config.yaml` — fill in `metrics.primary.name` and `metrics.primary.direction`
+- **Update**: `.research/config.yaml` — fill in `metrics.primary.*` and the `bootstrap` section
 - **Write**: `.research/activity.json` — update `scout_agent` key with your status
 
 ## Status Updates
@@ -73,14 +73,22 @@ Update status: `{"status": "strategizing", "detail": "defining research strategy
 1. Define the primary metric (name + direction: higher_is_better or lower_is_better)
 2. Define the evaluation command (how to measure the metric)
 3. Estimate reasonable experiment duration
-4. Write to `.research/evaluation.md`
-5. Update `.research/config.yaml`: set `metrics.primary.name` and `metrics.primary.direction`
-6. Update status: `{"status": "idle", "detail": "analysis complete"}`
+4. Determine how this repo should be prepared before experiments:
+   - `bootstrap.working_dir`
+   - `bootstrap.install_command`
+   - `bootstrap.data_command` if dataset/setup is needed
+   - `bootstrap.smoke_command` for a fast readiness check
+   - `bootstrap.expected_paths` if data/setup should materialize specific files
+   - `bootstrap.requires_gpu` if the repo is GPU-only
+5. Write to `.research/evaluation.md`
+6. Update `.research/config.yaml`: set `metrics.primary.*` and `bootstrap.*`
+7. Update status: `{"status": "idle", "detail": "analysis complete"}`
 
 ## Rules
 
 - Do NOT generate specific experiment ideas — that is the Research Manager's job
 - Do NOT modify code or run experiments
+- Bootstrap commands should be concrete and executable; prefer short local commands over prose
 - Always update `activity.json` before each action
 - Keep all outputs specific and actionable
 - If web search is unavailable, rely on codebase analysis alone

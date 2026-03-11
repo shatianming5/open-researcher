@@ -8,6 +8,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
+from open_researcher.bootstrap import resolve_bootstrap_plan
 from open_researcher.config import RESEARCH_PROTOCOL, load_config
 
 
@@ -67,8 +68,10 @@ def run_doctor(repo_path: Path) -> list[dict]:
     else:
         results.append({"check": "config.yaml", "status": "WARN", "detail": "File not found"})
 
+    cfg = None
     try:
-        protocol = load_config(research, strict=True).protocol
+        cfg = load_config(research, strict=True)
+        protocol = cfg.protocol
         if protocol == RESEARCH_PROTOCOL:
             results.append({"check": "research.protocol", "status": "OK", "detail": protocol})
         else:
@@ -80,6 +83,7 @@ def run_doctor(repo_path: Path) -> list[dict]:
                 }
             )
     except ValueError as exc:
+        cfg = None
         results.append({"check": "research.protocol", "status": "FAIL", "detail": str(exc)})
 
     # 4. results.tsv exists
@@ -175,7 +179,91 @@ def run_doctor(repo_path: Path) -> list[dict]:
     else:
         results.append({"check": "experiment_progress.json", "status": "WARN", "detail": "File not found"})
 
-    # 11. events.jsonl parseable with seq
+    # 11. bootstrap_state.json parseable
+    bootstrap_path = research / "bootstrap_state.json"
+    if bootstrap_path.exists():
+        bootstrap, error = _load_json_object(bootstrap_path)
+        if error is not None:
+            results.append({"check": "bootstrap_state.json", "status": "FAIL", "detail": error})
+        else:
+            field_error = None
+            for key in ("install", "data", "smoke"):
+                if not isinstance(bootstrap.get(key, {}), dict):
+                    field_error = f"{key} must be an object"
+                    break
+            if field_error is not None:
+                results.append({"check": "bootstrap_state.json", "status": "FAIL", "detail": field_error})
+            else:
+                results.append(
+                    {
+                        "check": "bootstrap_state.json",
+                        "status": "OK",
+                        "detail": f"status={bootstrap.get('status', 'pending')}",
+                    }
+                )
+    else:
+        results.append({"check": "bootstrap_state.json", "status": "WARN", "detail": "File not found"})
+
+    # 12. bootstrap resolution
+    if research.is_dir() and cfg is not None:
+        plan = resolve_bootstrap_plan(repo_path, research, cfg)
+        errors = plan.get("errors", [])
+        unresolved = plan.get("unresolved", [])
+        if errors:
+            results.append(
+                {
+                    "check": "bootstrap resolution",
+                    "status": "FAIL",
+                    "detail": "; ".join(str(item) for item in errors[:3]),
+                }
+            )
+        elif unresolved:
+            results.append(
+                {
+                    "check": "bootstrap resolution",
+                    "status": "WARN",
+                    "detail": "; ".join(str(item) for item in unresolved[:3]),
+                }
+            )
+        else:
+            detail = (
+                f"python={plan.get('python_env', {}).get('source', '')}, "
+                f"smoke={plan.get('smoke', {}).get('source', '') or 'explicit'}"
+            )
+            results.append({"check": "bootstrap resolution", "status": "OK", "detail": detail})
+
+        expected = plan.get("expected_path_status", [])
+        if expected:
+            missing = [item["path"] for item in expected if not item.get("exists")]
+            if missing:
+                results.append(
+                    {
+                        "check": "bootstrap expected paths",
+                        "status": "FAIL",
+                        "detail": ", ".join(missing),
+                    }
+                )
+            else:
+                results.append(
+                    {
+                        "check": "bootstrap expected paths",
+                        "status": "OK",
+                        "detail": f"{len(expected)} path(s) present",
+                    }
+                )
+        else:
+            results.append(
+                {
+                    "check": "bootstrap expected paths",
+                    "status": "WARN",
+                    "detail": "No expected paths configured",
+                }
+            )
+    else:
+        results.append({"check": "bootstrap resolution", "status": "WARN", "detail": "No .research/ config to inspect"})
+        results.append({"check": "bootstrap expected paths", "status": "WARN", "detail": "No .research/ config to inspect"})
+
+    # 13. events.jsonl parseable with seq
     events_path = research / "events.jsonl"
     if events_path.exists():
         try:
@@ -200,7 +288,7 @@ def run_doctor(repo_path: Path) -> list[dict]:
     else:
         results.append({"check": "events.jsonl", "status": "WARN", "detail": "File not found"})
 
-    # 12. Agent binaries on PATH
+    # 14. Agent binaries on PATH
     agents = ["claude", "codex", "aider", "opencode"]
     found = [a for a in agents if shutil.which(a)]
     missing = [a for a in agents if not shutil.which(a)]
@@ -213,7 +301,7 @@ def run_doctor(repo_path: Path) -> list[dict]:
     else:
         results.append({"check": "Agent binaries", "status": "WARN", "detail": "No agents found on PATH"})
 
-    # 13. Python >= 3.10
+    # 15. Python >= 3.10
     major, minor = sys.version_info[:2]
     if (major, minor) >= (3, 10):
         results.append({"check": "Python >= 3.10", "status": "OK", "detail": f"{major}.{minor}"})

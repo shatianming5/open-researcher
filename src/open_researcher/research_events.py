@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Callable, Literal, TypeAlias
 
-PhaseName = Literal["init", "scouting", "reviewing", "experimenting", "done"]
+PhaseName = Literal["init", "scouting", "preparing", "reviewing", "experimenting", "done"]
 LogLevel = Literal["info", "error"]
 
 
@@ -38,6 +38,40 @@ class ScoutFailed:
 @dataclass(slots=True)
 class ReviewAutoConfirmed:
     pass
+
+
+@dataclass(slots=True)
+class PrepareStarted:
+    repo_profile: str
+    working_dir: str
+    python_executable: str
+
+
+@dataclass(slots=True)
+class PrepareStepStarted:
+    step: str
+    command: str
+    source: str = ""
+
+
+@dataclass(slots=True)
+class PrepareStepCompleted:
+    step: str
+    status: str
+    log_path: str = ""
+    detail: str = ""
+
+
+@dataclass(slots=True)
+class PrepareCompleted:
+    status: str
+    unresolved: int = 0
+
+
+@dataclass(slots=True)
+class PrepareFailed:
+    step: str
+    detail: str
 
 
 @dataclass(slots=True)
@@ -170,6 +204,11 @@ ResearchEvent: TypeAlias = (
     | AgentOutput
     | ScoutCompleted
     | ScoutFailed
+    | PrepareStarted
+    | PrepareStepStarted
+    | PrepareStepCompleted
+    | PrepareCompleted
+    | PrepareFailed
     | ReviewAutoConfirmed
     | RoleFailed
     | ManagerCycleStarted
@@ -207,6 +246,16 @@ def event_name(event: ResearchEvent) -> str:
         return "scout_completed"
     if isinstance(event, ScoutFailed):
         return "scout_failed"
+    if isinstance(event, PrepareStarted):
+        return "prepare_started"
+    if isinstance(event, PrepareStepStarted):
+        return "prepare_step_started"
+    if isinstance(event, PrepareStepCompleted):
+        return "prepare_step_completed"
+    if isinstance(event, PrepareCompleted):
+        return "prepare_completed"
+    if isinstance(event, PrepareFailed):
+        return "prepare_failed"
     if isinstance(event, ReviewAutoConfirmed):
         return "auto_confirmed"
     if isinstance(event, RoleFailed):
@@ -258,6 +307,8 @@ def event_phase(event: ResearchEvent) -> PhaseName:
         return "init"
     if isinstance(event, (ScoutStarted, ScoutCompleted, ScoutFailed)):
         return "scouting"
+    if isinstance(event, (PrepareStarted, PrepareStepStarted, PrepareStepCompleted, PrepareCompleted, PrepareFailed)):
+        return "preparing"
     if isinstance(event, ReviewAutoConfirmed):
         return "reviewing"
     if isinstance(event, RoleFailed):
@@ -293,7 +344,10 @@ def event_phase(event: ResearchEvent) -> PhaseName:
 
 def event_level(event: ResearchEvent) -> LogLevel:
     """Return the default log level for an event."""
-    if isinstance(event, (ScoutFailed, RoleFailed, CrashLimitReached, ExperimentPreflightFailed, SessionFailed)):
+    if isinstance(
+        event,
+        (ScoutFailed, PrepareFailed, RoleFailed, CrashLimitReached, ExperimentPreflightFailed, SessionFailed),
+    ):
         return "error"
     return "info"
 
@@ -312,6 +366,29 @@ def event_payload(event: ResearchEvent) -> dict:
         return {"exit_code": event.exit_code}
     if isinstance(event, ScoutFailed):
         return {"exit_code": event.exit_code}
+    if isinstance(event, PrepareStarted):
+        return {
+            "repo_profile": event.repo_profile,
+            "working_dir": event.working_dir,
+            "python_executable": event.python_executable,
+        }
+    if isinstance(event, PrepareStepStarted):
+        return {
+            "step": event.step,
+            "command": event.command,
+            "source": event.source,
+        }
+    if isinstance(event, PrepareStepCompleted):
+        return {
+            "step": event.step,
+            "status": event.status,
+            "log_path": event.log_path,
+            "detail": event.detail,
+        }
+    if isinstance(event, PrepareCompleted):
+        return {"status": event.status, "unresolved": event.unresolved}
+    if isinstance(event, PrepareFailed):
+        return {"step": event.step, "detail": event.detail}
     if isinstance(event, RoleFailed):
         return {"role": event.role, "exit_code": event.exit_code}
     if isinstance(event, ManagerCycleStarted):

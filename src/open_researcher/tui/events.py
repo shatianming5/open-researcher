@@ -25,6 +25,11 @@ from open_researcher.research_events import (
     MemoryUpdated,
     NoPendingIdeas,
     PhaseTransition,
+    PrepareCompleted,
+    PrepareFailed,
+    PrepareStarted,
+    PrepareStepCompleted,
+    PrepareStepStarted,
     ReproductionRequested,
     ResearchEvent,
     RoleFailed,
@@ -129,6 +134,45 @@ class TUIEventRenderer:
         if isinstance(event, ScoutStarted):
             self._set_phase("scouting")
             self._set_trace("Scout agent | repository reconnaissance")
+            return
+
+        if isinstance(event, PrepareStarted):
+            self._set_phase("preparing")
+            self._set_trace(
+                f"Prepare | {event.repo_profile} | {event.working_dir} | {event.python_executable}"
+            )
+            self._safe_output(
+                f"[prepare] Starting repo prepare ({event.repo_profile}) in {event.working_dir}."
+            )
+            return
+
+        if isinstance(event, PrepareStepStarted):
+            self._set_phase("preparing")
+            self._set_trace(f"Prepare {event.step} | {event.source or 'auto-detected'}")
+            self._safe_output(
+                f"[prepare] {event.step} -> {event.command}"
+            )
+            return
+
+        if isinstance(event, PrepareStepCompleted):
+            self._set_trace(f"Prepare {event.step} complete | {event.status}")
+            suffix = f" ({event.detail})" if event.detail else ""
+            self._safe_output(
+                f"[prepare] {event.step} completed [{event.status}].{suffix}"
+            )
+            return
+
+        if isinstance(event, PrepareCompleted):
+            self._set_trace(f"Prepare complete | {event.status}")
+            self._safe_output(
+                f"[prepare] Repo prepare finished [{event.status}]"
+                + (f" with {event.unresolved} unresolved item(s)." if event.unresolved else ".")
+            )
+            return
+
+        if isinstance(event, PrepareFailed):
+            self._set_trace(f"Prepare failed | {event.step}")
+            self._safe_output(f"[prepare] {event.step} failed: {event.detail}")
             return
 
         if isinstance(event, ManagerCycleStarted):

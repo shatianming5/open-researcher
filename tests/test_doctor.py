@@ -15,7 +15,13 @@ def valid_repo(tmp_path):
     research = tmp_path / ".research"
     research.mkdir()
     (research / "config.yaml").write_text(
-        yaml.dump({"mode": "autonomous", "metrics": {"primary": {"name": "acc", "direction": "maximize"}}})
+        yaml.dump(
+            {
+                "mode": "autonomous",
+                "bootstrap": {"auto_prepare": False},
+                "metrics": {"primary": {"name": "acc", "direction": "maximize"}},
+            }
+        )
     )
     (research / "results.tsv").write_text("timestamp\tcommit\tmetric\n")
     (research / "research_graph.json").write_text(
@@ -47,6 +53,22 @@ def valid_repo(tmp_path):
     (research / "activity.json").write_text("{}")
     (research / "events.jsonl").write_text("")
     (research / "experiment_progress.json").write_text(json.dumps({"phase": "init"}))
+    (research / "bootstrap_state.json").write_text(
+        json.dumps(
+            {
+                "version": "research-v1",
+                "status": "disabled",
+                "repo_profile": {"kind": "python", "python_project": True, "manifests": []},
+                "working_dir": ".",
+                "python_env": {"executable": "", "source": ""},
+                "install": {},
+                "data": {},
+                "smoke": {},
+                "errors": [],
+                "unresolved": [],
+            }
+        )
+    )
     for name in ["scout_program.md", "manager_program.md", "critic_program.md", "experiment_program.md"]:
         (research / name).write_text(f"# {name}\n")
     return tmp_path
@@ -150,7 +172,7 @@ def test_doctor_events_require_monotonic_positive_seq(valid_repo):
 def test_doctor_returns_all_checks(valid_repo):
     """Doctor should return the expanded research-v1 health surface."""
     checks = run_doctor(valid_repo)
-    assert len(checks) == 14
+    assert len(checks) == 17
     names = [c["check"] for c in checks]
     assert "Git repository" in names
     assert ".research/ directory" in names
@@ -163,6 +185,9 @@ def test_doctor_returns_all_checks(valid_repo):
     assert "activity.json" in names
     assert "role programs" in names
     assert "experiment_progress.json" in names
+    assert "bootstrap_state.json" in names
+    assert "bootstrap resolution" in names
+    assert "bootstrap expected paths" in names
     assert "events.jsonl" in names
     assert "Agent binaries" in names
     assert "Python >= 3.10" in names

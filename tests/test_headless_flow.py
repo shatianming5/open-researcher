@@ -17,6 +17,14 @@ def _make_git_repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
+def _set_bootstrap_auto_prepare(repo_path: Path, enabled: bool) -> None:
+    config_path = repo_path / ".research" / "config.yaml"
+    payload = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    payload.setdefault("bootstrap", {})
+    payload["bootstrap"]["auto_prepare"] = enabled
+    config_path.write_text(yaml.dump(payload), encoding="utf-8")
+
+
 def test_headless_scout_phase(tmp_path):
     """Headless mode should run scout agent and emit structured events."""
     _make_git_repo(tmp_path)
@@ -53,8 +61,13 @@ def test_headless_max_experiments_limit(tmp_path):
 
     scout_agent = MagicMock()
     scout_agent.name = "scout"
-    scout_agent.run.return_value = 0
     scout_agent.terminate = MagicMock()
+
+    def scout_run(workdir, on_output=None, program_file="program.md", env=None):
+        _set_bootstrap_auto_prepare(workdir, False)
+        return 0
+
+    scout_agent.run.side_effect = scout_run
 
     manager_agent = MagicMock()
     manager_agent.name = "manager"
@@ -150,8 +163,14 @@ def test_headless_empty_frontier_completes_session(tmp_path):
 
     mock_agent = MagicMock()
     mock_agent.name = "mock-agent"
-    mock_agent.run.return_value = 0
     mock_agent.terminate = MagicMock()
+
+    def mock_run(workdir, on_output=None, program_file="program.md", env=None):
+        if program_file == "scout_program.md":
+            _set_bootstrap_auto_prepare(workdir, False)
+        return 0
+
+    mock_agent.run.side_effect = mock_run
 
     buf = StringIO()
 
@@ -215,6 +234,7 @@ def test_headless_research_v1_emits_manager_and_critic_events(tmp_path):
     from open_researcher.init_cmd import do_init
 
     do_init(tmp_path, tag="test")
+    _set_bootstrap_auto_prepare(tmp_path, False)
     config_path = tmp_path / ".research" / "config.yaml"
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     config["research"]["protocol"] = "research-v1"
@@ -222,8 +242,13 @@ def test_headless_research_v1_emits_manager_and_critic_events(tmp_path):
 
     scout_agent = MagicMock()
     scout_agent.name = "scout"
-    scout_agent.run.return_value = 0
     scout_agent.terminate = MagicMock()
+
+    def scout_run(workdir, on_output=None, program_file="program.md", env=None):
+        _set_bootstrap_auto_prepare(workdir, False)
+        return 0
+
+    scout_agent.run.side_effect = scout_run
 
     manager_agent = MagicMock()
     manager_agent.name = "manager"
@@ -357,8 +382,13 @@ def test_headless_manager_failure_emits_session_failed(tmp_path):
 
     scout_agent = MagicMock()
     scout_agent.name = "scout"
-    scout_agent.run.return_value = 0
     scout_agent.terminate = MagicMock()
+
+    def scout_run(workdir, on_output=None, program_file="program.md", env=None):
+        _set_bootstrap_auto_prepare(workdir, False)
+        return 0
+
+    scout_agent.run.side_effect = scout_run
 
     manager_agent = MagicMock()
     manager_agent.name = "manager"
@@ -485,6 +515,7 @@ def test_do_run_headless_continues_existing_workspace_without_scout(tmp_path):
     from open_researcher.init_cmd import do_init
 
     do_init(tmp_path, tag="test")
+    _set_bootstrap_auto_prepare(tmp_path, False)
     (tmp_path / ".research" / "goal.md").write_text("# Research Goal\n\nContinue existing run.\n", encoding="utf-8")
 
     manager_agent = MagicMock()

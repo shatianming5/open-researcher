@@ -47,6 +47,7 @@ def _detect_phase(research: Path) -> int:
     lit = research / "literature.md"
     ev = research / "evaluation.md"
     results = research / "results.tsv"
+    bootstrap = _load_bootstrap_state(research)
 
     # Phase 1: project understanding not filled
     if not _has_real_content(pu):
@@ -60,15 +61,19 @@ def _detect_phase(research: Path) -> int:
     if not _has_real_content(ev):
         return 3
 
-    # Phase 4/5: check results
+    # Phase 4: repo prepare/bootstrap
+    if bootstrap and bootstrap.get("status") not in {"completed", "disabled"}:
+        return 4
+
+    # Phase 5/6: check results
     if results.exists():
         with results.open() as f:
             rows = list(csv.DictReader(f, delimiter="\t"))
         if len(rows) == 0:
-            return 4
-        return 5
+            return 5
+        return 6
 
-    return 4
+    return 5
 
 
 def _safe_list_field(payload: dict, key: str) -> list:
@@ -120,7 +125,63 @@ def _load_graph_state(research: Path) -> dict | None:
     }
 
 
+def _load_bootstrap_state(research: Path) -> dict | None:
+    path = research / "bootstrap_state.json"
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return {"error": f"Parse error: {exc}"}
+    if not isinstance(payload, dict):
+        return {"error": "top-level JSON must be an object"}
+    steps = {}
+    for step_name in ("install", "data", "smoke"):
+        value = payload.get(step_name, {})
+        if not isinstance(value, dict):
+            return {"error": f"{step_name} must be an object"}
+        steps[step_name] = {
+            "status": str(value.get("status", "")).strip(),
+            "command": str(value.get("command", "")).strip(),
+            "source": str(value.get("source", "")).strip(),
+        }
+    errors = payload.get("errors", [])
+    if not isinstance(errors, list):
+        return {"error": "errors must be a list"}
+    unresolved = payload.get("unresolved", [])
+    if not isinstance(unresolved, list):
+        return {"error": "unresolved must be a list"}
+    expected_status = payload.get("expected_path_status", [])
+    if not isinstance(expected_status, list):
+        return {"error": "expected_path_status must be a list"}
+    return {
+        "status": str(payload.get("status", "")).strip() or "pending",
+        "working_dir": str(payload.get("working_dir", ".") or "."),
+        "python_executable": str(payload.get("python_env", {}).get("executable", "")).strip()
+        if isinstance(payload.get("python_env"), dict)
+        else "",
+        "requires_gpu": bool(payload.get("requires_gpu", False)),
+        "steps": steps,
+        "errors": [str(item) for item in errors],
+        "unresolved": [str(item) for item in unresolved],
+        "expected_path_status": [item for item in expected_status if isinstance(item, dict)],
+        "log_path": str(payload.get("smoke", {}).get("log_path", "")).strip()
+        if isinstance(payload.get("smoke"), dict)
+        else "",
+    }
+
+
 def _research_phase_label(state: dict) -> str:
+    bootstrap = state.get("bootstrap")
+    if isinstance(bootstrap, dict) and bootstrap:
+        status = str(bootstrap.get("status", "")).strip()
+        if status in {"pending", "resolved", "running"}:
+            return "Prepare: Environment / Data / Smoke"
+        if status == "failed":
+            return "Prepare: Failed"
+        if status == "unresolved":
+            return "Prepare: Needs Bootstrap Overrides"
+
     graph = state.get("graph")
     if not graph:
         return PHASE_NAMES.get(state["phase"], "unknown")
@@ -158,6 +219,7 @@ def parse_research_state(repo_path: Path) -> dict:
     state["manager_batch_size"] = cfg.manager_batch_size
     state["config_error"] = config_error
     state["graph"] = _load_graph_state(research)
+    state["bootstrap"] = _load_bootstrap_state(research)
 
     # Parse results
     results_path = research / "results.tsv"
@@ -213,8 +275,9 @@ PHASE_NAMES = {
     1: "Phase 1: Understand Project",
     2: "Phase 2: Research Related Work",
     3: "Phase 3: Design Evaluation",
-    4: "Phase 4: Establish Baseline",
-    5: "Phase 5: Experiment Loop",
+    4: "Phase 4: Prepare Repository",
+    5: "Phase 5: Establish Baseline",
+    6: "Phase 6: Experiment Loop",
 }
 
 SPARK_CHARS = "\u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588"
@@ -277,6 +340,40 @@ def print_status(repo_path: Path, sparkline: bool = False) -> None:
                 f"Post-review: {counts.get('needs_post_review', 0)}  "
                 f"Needs repro: {counts.get('needs_repro', 0)}"
             )
+        lines.append("")
+
+    bootstrap = state.get("bootstrap")
+    if bootstrap:
+        if bootstrap.get("error"):
+            lines.append(f"  Bootstrap Error: {bootstrap['error']}")
+        else:
+            lines.append("  Bootstrap:")
+            lines.append(
+                f"    Status: {bootstrap.get('status', 'unknown')}  "
+                f"Working dir: {bootstrap.get('working_dir', '.')}  "
+                f"Python: {bootstrap.get('python_executable', '') or 'unresolved'}"
+            )
+            step_bits = []
+            for step_name in ("install", "data", "smoke"):
+                step = bootstrap.get("steps", {}).get(step_name, {})
+                step_bits.append(f"{step_name}={step.get('status', 'unknown')}")
+            lines.append("    " + "  ".join(step_bits))
+            if bootstrap.get("errors"):
+                lines.append("    Errors:")
+                for item in bootstrap["errors"][:3]:
+                    lines.append(f"      - {item}")
+            if bootstrap.get("unresolved"):
+                lines.append("    Unresolved:")
+                for item in bootstrap["unresolved"][:3]:
+                    lines.append(f"      - {item}")
+            expected_status = bootstrap.get("expected_path_status", [])
+            missing_paths = [item.get("path", "") for item in expected_status if not item.get("exists")]
+            if missing_paths:
+                lines.append("    Missing expected paths:")
+                for item in missing_paths[:3]:
+                    lines.append(f"      - {item}")
+            if bootstrap.get("log_path"):
+                lines.append(f"    Log: {bootstrap['log_path']}")
         lines.append("")
 
     if state["total"] > 0:

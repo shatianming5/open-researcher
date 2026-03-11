@@ -29,6 +29,16 @@ environment: |
   # Remote: ssh user@host "cd /path && ..."
   # Docker: docker exec container_name ...
 
+bootstrap:
+  auto_prepare: true         # run install/data/smoke automatically before review/runtime
+  working_dir: "."           # relative to repo root
+  python: ""                 # optional explicit Python executable
+  install_command: ""        # optional explicit dependency install command
+  data_command: ""           # optional explicit dataset/setup command
+  smoke_command: ""          # optional explicit readiness smoke/eval command
+  expected_paths: []         # files/dirs expected after data/setup, relative to repo root
+  requires_gpu: false        # fail prepare if no GPU is present
+
 research:
   web_search: true          # let agent use web search if available
   search_interval: 5        # refresh ideas every N experiments
