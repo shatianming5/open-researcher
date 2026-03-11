@@ -92,14 +92,10 @@ class FailureMemoryPlugin:
         failure_class = classify_failure(idea_description)
         ranked_fixes = self.ledger.rank_fixes(failure_class)
         ranked_fix_actions = [
-            str(item.get("fix_action", "")).strip()
-            for item in ranked_fixes
-            if str(item.get("fix_action", "")).strip()
+            str(item.get("fix_action", "")).strip() for item in ranked_fixes if str(item.get("fix_action", "")).strip()
         ]
         first_fix_action = ranked_fix_actions[0] if ranked_fix_actions else "generate_new_plan"
-        log_lines = [
-            f"[{worker_id}] Memory policy {MEMORY_POLICY}: first remediation action {first_fix_action}"
-        ]
+        log_lines = [f"[{worker_id}] Memory policy {MEMORY_POLICY}: first remediation action {first_fix_action}"]
         return FailureMemoryContext(
             failure_class=failure_class,
             ranked_fix_actions=ranked_fix_actions[:3],
@@ -171,9 +167,7 @@ def build_default_worker_plugins(
     """Build the default research-v1 worker runtime plugins."""
     return WorkerRuntimePlugins(
         gpu_allocator=GPUAllocatorPlugin(gpu_manager) if gpu_manager is not None else None,
-        failure_memory=FailureMemoryPlugin(
-            FailureMemoryLedger(research_dir / "failure_memory_ledger.json")
-        ),
+        failure_memory=FailureMemoryPlugin(FailureMemoryLedger(research_dir / "failure_memory_ledger.json")),
         workspace_isolation=WorktreeIsolationPlugin(repo_path),
     )
 

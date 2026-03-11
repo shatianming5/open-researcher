@@ -68,6 +68,7 @@ def test_demo_cli_help():
     """Demo command is registered and shows in help."""
     result = subprocess.run(
         ["python3", "-m", "open_researcher.cli", "--help"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     assert "demo" in result.stdout

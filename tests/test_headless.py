@@ -38,8 +38,15 @@ def test_emit_extra_kwargs():
     """Extra keyword arguments appear in the JSON record."""
     buf = StringIO()
     logger = HeadlessLogger(stream=buf)
-    logger.emit("info", "experimenting", "experiment_completed",
-                idea="idea-002", metric_value=0.95, experiment_num=3, max_experiments=10)
+    logger.emit(
+        "info",
+        "experimenting",
+        "experiment_completed",
+        idea="idea-002",
+        metric_value=0.95,
+        experiment_num=3,
+        max_experiments=10,
+    )
     record = json.loads(buf.getvalue().strip())
     assert record["metric_value"] == 0.95
     assert record["experiment_num"] == 3

@@ -76,9 +76,7 @@ class WorkerManager:
             slots = [None] * n_workers
 
         for i, gpu in enumerate(slots):
-            t = threading.Thread(
-                target=self._worker_loop, args=(i, gpu), daemon=True
-            )
+            t = threading.Thread(target=self._worker_loop, args=(i, gpu), daemon=True)
             t.start()
             self._workers.append(t)
         self.on_output(f"[system] Started {len(slots)} worker(s)")
@@ -140,7 +138,7 @@ class WorkerManager:
         expected_frontier_id = str(idea.get("frontier_id", "")).strip()
         if not expected_idea_id:
             return None
-        for row in reversed(rows[max(results_before_count, 0):]):
+        for row in reversed(rows[max(results_before_count, 0) :]):
             secondary = self._parse_secondary_metrics(row)
             trace = secondary.get("_open_researcher_trace", {})
             if not isinstance(trace, dict):
@@ -206,9 +204,7 @@ class WorkerManager:
         allocation = None
         try:
             allocation = (
-                self._plugins.gpu_allocator.allocate(wid, gpu)
-                if self._plugins.gpu_allocator is not None
-                else None
+                self._plugins.gpu_allocator.allocate(wid, gpu) if self._plugins.gpu_allocator is not None else None
             )
             gpu_env = allocation.env if allocation is not None else {}
             for line in allocation.log_lines if allocation is not None else []:
@@ -241,9 +237,7 @@ class WorkerManager:
                 notify_finished = True
                 try:
                     if not self._wait_until_unpaused():
-                        applied = self.idea_pool.update_status(
-                            idea["id"], "pending", claim_token=claim_token or None
-                        )
+                        applied = self.idea_pool.update_status(idea["id"], "pending", claim_token=claim_token or None)
                         if not applied:
                             self.on_output(f"[{wid}] Stop requested while pausing; claim release skipped")
                         notify_finished = False
@@ -251,9 +245,7 @@ class WorkerManager:
 
                     if consume_skip_current(self.research_dir / "control.json", source=f"{wid}:runtime"):
                         self.on_output(f"[{wid}] Consumed skip_current for {idea['id']}")
-                        applied = self.idea_pool.update_status(
-                            idea["id"], "skipped", claim_token=claim_token or None
-                        )
+                        applied = self.idea_pool.update_status(idea["id"], "skipped", claim_token=claim_token or None)
                         if not applied:
                             self.on_output(
                                 f"[{wid}] Claim race detected for {idea['id']}; skip write suppressed, cleanup applied"
@@ -266,12 +258,8 @@ class WorkerManager:
                         if self._plugins.failure_memory is not None
                         else None
                     )
-                    failure_class = (
-                        memory_context.failure_class if memory_context is not None else "general_failure"
-                    )
-                    ranked_fix_actions = (
-                        memory_context.ranked_fix_actions if memory_context is not None else []
-                    )
+                    failure_class = memory_context.failure_class if memory_context is not None else "general_failure"
+                    ranked_fix_actions = memory_context.ranked_fix_actions if memory_context is not None else []
                     first_fix_action = (
                         memory_context.first_fix_action if memory_context is not None else "generate_new_plan"
                     )
@@ -308,9 +296,7 @@ class WorkerManager:
                     def _on_timeout() -> None:
                         nonlocal timed_out
                         timed_out = True
-                        self.on_output(
-                            f"[{wid}] Experiment timeout after {self._timeout_seconds}s; terminating agent"
-                        )
+                        self.on_output(f"[{wid}] Experiment timeout after {self._timeout_seconds}s; terminating agent")
                         try:
                             agent.terminate()
                         except Exception:
@@ -367,7 +353,8 @@ class WorkerManager:
                                     )
                                     if not applied:
                                         self.on_output(
-                                            f"[{wid}] Claim race detected for {idea['id']}; winner already finalized, cleanup applied"
+                                            f"[{wid}] Claim race detected for {idea['id']}; "
+                                            "winner already finalized, cleanup applied"
                                         )
                             elif self._terminal_result_present(current_state):
                                 pass
@@ -379,11 +366,13 @@ class WorkerManager:
                                 )
                                 if reapplied:
                                     self.on_output(
-                                        f"[{wid}] No recorded result for {idea['id']} despite zero exit; released claim back to pending"
+                                        f"[{wid}] No recorded result for {idea['id']} despite zero exit; "
+                                        "released claim back to pending"
                                     )
                                 else:
                                     self.on_output(
-                                        f"[{wid}] Claim race detected for {idea['id']}; pending release suppressed, cleanup applied"
+                                        f"[{wid}] Claim race detected for {idea['id']}; "
+                                        "pending release suppressed, cleanup applied"
                                     )
                                 if timed_out:
                                     run_code = 124
@@ -396,7 +385,8 @@ class WorkerManager:
                             )
                             if not applied:
                                 self.on_output(
-                                    f"[{wid}] Claim race detected for {idea['id']}; winner already finalized, cleanup applied"
+                                    f"[{wid}] Claim race detected for {idea['id']}; "
+                                    "winner already finalized, cleanup applied"
                                 )
                     else:
                         if not self._terminal_result_present(current_state):
@@ -405,13 +395,12 @@ class WorkerManager:
                             )
                             if not applied:
                                 self.on_output(
-                                    f"[{wid}] Claim race detected for {idea['id']}; skip write suppressed, cleanup applied"
+                                    f"[{wid}] Claim race detected for {idea['id']}; "
+                                    "skip write suppressed, cleanup applied"
                                 )
                 except Exception as exc:
                     self.on_output(f"[{wid}] Error: {exc}")
-                    applied = self.idea_pool.update_status(
-                        idea["id"], "skipped", claim_token=claim_token or None
-                    )
+                    applied = self.idea_pool.update_status(idea["id"], "skipped", claim_token=claim_token or None)
                     if not applied:
                         self.on_output(
                             f"[{wid}] Claim race detected for {idea['id']}; error skip suppressed, cleanup applied"
@@ -447,8 +436,6 @@ class WorkerManager:
             logger.debug("Fatal worker loop error", exc_info=True)
             self.stop()
         finally:
-            self._activity.update_worker(
-                "experiment_agent", wid, status="idle"
-            )
+            self._activity.update_worker("experiment_agent", wid, status="idle")
             if self._plugins.gpu_allocator is not None and allocation is not None:
                 self._plugins.gpu_allocator.release(allocation)

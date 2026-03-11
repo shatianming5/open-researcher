@@ -42,6 +42,7 @@ class ActivityMonitor:
 
     def update_worker(self, agent_key: str, worker_id: str, **kwargs) -> None:
         """Update or add a worker entry within an agent's activity."""
+
         def _do(data):
             entry = data.get(agent_key, {})
             workers = entry.get("workers", [])
@@ -63,6 +64,7 @@ class ActivityMonitor:
 
     def remove_worker(self, agent_key: str, worker_id: str) -> None:
         """Remove a worker entry."""
+
         def _do(data):
             entry = data.get(agent_key, {})
             workers = entry.get("workers", [])

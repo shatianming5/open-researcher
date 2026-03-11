@@ -101,9 +101,7 @@ def test_ideas_add(research_dir):
 
 def test_ideas_add_with_options(research_dir):
     """Mutation commands stay disabled even when options are provided."""
-    result = runner.invoke(
-        app, ["ideas", "add", "New loss function", "--category", "loss", "--priority", "2"]
-    )
+    result = runner.invoke(app, ["ideas", "add", "New loss function", "--category", "loss", "--priority", "2"])
     assert result.exit_code == 1
     assert "read-only projected backlog" in _combined_output(result)
 

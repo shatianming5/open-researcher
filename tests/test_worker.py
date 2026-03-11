@@ -35,18 +35,45 @@ def test_worker_manager_processes_ideas():
         research = _make_research_dir(tmp_path)
 
         ideas = [
-            {"id": "idea-001", "description": "Test idea 1", "status": "pending",
-             "priority": 1, "claimed_by": None, "assigned_experiment": None,
-             "result": None, "source": "original", "category": "general",
-             "gpu_hint": "auto", "created_at": "2026-01-01T00:00:00"},
-            {"id": "idea-002", "description": "Test idea 2", "status": "pending",
-             "priority": 2, "claimed_by": None, "assigned_experiment": None,
-             "result": None, "source": "original", "category": "general",
-             "gpu_hint": "auto", "created_at": "2026-01-01T00:00:00"},
-            {"id": "idea-003", "description": "Test idea 3", "status": "pending",
-             "priority": 3, "claimed_by": None, "assigned_experiment": None,
-             "result": None, "source": "original", "category": "general",
-             "gpu_hint": "auto", "created_at": "2026-01-01T00:00:00"},
+            {
+                "id": "idea-001",
+                "description": "Test idea 1",
+                "status": "pending",
+                "priority": 1,
+                "claimed_by": None,
+                "assigned_experiment": None,
+                "result": None,
+                "source": "original",
+                "category": "general",
+                "gpu_hint": "auto",
+                "created_at": "2026-01-01T00:00:00",
+            },
+            {
+                "id": "idea-002",
+                "description": "Test idea 2",
+                "status": "pending",
+                "priority": 2,
+                "claimed_by": None,
+                "assigned_experiment": None,
+                "result": None,
+                "source": "original",
+                "category": "general",
+                "gpu_hint": "auto",
+                "created_at": "2026-01-01T00:00:00",
+            },
+            {
+                "id": "idea-003",
+                "description": "Test idea 3",
+                "status": "pending",
+                "priority": 3,
+                "claimed_by": None,
+                "assigned_experiment": None,
+                "result": None,
+                "source": "original",
+                "category": "general",
+                "gpu_hint": "auto",
+                "created_at": "2026-01-01T00:00:00",
+            },
         ]
         idea_pool = _make_idea_pool(research, ideas)
 
@@ -134,10 +161,19 @@ def test_worker_manager_handles_agent_failure():
         research = _make_research_dir(tmp_path)
 
         ideas = [
-            {"id": "idea-001", "description": "Will fail", "status": "pending",
-             "priority": 1, "claimed_by": None, "assigned_experiment": None,
-             "result": None, "source": "original", "category": "general",
-             "gpu_hint": "auto", "created_at": "2026-01-01T00:00:00"},
+            {
+                "id": "idea-001",
+                "description": "Will fail",
+                "status": "pending",
+                "priority": 1,
+                "claimed_by": None,
+                "assigned_experiment": None,
+                "result": None,
+                "source": "original",
+                "category": "general",
+                "gpu_hint": "auto",
+                "created_at": "2026-01-01T00:00:00",
+            },
         ]
         idea_pool = _make_idea_pool(research, ideas)
 
@@ -177,10 +213,19 @@ def test_worker_manager_handles_agent_exception():
         research = _make_research_dir(tmp_path)
 
         ideas = [
-            {"id": "idea-001", "description": "Will crash", "status": "pending",
-             "priority": 1, "claimed_by": None, "assigned_experiment": None,
-             "result": None, "source": "original", "category": "general",
-             "gpu_hint": "auto", "created_at": "2026-01-01T00:00:00"},
+            {
+                "id": "idea-001",
+                "description": "Will crash",
+                "status": "pending",
+                "priority": 1,
+                "claimed_by": None,
+                "assigned_experiment": None,
+                "result": None,
+                "source": "original",
+                "category": "general",
+                "gpu_hint": "auto",
+                "created_at": "2026-01-01T00:00:00",
+            },
         ]
         idea_pool = _make_idea_pool(research, ideas)
 
@@ -220,10 +265,19 @@ def test_worker_manager_stop_signal():
 
         # Create many ideas so workers don't run out
         ideas = [
-            {"id": f"idea-{i:03d}", "description": f"Idea {i}", "status": "pending",
-             "priority": i, "claimed_by": None, "assigned_experiment": None,
-             "result": None, "source": "original", "category": "general",
-             "gpu_hint": "auto", "created_at": "2026-01-01T00:00:00"}
+            {
+                "id": f"idea-{i:03d}",
+                "description": f"Idea {i}",
+                "status": "pending",
+                "priority": i,
+                "claimed_by": None,
+                "assigned_experiment": None,
+                "result": None,
+                "source": "original",
+                "category": "general",
+                "gpu_hint": "auto",
+                "created_at": "2026-01-01T00:00:00",
+            }
             for i in range(1, 20)
         ]
         idea_pool = _make_idea_pool(research, ideas)
@@ -379,10 +433,19 @@ def test_worker_manager_can_disable_advanced_plugins():
         research = _make_research_dir(tmp_path)
 
         ideas = [
-            {"id": "idea-001", "description": "No plugins", "status": "pending",
-             "priority": 1, "claimed_by": None, "assigned_experiment": None,
-             "result": None, "source": "original", "category": "general",
-             "gpu_hint": "auto", "created_at": "2026-01-01T00:00:00"},
+            {
+                "id": "idea-001",
+                "description": "No plugins",
+                "status": "pending",
+                "priority": 1,
+                "claimed_by": None,
+                "assigned_experiment": None,
+                "result": None,
+                "source": "original",
+                "category": "general",
+                "gpu_hint": "auto",
+                "created_at": "2026-01-01T00:00:00",
+            },
         ]
         idea_pool = _make_idea_pool(research, ideas)
         workdirs_used = []

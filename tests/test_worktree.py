@@ -9,8 +9,7 @@ from unittest.mock import MagicMock
 
 from open_researcher.idea_pool import IdeaPool
 from open_researcher.storage import atomic_write_json
-from open_researcher.worktree import create_worktree, remove_worktree
-from open_researcher.worktree import worktrees_root
+from open_researcher.worktree import create_worktree, remove_worktree, worktrees_root
 
 
 def _init_git_repo(path: Path) -> None:
@@ -18,18 +17,24 @@ def _init_git_repo(path: Path) -> None:
     subprocess.run(["git", "init"], cwd=str(path), capture_output=True, check=True)
     subprocess.run(
         ["git", "config", "user.email", "test@test.com"],
-        cwd=str(path), capture_output=True, check=True,
+        cwd=str(path),
+        capture_output=True,
+        check=True,
     )
     subprocess.run(
         ["git", "config", "user.name", "Test"],
-        cwd=str(path), capture_output=True, check=True,
+        cwd=str(path),
+        capture_output=True,
+        check=True,
     )
     # Create a file and commit
     (path / "hello.py").write_text("print('hello')\n")
     subprocess.run(["git", "add", "."], cwd=str(path), capture_output=True, check=True)
     subprocess.run(
         ["git", "commit", "-m", "initial"],
-        cwd=str(path), capture_output=True, check=True,
+        cwd=str(path),
+        capture_output=True,
+        check=True,
     )
 
 
@@ -170,10 +175,19 @@ def test_worker_uses_worktree_isolation():
         from open_researcher.worker import WorkerManager
 
         ideas = [
-            {"id": "idea-001", "description": "Test idea", "status": "pending",
-             "priority": 1, "claimed_by": None, "assigned_experiment": None,
-             "result": None, "source": "original", "category": "general",
-             "gpu_hint": "auto", "created_at": "2026-01-01T00:00:00"},
+            {
+                "id": "idea-001",
+                "description": "Test idea",
+                "status": "pending",
+                "priority": 1,
+                "claimed_by": None,
+                "assigned_experiment": None,
+                "result": None,
+                "source": "original",
+                "category": "general",
+                "gpu_hint": "auto",
+                "created_at": "2026-01-01T00:00:00",
+            },
         ]
         pool_path = research / "idea_pool.json"
         pool_path.write_text(json.dumps({"ideas": ideas}, indent=2))

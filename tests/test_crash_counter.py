@@ -8,7 +8,7 @@ def test_crash_counter_triggers_at_limit():
     cc = CrashCounter(max_crashes=3)
     assert cc.record("crash") is False  # 1st crash
     assert cc.record("crash") is False  # 2nd crash
-    assert cc.record("crash") is True   # 3rd crash -- limit reached
+    assert cc.record("crash") is True  # 3rd crash -- limit reached
 
 
 def test_crash_counter_resets_on_success():
@@ -21,7 +21,7 @@ def test_crash_counter_resets_on_success():
     # After reset, need 3 more crashes to trigger
     assert cc.record("crash") is False  # 1
     assert cc.record("crash") is False  # 2
-    assert cc.record("crash") is True   # 3 -- limit reached
+    assert cc.record("crash") is True  # 3 -- limit reached
 
 
 def test_crash_counter_reset_method():

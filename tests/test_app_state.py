@@ -16,7 +16,7 @@ def test_app_state_default():
         research = tmp_path / ".research"
         research.mkdir()
         (research / "idea_pool.json").write_text('{"ideas": []}')
-        (research / "activity.json").write_text('{}')
+        (research / "activity.json").write_text("{}")
 
         app = ResearchApp(tmp_path)
         assert app.app_phase == "experimenting"
@@ -31,7 +31,7 @@ def test_app_state_scouting():
         research = tmp_path / ".research"
         research.mkdir()
         (research / "idea_pool.json").write_text('{"ideas": []}')
-        (research / "activity.json").write_text('{}')
+        (research / "activity.json").write_text("{}")
 
         app = ResearchApp(tmp_path, initial_phase="scouting")
         assert app.app_phase == "scouting"
@@ -45,7 +45,7 @@ def test_app_bindings_expose_command_center_tabs():
         research = tmp_path / ".research"
         research.mkdir()
         (research / "idea_pool.json").write_text('{"ideas": []}')
-        (research / "activity.json").write_text('{}')
+        (research / "activity.json").write_text("{}")
 
         app = ResearchApp(tmp_path)
         bindings = {binding[0]: binding[1] for binding in app.BINDINGS}
@@ -61,7 +61,7 @@ async def test_docs_sidebar_selection_switches_doc(tmp_path: Path):
 
     from open_researcher.tui.app import ResearchApp
     from open_researcher.tui.view_model import build_docs_workbench
-    from open_researcher.tui.widgets import DocViewer, DocsSidebarPanel
+    from open_researcher.tui.widgets import DocsSidebarPanel, DocViewer
 
     research = tmp_path / ".research"
     research.mkdir()

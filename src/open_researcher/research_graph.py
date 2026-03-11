@@ -145,9 +145,7 @@ class ResearchGraphStore:
         claim_updates = normalized.get("claim_updates")
         branch_relations = normalized.get("branch_relations")
         frontier = normalized.get("frontier")
-        normalized["hypotheses"] = self._normalize_hypotheses(
-            hypotheses if isinstance(hypotheses, list) else []
-        )
+        normalized["hypotheses"] = self._normalize_hypotheses(hypotheses if isinstance(hypotheses, list) else [])
         normalized["experiment_specs"] = self._normalize_experiment_specs(
             experiment_specs if isinstance(experiment_specs, list) else [],
             normalized["hypotheses"],
@@ -233,11 +231,7 @@ class ResearchGraphStore:
         hypotheses: list[dict],
         experiment_specs: list[dict],
     ) -> list[dict]:
-        frontier_by_id = {
-            str(row.get("id", "")).strip(): row
-            for row in frontier
-            if isinstance(row, dict)
-        }
+        frontier_by_id = {str(row.get("id", "")).strip(): row for row in frontier if isinstance(row, dict)}
         known_hypotheses = {str(row.get("id", "")).strip() for row in hypotheses}
         known_specs = {str(row.get("id", "")).strip() for row in experiment_specs}
         normalized: list[dict] = []
@@ -298,11 +292,7 @@ class ResearchGraphStore:
         hypotheses: list[dict],
         experiment_specs: list[dict],
     ) -> list[dict]:
-        frontier_by_id = {
-            str(row.get("id", "")).strip(): row
-            for row in frontier
-            if isinstance(row, dict)
-        }
+        frontier_by_id = {str(row.get("id", "")).strip(): row for row in frontier if isinstance(row, dict)}
         known_hypotheses = {str(row.get("id", "")).strip() for row in hypotheses}
         known_specs = {str(row.get("id", "")).strip() for row in experiment_specs}
         normalized: list[dict] = []
@@ -323,8 +313,7 @@ class ResearchGraphStore:
                 matching_frontier = [
                     item
                     for item in frontier
-                    if isinstance(item, dict)
-                    and str(item.get("hypothesis_id", "")).strip() == hypothesis_id
+                    if isinstance(item, dict) and str(item.get("hypothesis_id", "")).strip() == hypothesis_id
                 ]
                 if len(matching_frontier) != 1:
                     continue
@@ -393,11 +382,7 @@ class ResearchGraphStore:
     ) -> list[dict]:
         known_hypotheses = {str(row.get("id", "")).strip() for row in hypotheses}
         known_specs = {str(row.get("id", "")).strip() for row in experiment_specs}
-        spec_by_id = {
-            str(row.get("id", "")).strip(): row
-            for row in experiment_specs
-            if isinstance(row, dict)
-        }
+        spec_by_id = {str(row.get("id", "")).strip(): row for row in experiment_specs if isinstance(row, dict)}
         normalized: list[dict] = []
         seen: set[str] = set()
         for row in rows:
@@ -435,9 +420,7 @@ class ResearchGraphStore:
                     "last_evidence_id": str(row.get("last_evidence_id", "")).strip(),
                     "last_claim_update_id": str(row.get("last_claim_update_id", "")).strip(),
                     "description": str(
-                        row.get("description", "")
-                        or row.get("summary", "")
-                        or spec_row.get("summary", "")
+                        row.get("description", "") or row.get("summary", "") or spec_row.get("summary", "")
                     ).strip(),
                     "priority": self._normalize_priority(row.get("priority", 5)),
                     "status": status,
@@ -522,9 +505,7 @@ class ResearchGraphStore:
         return {
             "frontier_id": str(row.get("id", "")).strip(),
             "idea_id": str(row.get("idea_id", "")).strip(),
-            "execution_id": str(
-                row.get("active_execution_id", "") or row.get("last_execution_id", "")
-            ).strip(),
+            "execution_id": str(row.get("active_execution_id", "") or row.get("last_execution_id", "")).strip(),
             "hypothesis_id": str(row.get("hypothesis_id", "")).strip(),
             "experiment_spec_id": str(row.get("experiment_spec_id", "")).strip(),
             "claim_state": str(row.get("claim_state", "")).strip(),
@@ -714,7 +695,8 @@ class ResearchGraphStore:
                         "evaluation_plan": str(spec.get("evaluation_plan", "")).strip(),
                         "expected_signal": str(spec.get("expected_signal", "")).strip(),
                         "risk_level": str(spec.get("risk_level", "")).strip(),
-                        "selection_reason_code": str(item.get("selection_reason_code", "")).strip() or "manager_refresh",
+                        "selection_reason_code": str(item.get("selection_reason_code", "")).strip()
+                        or "manager_refresh",
                         "review_reason_code": str(item.get("review_reason_code", "")).strip() or "unspecified",
                     }
                 )
@@ -753,9 +735,7 @@ class ResearchGraphStore:
             completed = 0
             created_items: list[dict] = []
             result_signatures = {
-                str(row.get("result_signature", "")).strip()
-                for row in evidence_rows
-                if isinstance(row, dict)
+                str(row.get("result_signature", "")).strip() for row in evidence_rows if isinstance(row, dict)
             }
             for idea in ideas:
                 if not isinstance(idea, dict):
@@ -796,9 +776,7 @@ class ResearchGraphStore:
                     frontier_item=frontier_item,
                 )
                 metric_value = self._safe_float(
-                    idea.get("result", {}).get("metric_value")
-                    if isinstance(idea.get("result"), dict)
-                    else None
+                    idea.get("result", {}).get("metric_value") if isinstance(idea.get("result"), dict) else None
                 )
                 if row is not None:
                     row_metric = self._safe_float(row.get("metric_value"))
@@ -811,9 +789,10 @@ class ResearchGraphStore:
                 frontier_item["terminal_status"] = idea_status
                 frontier_item["primary_metric"] = primary_metric or ""
                 frontier_item["metric_value"] = metric_value
-                execution_id = str(idea.get("execution_id", "")).strip() or str(
-                    frontier_item.get("active_execution_id", "")
-                ).strip()
+                execution_id = (
+                    str(idea.get("execution_id", "")).strip()
+                    or str(frontier_item.get("active_execution_id", "")).strip()
+                )
                 if not execution_id:
                     execution_id = self._next_execution_id(normalized["counters"])
                 if execution_id:
@@ -848,9 +827,7 @@ class ResearchGraphStore:
                                 "commit": row.get("commit", ""),
                                 "reliability": "pending_critic",
                                 "reason_code": (
-                                    "reproduction_run"
-                                    if bool(idea.get("repro_required", False))
-                                    else "result_observed"
+                                    "reproduction_run" if bool(idea.get("repro_required", False)) else "result_observed"
                                 ),
                                 "result_signature": signature,
                             }
@@ -938,9 +915,13 @@ class ResearchGraphStore:
         frontier_item: dict,
     ) -> dict | None:
         frontier_id = str(frontier_item.get("id", "")).strip()
-        execution_id = str(idea.get("execution_id", "")).strip() or str(frontier_item.get("last_execution_id", "")).strip()
+        execution_id = (
+            str(idea.get("execution_id", "")).strip() or str(frontier_item.get("last_execution_id", "")).strip()
+        )
         idea_id = str(idea.get("id", "")).strip()
-        spec_id = str(idea.get("experiment_spec_id", "")).strip() or str(frontier_item.get("experiment_spec_id", "")).strip()
+        spec_id = (
+            str(idea.get("experiment_spec_id", "")).strip() or str(frontier_item.get("experiment_spec_id", "")).strip()
+        )
         desc = str(idea.get("description", "")).strip()
         for row in reversed(rows):
             if not isinstance(row, dict):
@@ -955,7 +936,12 @@ class ResearchGraphStore:
                 return row
             if idea_id and trace.get("idea_id") == idea_id:
                 return row
-            if spec_id and trace.get("experiment_spec_id") == spec_id and frontier_id and trace.get("frontier_id") == frontier_id:
+            if (
+                spec_id
+                and trace.get("experiment_spec_id") == spec_id
+                and frontier_id
+                and trace.get("frontier_id") == frontier_id
+            ):
                 return row
         for row in reversed(rows):
             if not isinstance(row, dict):
@@ -1035,8 +1021,7 @@ class ResearchGraphStore:
         values = [
             self._safe_float(row.get("metric_value"))
             for row in rows
-            if isinstance(row, dict)
-            and (exclude_signature is None or self._result_signature(row) != exclude_signature)
+            if isinstance(row, dict) and (exclude_signature is None or self._result_signature(row) != exclude_signature)
         ]
         clean = [value for value in values if value is not None]
         if not clean:

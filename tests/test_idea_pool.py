@@ -119,9 +119,7 @@ def test_mark_done_rejects_stale_claim_token(pool):
     claim = concurrent_pool.claim_idea(worker_id="w-001")
     assert claim is not None
 
-    stale_ok = concurrent_pool.mark_done(
-        claim["id"], metric_value=1.23, verdict="kept", claim_token="stale-token"
-    )
+    stale_ok = concurrent_pool.mark_done(claim["id"], metric_value=1.23, verdict="kept", claim_token="stale-token")
     assert stale_ok is False
     assert len(concurrent_pool.list_by_status("done")) == 0
 

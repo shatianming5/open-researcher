@@ -98,9 +98,7 @@ def load_config(research_dir: Path, *, strict: bool = False) -> ResearchConfig:
         enable_worktree_isolation=runtime.get("worktree_isolation", True),
         protocol=protocol,
         manager_batch_size=max(int(research.get("manager_batch_size", 3) or 3), 1),
-        critic_repro_policy=str(
-            research.get("critic_repro_policy", "best_or_surprising") or "best_or_surprising"
-        ),
+        critic_repro_policy=str(research.get("critic_repro_policy", "best_or_surprising") or "best_or_surprising"),
         enable_ideation_memory=bool(memory.get("ideation", True)),
         enable_experiment_memory=bool(memory.get("experiment", True)),
         enable_repo_type_prior=bool(memory.get("repo_type_prior", True)),

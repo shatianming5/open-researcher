@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import os
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
-import threading
 
 from open_researcher.agents import get_agent
 from open_researcher.config import ResearchConfig
@@ -81,14 +81,10 @@ def build_parallel_worker_plugins(
         gpu_allocator=GPUAllocatorPlugin(GPUManager(research_dir / "gpu_status.json", cfg.remote_hosts))
         if profile.gpu_allocation
         else None,
-        failure_memory=FailureMemoryPlugin(
-            FailureMemoryLedger(research_dir / "failure_memory_ledger.json")
-        )
+        failure_memory=FailureMemoryPlugin(FailureMemoryLedger(research_dir / "failure_memory_ledger.json"))
         if profile.failure_memory
         else None,
-        workspace_isolation=WorktreeIsolationPlugin(repo_path)
-        if profile.worktree_isolation
-        else None,
+        workspace_isolation=WorktreeIsolationPlugin(repo_path) if profile.worktree_isolation else None,
     )
     return profile, plugins
 

@@ -1,6 +1,5 @@
 """Tests for the logs CLI subcommand."""
 
-
 import pytest
 from typer.testing import CliRunner
 

@@ -189,7 +189,11 @@ class SessionChromeBar(Static):
             control_bits.append(_chip("Skip queued", fg="#08111a", bg=C_WARNING))
         control_suffix = " ".join(control_bits) if control_bits else f"[{C_DIM}]runtime live[/]"
         metric_name = escape(chrome.primary_metric or "metric")
-        config_line = f"[{C_DIM}]protocol[/] [{C_PRIMARY}]{escape(chrome.protocol)}[/]  [{C_DIM}]mode[/] [{C_TEXT}]{escape(mode_label)}[/]  [{C_DIM}]branch[/] [{C_TEXT}]{escape(chrome.branch)}[/]"
+        config_line = (
+            f"[{C_DIM}]protocol[/] [{C_PRIMARY}]{escape(chrome.protocol)}[/]  "
+            f"[{C_DIM}]mode[/] [{C_TEXT}]{escape(mode_label)}[/]  "
+            f"[{C_DIM}]branch[/] [{C_TEXT}]{escape(chrome.branch)}[/]"
+        )
         metric_line = (
             f"[{C_DIM}]metric[/] [bold {C_TEXT}]{metric_name}[/]  "
             f"[{C_DIM}]baseline[/] [{C_INFO}]{_format_metric(chrome.baseline_value)}[/]  "
@@ -226,11 +230,10 @@ class BootstrapStatusPanel(Static):
 
     def update_summary(self, summary: BootstrapSummary) -> None:
         status_chip = _chip(summary.status.replace("_", " "), fg="#08111a", bg=_status_color(summary.status))
-        step_line = (
-            f"[{C_DIM}]install[/] {_chip(summary.install_status, fg='#08111a', bg=_status_color(summary.install_status))}  "
-            f"[{C_DIM}]data[/] {_chip(summary.data_status, fg='#08111a', bg=_status_color(summary.data_status))}  "
-            f"[{C_DIM}]smoke[/] {_chip(summary.smoke_status, fg='#08111a', bg=_status_color(summary.smoke_status))}"
-        )
+        install_chip = _chip(summary.install_status, fg="#08111a", bg=_status_color(summary.install_status))
+        data_chip = _chip(summary.data_status, fg="#08111a", bg=_status_color(summary.data_status))
+        smoke_chip = _chip(summary.smoke_status, fg="#08111a", bg=_status_color(summary.smoke_status))
+        step_line = f"[{C_DIM}]install[/] {install_chip}  [{C_DIM}]data[/] {data_chip}  [{C_DIM}]smoke[/] {smoke_chip}"
         lines = [
             f"[bold {C_TEXT}]Repository Prepare[/]  {status_chip}",
             f"[{C_DIM}]working dir[/] [{C_TEXT}]{escape(summary.working_dir)}[/]  "
@@ -309,9 +312,18 @@ class ResearchGraphSummaryPanel(Static):
         ]
         lines = [
             f"[bold {C_TEXT}]Research Graph[/]",
-            f"[{C_DIM}]hypotheses[/] [{C_TEXT}]{summary.hypotheses}[/]  [{C_DIM}]specs[/] [{C_TEXT}]{summary.experiment_specs}[/]  [{C_DIM}]evidence[/] [{C_TEXT}]{summary.evidence}[/]  [{C_DIM}]claims[/] [{C_TEXT}]{summary.claims}[/]",
+            (
+                f"[{C_DIM}]hypotheses[/] [{C_TEXT}]{summary.hypotheses}[/]  "
+                f"[{C_DIM}]specs[/] [{C_TEXT}]{summary.experiment_specs}[/]  "
+                f"[{C_DIM}]evidence[/] [{C_TEXT}]{summary.evidence}[/]  "
+                f"[{C_DIM}]claims[/] [{C_TEXT}]{summary.claims}[/]"
+            ),
             f"[{C_DIM}]frontier[/] [{C_TEXT}]{summary.frontier_total}[/]  " + "  ".join(frontier_bits),
-            f"[{C_DIM}]memory[/] priors {summary.repo_type_priors}  ideation {summary.ideation_memory}  experiment {summary.experiment_memory}",
+            (
+                f"[{C_DIM}]memory[/] priors {summary.repo_type_priors}  "
+                f"ideation {summary.ideation_memory}  "
+                f"experiment {summary.experiment_memory}"
+            ),
         ]
         self.summary_text = "\n".join(lines)
 
@@ -400,9 +412,11 @@ class ProjectedBacklogPanel(Static):
 
         self.items_text = "\n".join(lines).rstrip()
         try:
-            self.query_one("#frontier-header", Static).update(
-                f"[bold {C_TEXT}]Frontier Focus[/]\n[{C_DIM}]Select a frontier to inspect hypothesis, spec, and evidence[/]"
+            header = (
+                f"[bold {C_TEXT}]Frontier Focus[/]\n"
+                f"[{C_DIM}]Select a frontier to inspect hypothesis, spec, and evidence[/]"
             )
+            self.query_one("#frontier-header", Static).update(header)
             option_list = self.query_one("#frontier-options", OptionList)
             option_list.set_options(options)
             option_list.highlighted = 0 if options else None
@@ -476,7 +490,11 @@ class FrontierFocusPanel(ProjectedBacklogPanel):
             chips.append(_chip("REPRO", fg="#08111a", bg=C_WARNING))
         preview = [
             f"[bold {C_TEXT}]Active Frontier[/]  {' '.join(chips)}",
-            f"[{C_PRIMARY}]{escape(item.frontier_id)}[/]  [{C_DIM}]{escape(item.execution_id)}[/]  [{C_DIM}]{escape(item.reason_code)}[/]",
+            (
+                f"[{C_PRIMARY}]{escape(item.frontier_id)}[/]  "
+                f"[{C_DIM}]{escape(item.execution_id)}[/]  "
+                f"[{C_DIM}]{escape(item.reason_code)}[/]"
+            ),
             f"[{C_TEXT}]{escape(item.hypothesis_summary or item.spec_summary or item.description)}[/]",
         ]
         self.query_one("#frontier-active", Static).update("\n".join(preview))
@@ -562,7 +580,11 @@ class FrontierDetailPanel(Static):
 
         summary_lines = [
             f"[bold {C_TEXT}]Frontier Detail[/]  {' '.join(chips)}",
-            f"[{C_PRIMARY}]{escape(frontier.frontier_id)}[/]  [{C_DIM}]{escape(frontier.execution_id)}[/]  [{C_DIM}]{escape(frontier.reason_code)}[/]",
+            (
+                f"[{C_PRIMARY}]{escape(frontier.frontier_id)}[/]  "
+                f"[{C_DIM}]{escape(frontier.execution_id)}[/]  "
+                f"[{C_DIM}]{escape(frontier.reason_code)}[/]"
+            ),
             f"[{C_DIM}]metric[/] [{C_TEXT}]{escape(detail.primary_metric or 'metric')}[/]  "
             f"[{C_DIM}]latest[/] [{C_INFO}]{_format_metric(detail.latest_metric_value)}[/]  "
             f"[{C_DIM}]best observed[/] [bold {C_BEST}]{_format_metric(detail.best_metric_value)}[/]  "
@@ -594,9 +616,7 @@ class FrontierDetailPanel(Static):
                 )
             )
         elif frontier.metric_value:
-            summary_lines.append(
-                f"[{C_DIM}]projected metric[/] [{C_INFO}]{_format_metric(frontier.metric_value)}[/]"
-            )
+            summary_lines.append(f"[{C_DIM}]projected metric[/] [{C_INFO}]{_format_metric(frontier.metric_value)}[/]")
 
         hypothesis_lines = [
             f"[bold {C_TEXT}]{escape(frontier.hypothesis_summary or detail.hypothesis_id or frontier.description)}[/]",
@@ -604,9 +624,7 @@ class FrontierDetailPanel(Static):
         if detail.hypothesis_rationale:
             hypothesis_lines.append(f"[{C_DIM}]Rationale:[/] {escape(detail.hypothesis_rationale)}")
         if detail.expected_evidence:
-            hypothesis_lines.append(
-                f"[{C_DIM}]Expected evidence:[/] {escape(', '.join(detail.expected_evidence))}"
-            )
+            hypothesis_lines.append(f"[{C_DIM}]Expected evidence:[/] {escape(', '.join(detail.expected_evidence))}")
 
         spec_lines = [
             f"[bold {C_TEXT}]{escape(frontier.spec_summary or detail.experiment_spec_id or frontier.description)}[/]",
@@ -624,9 +642,7 @@ class FrontierDetailPanel(Static):
         if detail.evidence_reliability_counts:
             reliability_parts = []
             for key, count in sorted(detail.evidence_reliability_counts.items()):
-                reliability_parts.append(
-                    f"[{_status_color(key)}]{escape(key)}[/] [{C_TEXT}]{count}[/]"
-                )
+                reliability_parts.append(f"[{_status_color(key)}]{escape(key)}[/] [{C_TEXT}]{count}[/]")
             evidence_lines.append("  ".join(reliability_parts))
         evidence_lines.append(
             f"[{C_DIM}]baseline[/] [{C_INFO}]{_format_metric(detail.baseline_value)}[/]  "
@@ -654,15 +670,7 @@ class FrontierDetailPanel(Static):
             claim_lines.append(f"[{C_DIM}]No claim updates recorded for this frontier yet[/]")
 
         self.body_text = "\n".join(
-            summary_lines
-            + [""]
-            + hypothesis_lines
-            + [""]
-            + spec_lines
-            + [""]
-            + evidence_lines
-            + [""]
-            + claim_lines
+            summary_lines + [""] + hypothesis_lines + [""] + spec_lines + [""] + evidence_lines + [""] + claim_lines
         )
 
         self._set_title(
@@ -758,12 +766,9 @@ class EvidenceClaimsPanel(Static):
         if evidence:
             lines.append(f"[{C_PRIMARY}]Recent Evidence[/]")
             for item in evidence[:4]:
-                trace = " / ".join(
-                    part for part in [item.evidence_id, item.frontier_id, item.execution_id] if part
-                )
+                trace = " / ".join(part for part in [item.evidence_id, item.frontier_id, item.execution_id] if part)
                 lines.append(
-                    f"[{_status_color(item.reliability)}]{escape(trace)}[/]  "
-                    f"[{C_DIM}]{escape(item.reason_code)}[/]"
+                    f"[{_status_color(item.reliability)}]{escape(trace)}[/]  [{C_DIM}]{escape(item.reason_code)}[/]"
                 )
                 detail = escape(item.description)
                 if item.metric_value:
@@ -774,16 +779,12 @@ class EvidenceClaimsPanel(Static):
         if claims:
             lines.append(f"[{C_ACCENT}]Recent Claims[/]")
             for item in claims[:4]:
-                trace = " / ".join(
-                    part for part in [item.claim_update_id, item.frontier_id, item.execution_id] if part
+                trace = " / ".join(part for part in [item.claim_update_id, item.frontier_id, item.execution_id] if part)
+                lines.append(
+                    f"[{_status_color(item.transition)}]{escape(trace)}[/]  [{C_DIM}]{escape(item.reason_code)}[/]"
                 )
                 lines.append(
-                    f"[{_status_color(item.transition)}]{escape(trace)}[/]  "
-                    f"[{C_DIM}]{escape(item.reason_code)}[/]"
-                )
-                lines.append(
-                    f"[{C_TEXT}]{escape(item.transition)}[/]  "
-                    f"[{C_DIM}]confidence[/] {escape(item.confidence)}"
+                    f"[{C_TEXT}]{escape(item.transition)}[/]  [{C_DIM}]confidence[/] {escape(item.confidence)}"
                 )
 
         self.body_text = "\n".join(lines).rstrip()
@@ -1096,7 +1097,8 @@ class ExperimentStatusPanel(Static):
             return
 
         if phase == "preparing":
-            detail = escape((activity or {}).get("detail", "Installing dependencies, preparing data, and running smoke."))
+            default_detail = "Installing dependencies, preparing data, and running smoke."
+            detail = escape((activity or {}).get("detail", default_detail))
             self.status_text = (
                 f"[bold {C_WARNING}]Repo Prepare[/]\n"
                 f"[{C_DIM}]Resolving environment, data, and smoke readiness before research starts.[/]\n"
@@ -1341,11 +1343,14 @@ def render_ideas_markdown(ideas: list[dict]) -> str:
                 result_str = verdict
         else:
             result_str = ""
-        lines.append(
-            f"| {num} | {frontier} | {desc} | {category} | {pri} | {status} | {result_str.replace('|', '\\|')} |"
-        )
+        escaped_result = result_str.replace("|", "\\|")
+        lines.append(f"| {num} | {frontier} | {desc} | {category} | {pri} | {status} | {escaped_result} |")
 
-    parts = [f"{counts.get(status, 0)} {status}" for status in ("pending", "running", "done", "skipped") if counts.get(status)]
+    parts = [
+        f"{counts.get(status, 0)} {status}"
+        for status in ("pending", "running", "done", "skipped")
+        if counts.get(status)
+    ]
     lines.append(f"\n**Summary**: {', '.join(parts)}, {len(ideas)} total projected backlog items")
     return "\n".join(lines)
 
@@ -1454,12 +1459,15 @@ class DocViewer(Static):
             ]
         elif source_file == "bootstrap_state.json":
             steps = payload if isinstance(payload, dict) else {}
+            install = steps.get("install", {}) if isinstance(steps.get("install"), dict) else {}
+            data = steps.get("data", {}) if isinstance(steps.get("data"), dict) else {}
+            smoke = steps.get("smoke", {}) if isinstance(steps.get("smoke"), dict) else {}
             summary = [
                 f"- status: {steps.get('status', 'pending')}",
                 f"- working_dir: {steps.get('working_dir', '.')}",
-                f"- install: {steps.get('install', {}).get('status', 'pending') if isinstance(steps.get('install'), dict) else 'pending'}",
-                f"- data: {steps.get('data', {}).get('status', 'pending') if isinstance(steps.get('data'), dict) else 'pending'}",
-                f"- smoke: {steps.get('smoke', {}).get('status', 'pending') if isinstance(steps.get('smoke'), dict) else 'pending'}",
+                f"- install: {install.get('status', 'pending')}",
+                f"- data: {data.get('status', 'pending')}",
+                f"- smoke: {smoke.get('status', 'pending')}",
             ]
         else:
             summary = [

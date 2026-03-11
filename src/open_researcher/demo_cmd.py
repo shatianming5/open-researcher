@@ -17,40 +17,47 @@ console = Console()
 # ---------------------------------------------------------------------------
 
 _EXPERIMENTS = [
-    ("baseline",     "keep",    0.412, "Baseline: standard training config"),
-    ("lr-warmup",    "keep",    0.389, "Add cosine learning rate warmup"),
-    ("bigger-ctx",   "discard", 0.425, "Increase context length 256→512"),
-    ("dropout-0.2",  "keep",    0.371, "Add dropout=0.2 to all layers"),
-    ("layernorm",    "discard", 0.395, "Switch to pre-LayerNorm"),
-    ("gelu-act",     "keep",    0.362, "Replace ReLU with GELU activation"),
-    ("head-dim-up",  "crash",   None,  "Double attention head dimension (OOM)"),
-    ("weight-decay", "keep",    0.358, "Add weight decay 0.1"),
-    ("grad-clip",    "keep",    0.351, "Gradient clipping max_norm=1.0"),
-    ("rope-embed",   "discard", 0.367, "Switch to RoPE embeddings"),
-    ("flash-attn",   "keep",    0.343, "Enable FlashAttention-2"),
-    ("batch-x2",     "keep",    0.338, "Double batch size with grad accum"),
-    ("mixup-aug",    "discard", 0.355, "MixUp data augmentation"),
-    ("kv-cache",     "keep",    0.335, "KV-cache optimization for inference"),
-    ("final-tune",   "keep",    0.329, "Fine-tune with reduced LR 1e-5"),
+    ("baseline", "keep", 0.412, "Baseline: standard training config"),
+    ("lr-warmup", "keep", 0.389, "Add cosine learning rate warmup"),
+    ("bigger-ctx", "discard", 0.425, "Increase context length 256→512"),
+    ("dropout-0.2", "keep", 0.371, "Add dropout=0.2 to all layers"),
+    ("layernorm", "discard", 0.395, "Switch to pre-LayerNorm"),
+    ("gelu-act", "keep", 0.362, "Replace ReLU with GELU activation"),
+    ("head-dim-up", "crash", None, "Double attention head dimension (OOM)"),
+    ("weight-decay", "keep", 0.358, "Add weight decay 0.1"),
+    ("grad-clip", "keep", 0.351, "Gradient clipping max_norm=1.0"),
+    ("rope-embed", "discard", 0.367, "Switch to RoPE embeddings"),
+    ("flash-attn", "keep", 0.343, "Enable FlashAttention-2"),
+    ("batch-x2", "keep", 0.338, "Double batch size with grad accum"),
+    ("mixup-aug", "discard", 0.355, "MixUp data augmentation"),
+    ("kv-cache", "keep", 0.335, "KV-cache optimization for inference"),
+    ("final-tune", "keep", 0.329, "Fine-tune with reduced LR 1e-5"),
 ]
 
 _IDEAS = [
-    {"description": "Try SwiGLU activation function", "status": "done", "priority": 2,
-     "result": {"metric_value": 0.341, "verdict": "completed"}},
-    {"description": "Implement grouped-query attention", "status": "done", "priority": 1,
-     "result": {"metric_value": 0.337, "verdict": "completed"}},
-    {"description": "Add sliding window attention", "status": "running", "priority": 3,
-     "result": None},
-    {"description": "Try Lion optimizer instead of AdamW", "status": "pending", "priority": 4,
-     "result": None},
-    {"description": "Implement speculative decoding", "status": "pending", "priority": 5,
-     "result": None},
-    {"description": "Add ALiBi positional encoding", "status": "skipped", "priority": 6,
-     "result": {"metric_value": None, "verdict": "incompatible with current arch"}},
-    {"description": "Knowledge distillation from larger model", "status": "pending", "priority": 7,
-     "result": None},
-    {"description": "Quantization-aware training (INT8)", "status": "pending", "priority": 8,
-     "result": None},
+    {
+        "description": "Try SwiGLU activation function",
+        "status": "done",
+        "priority": 2,
+        "result": {"metric_value": 0.341, "verdict": "completed"},
+    },
+    {
+        "description": "Implement grouped-query attention",
+        "status": "done",
+        "priority": 1,
+        "result": {"metric_value": 0.337, "verdict": "completed"},
+    },
+    {"description": "Add sliding window attention", "status": "running", "priority": 3, "result": None},
+    {"description": "Try Lion optimizer instead of AdamW", "status": "pending", "priority": 4, "result": None},
+    {"description": "Implement speculative decoding", "status": "pending", "priority": 5, "result": None},
+    {
+        "description": "Add ALiBi positional encoding",
+        "status": "skipped",
+        "priority": 6,
+        "result": {"metric_value": None, "verdict": "incompatible with current arch"},
+    },
+    {"description": "Knowledge distillation from larger model", "status": "pending", "priority": 7, "result": None},
+    {"description": "Quantization-aware training (INT8)", "status": "pending", "priority": 8, "result": None},
 ]
 
 
@@ -175,14 +182,28 @@ def _populate_research(research_dir: Path) -> None:
         json.dumps({"phase": "experimenting", "experiment_count": 15})
     )
     (research_dir / "gpu_status.json").write_text(
-        json.dumps({
-            "gpus": [
-                {"host": "localhost", "device": 0, "name": "NVIDIA RTX 4090",
-                 "memory_total": 24564, "memory_used": 18200, "allocated_to": "worker-0"},
-                {"host": "localhost", "device": 1, "name": "NVIDIA RTX 4090",
-                 "memory_total": 24564, "memory_used": 2100, "allocated_to": None},
-            ],
-        })
+        json.dumps(
+            {
+                "gpus": [
+                    {
+                        "host": "localhost",
+                        "device": 0,
+                        "name": "NVIDIA RTX 4090",
+                        "memory_total": 24564,
+                        "memory_used": 18200,
+                        "allocated_to": "worker-0",
+                    },
+                    {
+                        "host": "localhost",
+                        "device": 1,
+                        "name": "NVIDIA RTX 4090",
+                        "memory_total": 24564,
+                        "memory_used": 2100,
+                        "allocated_to": None,
+                    },
+                ],
+            }
+        )
     )
 
     (research_dir / "config.yaml").write_text(
@@ -227,7 +248,7 @@ _DEMO_LOG_LINES = [
     "[bold white]diff --git a/model.py b/model.py[/bold white]",
     "[yellow]@@ -45,6 +45,12 @@[/yellow]",
     "[green]+    def sliding_window_attention(self, q, k, v, window_size=256):[/green]",
-    "[green]+        \"\"\"Apply sliding window attention pattern.\"\"\"[/green]",
+    '[green]+        """Apply sliding window attention pattern."""[/green]',
     "[green]+        seq_len = q.size(-2)[/green]",
     "[green]+        mask = torch.ones(seq_len, seq_len, device=q.device)[/green]",
     "[green]+        mask = torch.triu(mask, diagonal=-window_size)[/green]",
@@ -261,16 +282,16 @@ def do_demo() -> None:
         repo = Path(tmp)
 
         # Init a minimal git repo (required for git-based features)
-        subprocess.run(
-            ["git", "init", "--quiet"], cwd=str(repo), capture_output=True
-        )
+        subprocess.run(["git", "init", "--quiet"], cwd=str(repo), capture_output=True)
         subprocess.run(
             ["git", "config", "user.email", "demo@open-researcher.dev"],
-            cwd=str(repo), capture_output=True,
+            cwd=str(repo),
+            capture_output=True,
         )
         subprocess.run(
             ["git", "config", "user.name", "Demo"],
-            cwd=str(repo), capture_output=True,
+            cwd=str(repo),
+            capture_output=True,
         )
         # Create a dummy file and initial commit
         (repo / "train.py").write_text("# nanoGPT training script\n")
@@ -278,7 +299,8 @@ def do_demo() -> None:
         subprocess.run(["git", "add", "."], cwd=str(repo), capture_output=True)
         subprocess.run(
             ["git", "commit", "-m", "initial", "--quiet"],
-            cwd=str(repo), capture_output=True,
+            cwd=str(repo),
+            capture_output=True,
         )
 
         # Populate .research/ with sample data

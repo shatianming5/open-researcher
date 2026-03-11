@@ -1,6 +1,5 @@
 """Tests for explicit parallel runtime profiles and plugins."""
 
-
 from open_researcher.config import ResearchConfig
 from open_researcher.parallel_runtime import (
     build_parallel_worker_plugins,

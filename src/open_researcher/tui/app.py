@@ -21,8 +21,8 @@ from open_researcher.tui.modals import GPUStatusModal, LogScreen
 from open_researcher.tui.view_model import DashboardState, build_dashboard_state, build_docs_workbench
 from open_researcher.tui.widgets import (
     BootstrapStatusPanel,
-    DocViewer,
     DocsSidebarPanel,
+    DocViewer,
     ExecutionSummaryPanel,
     ExperimentStatusPanel,
     FrontierDetailPanel,

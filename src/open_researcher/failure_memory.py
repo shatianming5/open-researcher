@@ -84,9 +84,7 @@ class FailureMemoryLedger:
         ranked = []
         for fix_action, entry in stats.items():
             if counts[fix_action] > 0:
-                entry["average_recovery_iterations"] = round(
-                    totals[fix_action] / counts[fix_action], 3
-                )
+                entry["average_recovery_iterations"] = round(totals[fix_action] / counts[fix_action], 3)
             ranked.append(entry)
 
         ranked.sort(
@@ -116,11 +114,7 @@ class FailureMemoryLedger:
         entry = {
             "failure_class": str(failure_class).strip() or "general_failure",
             "fix_action": str(fix_action).strip() or "generate_new_plan",
-            "verification_result": (
-                "pass"
-                if str(verification_result).strip().lower() == "pass"
-                else "fail"
-            ),
+            "verification_result": ("pass" if str(verification_result).strip().lower() == "pass" else "fail"),
             "recovery_iterations": max(int(recovery_iterations), 1),
         }
 

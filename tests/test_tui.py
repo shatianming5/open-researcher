@@ -1,5 +1,16 @@
 """Tests for Textual TUI components."""
 
+from open_researcher.tui.view_model import (
+    BootstrapSummary,
+    ClaimItem,
+    DocNavItem,
+    EvidenceItem,
+    FrontierCard,
+    FrontierDetail,
+    LineageItem,
+    SessionChrome,
+    TimelineItem,
+)
 from open_researcher.tui.widgets import (
     BootstrapStatusPanel,
     DocsSidebarPanel,
@@ -15,24 +26,17 @@ from open_researcher.tui.widgets import (
     TraceBanner,
     render_ideas_markdown,
 )
-from open_researcher.tui.view_model import (
-    BootstrapSummary,
-    ClaimItem,
-    DocNavItem,
-    EvidenceItem,
-    FrontierCard,
-    FrontierDetail,
-    LineageItem,
-    SessionChrome,
-    TimelineItem,
-)
 
 
 def test_stats_bar_colored_output():
     bar = StatsBar()
     state = {
-        "total": 7, "keep": 3, "discard": 2, "crash": 1,
-        "best_value": 1.47, "primary_metric": "val_loss",
+        "total": 7,
+        "keep": 3,
+        "discard": 2,
+        "crash": 1,
+        "best_value": 1.47,
+        "primary_metric": "val_loss",
     }
     bar.update_stats(state)
     assert "3K" in bar.stats_text
@@ -49,8 +53,10 @@ def test_stats_bar_empty():
 def test_experiment_status_panel_running():
     panel = ExperimentStatusPanel()
     activity = {
-        "status": "running", "detail": "implementing code changes",
-        "idea": "idea-003", "updated_at": "2026-03-09T12:00:00",
+        "status": "running",
+        "detail": "implementing code changes",
+        "idea": "idea-003",
+        "updated_at": "2026-03-09T12:00:00",
     }
     panel.update_status(activity, completed=3, total=10)
     assert "RUNNING" in panel.status_text
@@ -74,12 +80,15 @@ def test_experiment_status_panel_baseline():
 def test_idea_list_panel_renders():
     panel = IdeaListPanel()
     ideas = [
-        {"id": "idea-001", "description": "Add dropout", "status": "done",
-         "priority": 1, "result": {"metric_value": 1.23, "verdict": "kept"}},
-        {"id": "idea-002", "description": "Batch norm", "status": "running",
-         "priority": 2, "result": None},
-        {"id": "idea-003", "description": "LR warmup", "status": "pending",
-         "priority": 3, "result": None},
+        {
+            "id": "idea-001",
+            "description": "Add dropout",
+            "status": "done",
+            "priority": 1,
+            "result": {"metric_value": 1.23, "verdict": "kept"},
+        },
+        {"id": "idea-002", "description": "Batch norm", "status": "running", "priority": 2, "result": None},
+        {"id": "idea-003", "description": "LR warmup", "status": "pending", "priority": 3, "result": None},
     ]
     panel.update_ideas(ideas)
     text = panel.ideas_text
@@ -336,13 +345,30 @@ def test_render_ideas_markdown_empty():
 
 def test_render_ideas_markdown_with_data():
     ideas = [
-        {"id": "idea-001", "description": "Add dropout", "category": "regularization",
-         "priority": 1, "status": "done",
-         "result": {"metric_value": 0.85, "verdict": "kept"}},
-        {"id": "idea-002", "description": "Batch norm", "category": "architecture",
-         "priority": 2, "status": "running", "result": None},
-        {"id": "idea-003", "description": "LR warmup", "category": "training",
-         "priority": 3, "status": "pending", "result": None},
+        {
+            "id": "idea-001",
+            "description": "Add dropout",
+            "category": "regularization",
+            "priority": 1,
+            "status": "done",
+            "result": {"metric_value": 0.85, "verdict": "kept"},
+        },
+        {
+            "id": "idea-002",
+            "description": "Batch norm",
+            "category": "architecture",
+            "priority": 2,
+            "status": "running",
+            "result": None,
+        },
+        {
+            "id": "idea-003",
+            "description": "LR warmup",
+            "category": "training",
+            "priority": 3,
+            "status": "pending",
+            "result": None,
+        },
     ]
     result = render_ideas_markdown(ideas)
     assert "idea-001" in result
@@ -358,8 +384,14 @@ def test_render_ideas_markdown_with_data():
 
 def test_render_ideas_markdown_escapes_pipe():
     ideas = [
-        {"id": "idea-001", "description": "Use A|B config", "category": "test|cat",
-         "priority": 1, "status": "pending", "result": None},
+        {
+            "id": "idea-001",
+            "description": "Use A|B config",
+            "category": "test|cat",
+            "priority": 1,
+            "status": "pending",
+            "result": None,
+        },
     ]
     result = render_ideas_markdown(ideas)
     assert "A\\|B" in result

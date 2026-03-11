@@ -57,15 +57,19 @@ def test_resolve_bootstrap_plan_disabled_marks_steps_disabled(tmp_path: Path) ->
 def test_run_bootstrap_prepare_executes_install_data_and_smoke(tmp_path: Path) -> None:
     research = tmp_path / ".research"
     research.mkdir()
+    smoke_command = (
+        "from pathlib import Path; "
+        "assert Path('install.ok').exists(); "
+        "assert Path('data/ready.txt').exists(); "
+        "print('smoke ok')"
+    )
     cfg = ResearchConfig(
         bootstrap_auto_prepare=True,
         bootstrap_install_command=_py_inline("from pathlib import Path; Path('install.ok').write_text('ok')"),
         bootstrap_data_command=_py_inline(
             "from pathlib import Path; Path('data').mkdir(exist_ok=True); Path('data/ready.txt').write_text('ok')"
         ),
-        bootstrap_smoke_command=_py_inline(
-            "from pathlib import Path; assert Path('install.ok').exists(); assert Path('data/ready.txt').exists(); print('smoke ok')"
-        ),
+        bootstrap_smoke_command=_py_inline(smoke_command),
         bootstrap_expected_paths=["data/ready.txt"],
     )
 

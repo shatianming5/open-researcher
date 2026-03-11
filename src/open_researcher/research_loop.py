@@ -13,8 +13,6 @@ from open_researcher.activity import ActivityMonitor
 from open_researcher.config import ResearchConfig
 from open_researcher.crash_counter import CrashCounter
 from open_researcher.phase_gate import PhaseGate
-from open_researcher.research_graph import ResearchGraphStore
-from open_researcher.research_memory import ResearchMemoryStore
 from open_researcher.research_events import (
     AgentOutput,
     AllIdeasProcessed,
@@ -40,6 +38,9 @@ from open_researcher.research_events import (
     ScoutFailed,
     ScoutStarted,
 )
+from open_researcher.results_cmd import load_results, write_final_results_tsv
+from open_researcher.research_graph import ResearchGraphStore
+from open_researcher.research_memory import ResearchMemoryStore
 from open_researcher.results_cmd import load_results, write_final_results_tsv
 from open_researcher.storage import locked_read_json
 from open_researcher.watchdog import TimeoutWatchdog
@@ -122,7 +123,9 @@ class ResearchLoop:
 
         return on_output
 
-    def _run_agent(self, agent, *, phase: str, program_file: str, error_tag: str, env: dict[str, str] | None = None) -> int:
+    def _run_agent(
+        self, agent, *, phase: str, program_file: str, error_tag: str, env: dict[str, str] | None = None
+    ) -> int:
         try:
             return agent.run(
                 self.repo_path,
@@ -164,9 +167,7 @@ class ResearchLoop:
         return {
             "frontier_id": str(row.get("id", "")).strip(),
             "idea_id": str(row.get("idea_id", "")).strip(),
-            "execution_id": str(
-                row.get("active_execution_id", "") or row.get("last_execution_id", "")
-            ).strip(),
+            "execution_id": str(row.get("active_execution_id", "") or row.get("last_execution_id", "")).strip(),
             "hypothesis_id": str(row.get("hypothesis_id", "")).strip(),
             "experiment_spec_id": str(row.get("experiment_spec_id", "")).strip(),
             "claim_state": str(row.get("claim_state", "")).strip(),
@@ -713,9 +714,7 @@ class ResearchLoop:
                     HypothesisProposed(
                         count=len(new_hypotheses),
                         hypothesis_ids=[
-                            str(row.get("id", "")).strip()
-                            for row in new_hypotheses
-                            if str(row.get("id", "")).strip()
+                            str(row.get("id", "")).strip() for row in new_hypotheses if str(row.get("id", "")).strip()
                         ],
                     )
                 )
@@ -725,9 +724,7 @@ class ResearchLoop:
                     ExperimentSpecCreated(
                         count=len(new_specs),
                         experiment_spec_ids=[
-                            str(row.get("id", "")).strip()
-                            for row in new_specs
-                            if str(row.get("id", "")).strip()
+                            str(row.get("id", "")).strip() for row in new_specs if str(row.get("id", "")).strip()
                         ],
                     )
                 )
@@ -895,10 +892,7 @@ class ResearchLoop:
                     self.emit(
                         ClaimUpdated(
                             count=len(new_claims),
-                            items=[
-                                self._claim_trace(row, after_post.get("frontier", []))
-                                for row in new_claims
-                            ],
+                            items=[self._claim_trace(row, after_post.get("frontier", [])) for row in new_claims],
                         )
                     )
                 repro_items = self._new_reproduction_requests(before_post, after_post)
@@ -918,9 +912,7 @@ class ResearchLoop:
                     activity_monitor.update(
                         "experiment_agent",
                         status="queued",
-                        detail=(
-                            f"{frontier_sync['frontier_items']} frontier item(s) queued after critic review"
-                        ),
+                        detail=(f"{frontier_sync['frontier_items']} frontier item(s) queued after critic review"),
                         idea="",
                     )
                 else:

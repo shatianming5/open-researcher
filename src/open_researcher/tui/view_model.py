@@ -298,9 +298,7 @@ def _frontier_from_graph_row(frontier: dict, hypotheses: dict[str, dict], specs:
         metric_value = str(raw_metric)
     return FrontierCard(
         frontier_id=str(frontier.get("id", "")).strip(),
-        execution_id=str(
-            frontier.get("active_execution_id", "") or frontier.get("last_execution_id", "")
-        ).strip(),
+        execution_id=str(frontier.get("active_execution_id", "") or frontier.get("last_execution_id", "")).strip(),
         idea_id=str(frontier.get("idea_id", "")).strip(),
         priority=_safe_int(frontier.get("priority", 5), 5),
         status=str(frontier.get("status", "draft")).strip() or "draft",
@@ -438,7 +436,9 @@ def _doc_preview(path: Path) -> str:
     return "Present"
 
 
-def build_docs_workbench(research_dir: Path, *, current_file: str, doc_files: list[str], dynamic_files: set[str]) -> DocsWorkbenchState:
+def build_docs_workbench(
+    research_dir: Path, *, current_file: str, doc_files: list[str], dynamic_files: set[str]
+) -> DocsWorkbenchState:
     items: list[DocNavItem] = []
     for filename in doc_files:
         dynamic = filename in dynamic_files
@@ -449,10 +449,14 @@ def build_docs_workbench(research_dir: Path, *, current_file: str, doc_files: li
             "bootstrap_state.md": "bootstrap_state.json",
         }.get(filename, filename)
         path = research_dir / source
-        preview = _doc_preview(path) if not dynamic else (
-            "Generated from projected frontier"
-            if filename == "projected_backlog.md"
-            else "Generated from canonical JSON state"
+        preview = (
+            _doc_preview(path)
+            if not dynamic
+            else (
+                "Generated from projected frontier"
+                if filename == "projected_backlog.md"
+                else "Generated from canonical JSON state"
+            )
         )
         items.append(
             DocNavItem(
@@ -488,18 +492,10 @@ def build_dashboard_state(
     memory_payload = _load_json_object(research_dir / "research_memory.json")
     bootstrap_payload = state.get("bootstrap") if isinstance(state.get("bootstrap"), dict) else {}
     graph_state = state.get("graph") if isinstance(state.get("graph"), dict) else {}
-    graph_frontier_rows = [
-        row for row in graph_payload.get("frontier", []) if isinstance(row, dict)
-    ]
-    frontier_by_id = {
-        str(row.get("id", "")).strip(): row
-        for row in graph_frontier_rows
-        if isinstance(row, dict)
-    }
+    graph_frontier_rows = [row for row in graph_payload.get("frontier", []) if isinstance(row, dict)]
+    frontier_by_id = {str(row.get("id", "")).strip(): row for row in graph_frontier_rows if isinstance(row, dict)}
     hypotheses_by_id = {
-        str(row.get("id", "")).strip(): row
-        for row in graph_payload.get("hypotheses", [])
-        if isinstance(row, dict)
+        str(row.get("id", "")).strip(): row for row in graph_payload.get("hypotheses", []) if isinstance(row, dict)
     }
     specs_by_id = {
         str(row.get("id", "")).strip(): row
@@ -531,9 +527,7 @@ def build_dashboard_state(
 
     graph = GraphSummary(
         hypotheses=_safe_int(graph_state.get("hypotheses", len(graph_payload.get("hypotheses", [])))),
-        experiment_specs=_safe_int(
-            graph_state.get("experiment_specs", len(graph_payload.get("experiment_specs", [])))
-        ),
+        experiment_specs=_safe_int(graph_state.get("experiment_specs", len(graph_payload.get("experiment_specs", [])))),
         evidence=_safe_int(graph_state.get("evidence", len(graph_payload.get("evidence", [])))),
         claims=_safe_int(graph_state.get("claim_updates", len(graph_payload.get("claim_updates", [])))),
         frontier_total=_safe_int(graph_state.get("frontier_total", len(graph_payload.get("frontier", [])))),
@@ -567,13 +561,9 @@ def build_dashboard_state(
             (bootstrap_payload.get("steps", {}) or {}).get("install", {}).get("status", "pending")
         ).strip()
         or "pending",
-        data_status=str(
-            (bootstrap_payload.get("steps", {}) or {}).get("data", {}).get("status", "pending")
-        ).strip()
+        data_status=str((bootstrap_payload.get("steps", {}) or {}).get("data", {}).get("status", "pending")).strip()
         or "pending",
-        smoke_status=str(
-            (bootstrap_payload.get("steps", {}) or {}).get("smoke", {}).get("status", "pending")
-        ).strip()
+        smoke_status=str((bootstrap_payload.get("steps", {}) or {}).get("smoke", {}).get("status", "pending")).strip()
         or "pending",
         log_path=str(bootstrap_payload.get("log_path", "")).strip(),
         errors=bootstrap_errors,
@@ -615,15 +605,9 @@ def build_dashboard_state(
         for row in graph_frontier[:8]:
             frontiers.append(_frontier_from_graph_row(row, hypotheses_by_id, specs_by_id))
 
-    evidence_rows = [
-        row for row in graph_payload.get("evidence", []) if isinstance(row, dict)
-    ]
-    claims_rows = [
-        row for row in graph_payload.get("claim_updates", []) if isinstance(row, dict)
-    ]
-    branch_relations = [
-        row for row in graph_payload.get("branch_relations", []) if isinstance(row, dict)
-    ]
+    evidence_rows = [row for row in graph_payload.get("evidence", []) if isinstance(row, dict)]
+    claims_rows = [row for row in graph_payload.get("claim_updates", []) if isinstance(row, dict)]
+    branch_relations = [row for row in graph_payload.get("branch_relations", []) if isinstance(row, dict)]
 
     evidence_items = [
         EvidenceItem(
@@ -665,16 +649,8 @@ def build_dashboard_state(
             frontier_row=frontier_row,
             hypothesis=hypotheses_by_id.get(hypothesis_id, {}),
             spec=specs_by_id.get(spec_id, {}),
-            evidence_rows=[
-                row
-                for row in evidence_rows
-                if str(row.get("frontier_id", "")).strip() == card.frontier_id
-            ],
-            claim_rows=[
-                row
-                for row in claims_rows
-                if str(row.get("frontier_id", "")).strip() == card.frontier_id
-            ],
+            evidence_rows=[row for row in evidence_rows if str(row.get("frontier_id", "")).strip() == card.frontier_id],
+            claim_rows=[row for row in claims_rows if str(row.get("frontier_id", "")).strip() == card.frontier_id],
             primary_metric=session.primary_metric,
             direction=session.direction,
             baseline_value=session.baseline_value,

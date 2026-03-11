@@ -21,6 +21,7 @@ _VALID_COMMANDS: tuple[ControlCommand, ...] = (
 )
 _IDEMPOTENCY_WINDOW = 64
 
+
 def _default_control() -> dict:
     return {
         "paused": False,
@@ -59,9 +60,7 @@ def _load_control_snapshot(ctrl_path: Path) -> dict:
     ids = merged.get("applied_command_ids", [])
     if not isinstance(ids, list):
         ids = []
-    merged["applied_command_ids"] = [str(item) for item in ids if str(item).strip()][
-        -_IDEMPOTENCY_WINDOW:
-    ]
+    merged["applied_command_ids"] = [str(item) for item in ids if str(item).strip()][-_IDEMPOTENCY_WINDOW:]
     return merged
 
 

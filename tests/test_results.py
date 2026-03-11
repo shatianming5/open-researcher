@@ -39,10 +39,7 @@ def test_print_results_with_missing_fields(tmp_path):
     research = tmp_path / ".research"
     research.mkdir()
     # Write a TSV with only some columns (missing primary_metric, commit, etc.)
-    (research / "results.tsv").write_text(
-        "status\tmetric_value\tdescription\n"
-        "keep\t0.85\tbaseline\n"
-    )
+    (research / "results.tsv").write_text("status\tmetric_value\tdescription\nkeep\t0.85\tbaseline\n")
     # Should not crash — missing fields get "<missing>"
     print_results(tmp_path)
 

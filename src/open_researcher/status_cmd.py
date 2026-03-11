@@ -119,8 +119,7 @@ def _load_graph_state(research: Path) -> dict | None:
         "frontier_total": len(frontier),
         "frontier_status_counts": status_counts,
         "frontier_runnable": sum(
-            status_counts.get(status, 0)
-            for status in ResearchGraphStore.EXECUTABLE_FRONTIER_STATUSES
+            status_counts.get(status, 0) for status in ResearchGraphStore.EXECUTABLE_FRONTIER_STATUSES
         ),
     }
 
@@ -290,10 +289,7 @@ def _sparkline(values: list[float]) -> str:
     lo, hi = min(values), max(values)
     if lo == hi:
         return SPARK_CHARS[4] * len(values)
-    return "".join(
-        SPARK_CHARS[min(int((v - lo) / (hi - lo) * 7), 7)]
-        for v in values
-    )
+    return "".join(SPARK_CHARS[min(int((v - lo) / (hi - lo) * 7), 7)] for v in values)
 
 
 def print_status(repo_path: Path, sparkline: bool = False) -> None:

@@ -13,12 +13,58 @@ def test_build_dashboard_state_aggregates_graph_and_roles(tmp_path: Path):
         """
         {
           "version": "research-v1",
-          "hypotheses": [{"id": "hyp-001", "summary": "Seed locking reduces variance"}],
-          "experiment_specs": [{"id": "spec-001", "hypothesis_id": "hyp-001", "summary": "Run fixed-seed benchmark", "expected_signal": "variance down", "risk_level": "low"}],
-          "evidence": [{"id": "evi-001", "frontier_id": "frontier-001", "execution_id": "exec-001", "reason_code": "result_observed", "reliability": "strong", "description": "variance drop", "metric_value": 0.82}],
-          "claim_updates": [{"id": "claim-001", "frontier_id": "frontier-001", "execution_id": "exec-001", "transition": "promote", "confidence": "high", "reason_code": "supported_by_strong_evidence"}],
-          "branch_relations": [{"id": "rel-001", "parent_hypothesis_id": "hyp-000", "child_hypothesis_id": "hyp-001", "relation": "refines"}],
-          "frontier": [{"id": "frontier-001", "hypothesis_id": "hyp-001", "experiment_spec_id": "spec-001", "priority": 1, "status": "approved", "claim_state": "candidate", "selection_reason_code": "breadth_exploration"}]
+          "hypotheses": [
+            {"id": "hyp-001", "summary": "Seed locking reduces variance"}
+          ],
+          "experiment_specs": [
+            {
+              "id": "spec-001",
+              "hypothesis_id": "hyp-001",
+              "summary": "Run fixed-seed benchmark",
+              "expected_signal": "variance down",
+              "risk_level": "low"
+            }
+          ],
+          "evidence": [
+            {
+              "id": "evi-001",
+              "frontier_id": "frontier-001",
+              "execution_id": "exec-001",
+              "reason_code": "result_observed",
+              "reliability": "strong",
+              "description": "variance drop",
+              "metric_value": 0.82
+            }
+          ],
+          "claim_updates": [
+            {
+              "id": "claim-001",
+              "frontier_id": "frontier-001",
+              "execution_id": "exec-001",
+              "transition": "promote",
+              "confidence": "high",
+              "reason_code": "supported_by_strong_evidence"
+            }
+          ],
+          "branch_relations": [
+            {
+              "id": "rel-001",
+              "parent_hypothesis_id": "hyp-000",
+              "child_hypothesis_id": "hyp-001",
+              "relation": "refines"
+            }
+          ],
+          "frontier": [
+            {
+              "id": "frontier-001",
+              "hypothesis_id": "hyp-001",
+              "experiment_spec_id": "spec-001",
+              "priority": 1,
+              "status": "approved",
+              "claim_state": "candidate",
+              "selection_reason_code": "breadth_exploration"
+            }
+          ]
         }
         """,
         encoding="utf-8",

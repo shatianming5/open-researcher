@@ -14,7 +14,6 @@ from pathlib import Path
 from open_researcher.config import ResearchConfig
 from open_researcher.event_journal import now_iso
 
-
 BOOTSTRAP_STATE_VERSION = "research-v1"
 PREPARE_LOG_NAME = "prepare.log"
 
@@ -79,9 +78,7 @@ def read_bootstrap_state(path: Path) -> dict:
         if isinstance(value, dict):
             merged[key].update(value)
     if isinstance(payload.get("expected_path_status"), list):
-        merged["expected_path_status"] = [
-            item for item in payload["expected_path_status"] if isinstance(item, dict)
-        ]
+        merged["expected_path_status"] = [item for item in payload["expected_path_status"] if isinstance(item, dict)]
     if isinstance(payload.get("expected_paths"), list):
         merged["expected_paths"] = [str(item) for item in payload["expected_paths"]]
     if isinstance(payload.get("errors"), list):
@@ -174,7 +171,9 @@ def _extract_evaluation_command(path: Path) -> str:
     return ""
 
 
-def _detect_install_command(repo_path: Path, workdir: Path, python_executable: str, cfg: ResearchConfig) -> tuple[str, str]:
+def _detect_install_command(
+    repo_path: Path, workdir: Path, python_executable: str, cfg: ResearchConfig
+) -> tuple[str, str]:
     if cfg.bootstrap_install_command:
         return cfg.bootstrap_install_command.strip(), "config.bootstrap.install_command"
     if (workdir / "uv.lock").exists() and shutil.which("uv"):
@@ -277,8 +276,7 @@ def resolve_bootstrap_plan(repo_path: Path, research_dir: Path, cfg: ResearchCon
         unresolved.append("Smoke command is unresolved. Fill bootstrap.smoke_command or evaluation.md.")
     if missing_expected_paths and not data_command:
         unresolved.append(
-            "Expected paths are missing but no data command was resolved: "
-            + ", ".join(missing_expected_paths)
+            "Expected paths are missing but no data command was resolved: " + ", ".join(missing_expected_paths)
         )
     if cfg.bootstrap_requires_gpu and not shutil.which("nvidia-smi"):
         errors.append("bootstrap.requires_gpu=true but nvidia-smi is not available.")
@@ -459,9 +457,7 @@ def run_bootstrap_prepare(
         if on_prepare_event is not None:
             from open_researcher.research_events import PrepareFailed
 
-            on_prepare_event(
-                PrepareFailed(step="resolve", detail=" ; ".join(str(item) for item in state["errors"]))
-            )
+            on_prepare_event(PrepareFailed(step="resolve", detail=" ; ".join(str(item) for item in state["errors"])))
         return 1, state
     if state.get("unresolved"):
         state["status"] = "failed"

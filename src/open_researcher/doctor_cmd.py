@@ -11,7 +11,6 @@ from rich.table import Table
 from open_researcher.bootstrap import resolve_bootstrap_plan
 from open_researcher.config import RESEARCH_PROTOCOL, load_config
 
-
 REQUIRED_ROLE_PROGRAMS = [
     "scout_program.md",
     "manager_program.md",
@@ -111,7 +110,9 @@ def run_doctor(repo_path: Path) -> list[dict]:
                 results.append({"check": "research_graph.json", "status": "FAIL", "detail": field_error})
             else:
                 frontier_count = len(graph.get("frontier", []))
-                results.append({"check": "research_graph.json", "status": "OK", "detail": f"{frontier_count} frontier rows"})
+                results.append(
+                    {"check": "research_graph.json", "status": "OK", "detail": f"{frontier_count} frontier rows"}
+                )
     else:
         results.append({"check": "research_graph.json", "status": "WARN", "detail": "File not found"})
 
@@ -122,7 +123,9 @@ def run_doctor(repo_path: Path) -> list[dict]:
         if error is not None:
             results.append({"check": "research_memory.json", "status": "FAIL", "detail": error})
         else:
-            field_error = _require_list_field(memory, "ideation_memory") or _require_list_field(memory, "experiment_memory")
+            field_error = _require_list_field(memory, "ideation_memory") or _require_list_field(
+                memory, "experiment_memory"
+            )
             if field_error is not None:
                 results.append({"check": "research_memory.json", "status": "FAIL", "detail": field_error})
             else:
@@ -165,7 +168,9 @@ def run_doctor(repo_path: Path) -> list[dict]:
     if not missing_programs:
         results.append({"check": "role programs", "status": "OK", "detail": ", ".join(REQUIRED_ROLE_PROGRAMS)})
     else:
-        results.append({"check": "role programs", "status": "FAIL", "detail": f"Missing: {', '.join(missing_programs)}"})
+        results.append(
+            {"check": "role programs", "status": "FAIL", "detail": f"Missing: {', '.join(missing_programs)}"}
+        )
 
     # 10. experiment_progress.json parseable
     progress_path = research / "experiment_progress.json"
@@ -261,7 +266,9 @@ def run_doctor(repo_path: Path) -> list[dict]:
             )
     else:
         results.append({"check": "bootstrap resolution", "status": "WARN", "detail": "No .research/ config to inspect"})
-        results.append({"check": "bootstrap expected paths", "status": "WARN", "detail": "No .research/ config to inspect"})
+        results.append(
+            {"check": "bootstrap expected paths", "status": "WARN", "detail": "No .research/ config to inspect"}
+        )
 
     # 13. events.jsonl parseable with seq
     events_path = research / "events.jsonl"
@@ -282,7 +289,9 @@ def run_doctor(repo_path: Path) -> list[dict]:
                 if seq < last_seq:
                     raise ValueError("seq is not monotonic")
                 last_seq = seq
-            results.append({"check": "events.jsonl", "status": "OK", "detail": f"{total} event(s), last_seq={last_seq}"})
+            results.append(
+                {"check": "events.jsonl", "status": "OK", "detail": f"{total} event(s), last_seq={last_seq}"}
+            )
         except (TypeError, ValueError, json.JSONDecodeError, OSError) as exc:
             results.append({"check": "events.jsonl", "status": "FAIL", "detail": f"Parse error: {exc}"})
     else:
@@ -306,9 +315,7 @@ def run_doctor(repo_path: Path) -> list[dict]:
     if (major, minor) >= (3, 10):
         results.append({"check": "Python >= 3.10", "status": "OK", "detail": f"{major}.{minor}"})
     else:
-        results.append(
-            {"check": "Python >= 3.10", "status": "FAIL", "detail": f"{major}.{minor} (need >= 3.10)"}
-        )
+        results.append({"check": "Python >= 3.10", "status": "FAIL", "detail": f"{major}.{minor} (need >= 3.10)"})
 
     return results
 

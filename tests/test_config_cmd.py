@@ -1,6 +1,5 @@
 """Tests for the config CLI subcommand."""
 
-
 import pytest
 import yaml
 from typer.testing import CliRunner

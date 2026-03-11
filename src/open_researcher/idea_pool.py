@@ -39,9 +39,7 @@ class IdeaBacklog:
 
     def _atomic_update(self, updater) -> dict:
         """Lock file, read, apply updater function, write back, return updater result."""
-        _data, result = locked_update_json(
-            self.path, self._lock, updater, default=_default_pool
-        )
+        _data, result = locked_update_json(self.path, self._lock, updater, default=_default_pool)
         return result
 
     def _clear_live_parallel_runtime_state(self, idea: dict) -> None:
@@ -88,6 +86,7 @@ class IdeaBacklog:
             }
             data["ideas"].append(idea)
             return idea
+
         return self._atomic_update(_do)
 
     def list_by_status(self, status: str) -> list[dict]:
@@ -129,6 +128,7 @@ class IdeaBacklog:
     def delete(self, idea_id: str) -> None:
         def _do(data):
             data["ideas"] = [i for i in data["ideas"] if i["id"] != idea_id]
+
         self._atomic_update(_do)
 
     def update_priority(self, idea_id: str, priority: int) -> None:
@@ -137,6 +137,7 @@ class IdeaBacklog:
                 if idea["id"] == idea_id:
                     idea["priority"] = priority
                     break
+
         self._atomic_update(_do)
 
     def summary(self) -> dict:
@@ -184,9 +185,7 @@ class IdeaPool(IdeaBacklog):
                     return copy.deepcopy(idea)
             return None
 
-        _data, result = locked_update_json(
-            self.path, self._lock, _do, default=_default_pool
-        )
+        _data, result = locked_update_json(self.path, self._lock, _do, default=_default_pool)
         return result
 
     def update_status(
@@ -200,9 +199,7 @@ class IdeaPool(IdeaBacklog):
             for idea in data["ideas"]:
                 if idea["id"] != idea_id:
                     continue
-                if claim_token is not None and str(idea.get("claim_token") or "") != str(
-                    claim_token
-                ):
+                if claim_token is not None and str(idea.get("claim_token") or "") != str(claim_token):
                     return False
                 idea["status"] = status
                 if experiment is not None:
@@ -231,9 +228,7 @@ class IdeaPool(IdeaBacklog):
             for idea in data["ideas"]:
                 if idea["id"] != idea_id:
                     continue
-                if claim_token is not None and str(idea.get("claim_token") or "") != str(
-                    claim_token
-                ):
+                if claim_token is not None and str(idea.get("claim_token") or "") != str(claim_token):
                     return False
                 idea["status"] = "done"
                 idea["result"] = {"metric_value": metric_value, "verdict": verdict}

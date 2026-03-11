@@ -138,28 +138,20 @@ class TUIEventRenderer:
 
         if isinstance(event, PrepareStarted):
             self._set_phase("preparing")
-            self._set_trace(
-                f"Prepare | {event.repo_profile} | {event.working_dir} | {event.python_executable}"
-            )
-            self._safe_output(
-                f"[prepare] Starting repo prepare ({event.repo_profile}) in {event.working_dir}."
-            )
+            self._set_trace(f"Prepare | {event.repo_profile} | {event.working_dir} | {event.python_executable}")
+            self._safe_output(f"[prepare] Starting repo prepare ({event.repo_profile}) in {event.working_dir}.")
             return
 
         if isinstance(event, PrepareStepStarted):
             self._set_phase("preparing")
             self._set_trace(f"Prepare {event.step} | {event.source or 'auto-detected'}")
-            self._safe_output(
-                f"[prepare] {event.step} -> {event.command}"
-            )
+            self._safe_output(f"[prepare] {event.step} -> {event.command}")
             return
 
         if isinstance(event, PrepareStepCompleted):
             self._set_trace(f"Prepare {event.step} complete | {event.status}")
             suffix = f" ({event.detail})" if event.detail else ""
-            self._safe_output(
-                f"[prepare] {event.step} completed [{event.status}].{suffix}"
-            )
+            self._safe_output(f"[prepare] {event.step} completed [{event.status}].{suffix}")
             return
 
         if isinstance(event, PrepareCompleted):
@@ -184,19 +176,13 @@ class TUIEventRenderer:
         if isinstance(event, HypothesisProposed):
             suffix = self._id_suffix(event.hypothesis_ids)
             self._set_trace(f"Manager | hypothesis refresh{suffix}")
-            self._safe_output(
-                f"[manager] Proposed/updated {event.count} hypothesis item(s)."
-                f"{suffix}"
-            )
+            self._safe_output(f"[manager] Proposed/updated {event.count} hypothesis item(s).{suffix}")
             return
 
         if isinstance(event, ExperimentSpecCreated):
             suffix = self._id_suffix(event.experiment_spec_ids)
             self._set_trace(f"Manager | experiment specs{suffix}")
-            self._safe_output(
-                f"[manager] Prepared {event.count} experiment spec(s)."
-                f"{suffix}"
-            )
+            self._safe_output(f"[manager] Prepared {event.count} experiment spec(s).{suffix}")
             return
 
         if isinstance(event, CriticReviewStarted):
@@ -207,37 +193,27 @@ class TUIEventRenderer:
         if isinstance(event, FrontierSynced):
             suffix = self._first_item_suffix(event.items)
             self._set_trace(f"Frontier synced | {event.frontier_items} runnable item(s){suffix}")
-            self._safe_output(
-                f"[system] Frontier synced ({event.frontier_items} runnable item(s))."
-                f"{suffix}"
-            )
+            self._safe_output(f"[system] Frontier synced ({event.frontier_items} runnable item(s)).{suffix}")
             return
 
         if isinstance(event, ExperimentPreflightFailed):
             suffix = self._first_item_suffix(event.items)
             self._set_trace(f"Critic rejected | {event.rejected_count} spec(s){suffix}")
-            self._safe_output(
-                f"[critic] Rejected {event.rejected_count} experiment spec(s)."
-                f"{suffix}"
-            )
+            self._safe_output(f"[critic] Rejected {event.rejected_count} experiment spec(s).{suffix}")
             return
 
         if isinstance(event, ExperimentStarted):
             self._set_phase("experimenting")
             suffix = self._experiment_suffix(event)
             self._set_trace(f"Experiment running | run #{event.experiment_num}{suffix}")
-            self._safe_output(
-                f"[exp] Starting experiment agent (run #{event.experiment_num})..."
-                f"{suffix}"
-            )
+            self._safe_output(f"[exp] Starting experiment agent (run #{event.experiment_num})...{suffix}")
             return
 
         if isinstance(event, ExperimentCompleted):
             suffix = self._experiment_suffix(event)
             self._set_trace(f"Experiment finished | run #{event.experiment_num} | code={event.exit_code}{suffix}")
             self._safe_output(
-                f"[exp] Experiment agent finished (run #{event.experiment_num}, code={event.exit_code})."
-                f"{suffix}"
+                f"[exp] Experiment agent finished (run #{event.experiment_num}, code={event.exit_code}).{suffix}"
             )
             return
 
@@ -254,34 +230,23 @@ class TUIEventRenderer:
         if isinstance(event, EvidenceRecorded):
             suffix = self._first_item_suffix(event.items)
             self._set_trace(f"Evidence recorded | {event.evidence_created} item(s){suffix}")
-            self._safe_output(
-                f"[critic] Recorded {event.evidence_created} evidence item(s)."
-                f"{suffix}"
-            )
+            self._safe_output(f"[critic] Recorded {event.evidence_created} evidence item(s).{suffix}")
             return
 
         if isinstance(event, ClaimUpdated):
             suffix = self._first_item_suffix(event.items)
             self._set_trace(f"Claim updated | {event.count} item(s){suffix}")
-            self._safe_output(
-                f"[critic] Updated {event.count} claim(s)."
-                f"{suffix}"
-            )
+            self._safe_output(f"[critic] Updated {event.count} claim(s).{suffix}")
             return
 
         if isinstance(event, ReproductionRequested):
             suffix = self._first_item_suffix(event.items)
             self._set_trace(f"Reproduction requested | {event.count} item(s){suffix}")
-            self._safe_output(
-                f"[critic] Requested reproduction for {event.count} item(s)."
-                f"{suffix}"
-            )
+            self._safe_output(f"[critic] Requested reproduction for {event.count} item(s).{suffix}")
             return
 
         if isinstance(event, MemoryUpdated):
-            self._set_trace(
-                f"Memory updated | ideation={event.ideation_memory} experiment={event.experiment_memory}"
-            )
+            self._set_trace(f"Memory updated | ideation={event.ideation_memory} experiment={event.experiment_memory}")
             self._safe_output(
                 f"[system] Memory updated (ideation={event.ideation_memory}, experiment={event.experiment_memory})."
             )
@@ -294,9 +259,7 @@ class TUIEventRenderer:
 
         if isinstance(event, CrashLimitReached):
             self._set_trace(f"Crash limit reached | max_crashes={event.max_crashes}")
-            self._safe_output(
-                f"[system] Crash limit reached ({event.max_crashes} consecutive crashes). Pausing."
-            )
+            self._safe_output(f"[system] Crash limit reached ({event.max_crashes} consecutive crashes). Pausing.")
             return
 
         if isinstance(event, PhaseTransition):
@@ -311,6 +274,4 @@ class TUIEventRenderer:
 
         if isinstance(event, SessionFailed):
             self._set_trace(f"Session failed | {event.failed_role} | code={event.exit_code}")
-            self._safe_output(
-                f"[system] Session failed while running {event.failed_role} (code={event.exit_code})."
-            )
+            self._safe_output(f"[system] Session failed while running {event.failed_role} (code={event.exit_code}).")

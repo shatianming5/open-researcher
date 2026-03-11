@@ -163,9 +163,16 @@ def test_status_shows_activity(tmp_path):
 def test_parse_state_includes_research_graph_summary(tmp_path):
     research = tmp_path / ".research"
     research.mkdir()
-    (research / "config.yaml").write_text(
-        "mode: autonomous\nresearch:\n  protocol: research-v1\nmetrics:\n  primary:\n    name: acc\n    direction: higher_is_better\n"
+    config_text = (
+        "mode: autonomous\n"
+        "research:\n"
+        "  protocol: research-v1\n"
+        "metrics:\n"
+        "  primary:\n"
+        "    name: acc\n"
+        "    direction: higher_is_better\n"
     )
+    (research / "config.yaml").write_text(config_text)
     (research / "results.tsv").write_text(
         "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
     )

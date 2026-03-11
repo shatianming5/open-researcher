@@ -11,6 +11,7 @@ from textual.widgets import Button, Label, Static, TextArea
 
 def load_review_data(research_dir: Path) -> dict:
     """Load Scout output files for review."""
+
     def _read(name: str) -> str:
         p = research_dir / name
         if p.exists():

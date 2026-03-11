@@ -15,30 +15,35 @@ Open Researcher Demo — 演示多 Agent 系统的核心功能。
 
 import json
 import shutil
-import sys
+import subprocess
 import tempfile
-import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+from open_researcher.activity import ActivityMonitor
+from open_researcher.gpu_manager import GPUManager
+from open_researcher.idea_pool import IdeaPool
+from open_researcher.init_cmd import do_init
+from open_researcher.status_cmd import PHASE_NAMES, parse_research_state
+from open_researcher.tui.app import ResearchApp
 
 # ── 准备临时项目目录 ──────────────────────────────────────────────
 
 DEMO_DIR = Path(tempfile.mkdtemp(prefix="open-researcher-demo-"))
-print(f"\n{'='*60}")
-print(f"  Open Researcher Demo")
+print(f"\n{'=' * 60}")
+print("  Open Researcher Demo")
 print(f"  临时目录: {DEMO_DIR}")
-print(f"{'='*60}\n")
+print(f"{'=' * 60}\n")
 
 
 # ── Step 1: 初始化 .research/ ─────────────────────────────────────
 
 print(">>> Step 1: 初始化 .research/ 目录\n")
-from open_researcher.init_cmd import do_init
 
 do_init(repo_path=DEMO_DIR, tag="demo")
 
 research = DEMO_DIR / ".research"
-print(f"\n生成的文件:")
+print("\n生成的文件:")
 for f in sorted(research.iterdir()):
     if f.is_file():
         size = f.stat().st_size
@@ -54,7 +59,6 @@ print()
 # ── Step 2: IdeaPool 操作 ─────────────────────────────────────────
 
 print(">>> Step 2: IdeaPool — Idea 生命周期演示\n")
-from open_researcher.idea_pool import IdeaPool
 
 pool = IdeaPool(research / "idea_pool.json")
 
@@ -99,7 +103,6 @@ print()
 # ── Step 3: ActivityMonitor ───────────────────────────────────────
 
 print(">>> Step 3: ActivityMonitor — Agent 状态追踪\n")
-from open_researcher.activity import ActivityMonitor
 
 activity = ActivityMonitor(research)
 
@@ -124,7 +127,6 @@ for agent_key, act in all_act.items():
 # ── Step 4: GPUManager 模拟 ──────────────────────────────────────
 
 print(">>> Step 4: GPUManager — GPU 分配模拟\n")
-from open_researcher.gpu_manager import GPUManager
 
 FAKE_NVIDIA_SMI = """\
 index, memory.total [MiB], memory.used [MiB], memory.free [MiB], utilization.gpu [%]
@@ -147,7 +149,7 @@ with patch("subprocess.run") as mock_run:
     result2 = gpu_mgr.allocate(tag="exp-002")
     print(f"  分配 exp-002: host={result2[0]}, device={result2[1]}")
 
-print(f"\n  GPU 状态:")
+print("\n  GPU 状态:")
 for g in gpu_mgr.status():
     alloc = g.get("allocated_to") or "free"
     print(f"    GPU:{g['device']}  {g['memory_used']}/{g['memory_total']} MiB  free={g['memory_free']}  [{alloc}]")
@@ -205,7 +207,6 @@ print()
 # ── Step 7: Status 命令 ──────────────────────────────────────────
 
 print(">>> Step 7: 解析研究状态\n")
-from open_researcher.status_cmd import PHASE_NAMES, parse_research_state
 
 # 写入一些内容让 phase 检测工作
 (research / "project-understanding.md").write_text("# Project\nThis is a demo project.\nIt does cool things.\n")
@@ -213,7 +214,7 @@ from open_researcher.status_cmd import PHASE_NAMES, parse_research_state
 (research / "evaluation.md").write_text("# Evaluation\nUse accuracy as primary metric.\nRun test suite.\n")
 
 # 需要 git 初始化才能获取 branch
-import subprocess
+
 subprocess.run(["git", "init"], cwd=DEMO_DIR, capture_output=True)
 subprocess.run(["git", "checkout", "-b", "research/demo"], cwd=DEMO_DIR, capture_output=True)
 
@@ -221,7 +222,9 @@ state = parse_research_state(DEMO_DIR)
 print(f"  Phase: {PHASE_NAMES.get(state['phase'], '?')}")
 print(f"  Branch: {state['branch']}")
 print(f"  Mode: {state['mode']}")
-print(f"  Experiments: {state['total']} total, {state['keep']} kept, {state['discard']} discard, {state['crash']} crash")
+print(
+    f"  Experiments: {state['total']} total, {state['keep']} kept, {state['discard']} discard, {state['crash']} crash"
+)
 if state["baseline_value"] is not None:
     print(f"  Baseline: {state['baseline_value']:.4f}")
     print(f"  Current:  {state['current_value']:.4f}")
@@ -243,7 +246,6 @@ try:
 except EOFError:
     answer = "n"
 if answer == "y":
-    from open_researcher.tui.app import ResearchApp
     app = ResearchApp(DEMO_DIR, multi=True)
     app.run()
     print("\n  TUI 已退出。")
@@ -265,6 +267,6 @@ if answer == "y":
 else:
     print(f"  保留在: {DEMO_DIR}")
 
-print(f"\n{'='*60}")
+print(f"\n{'=' * 60}")
 print("  Demo 完成！")
-print(f"{'='*60}\n")
+print(f"{'=' * 60}\n")

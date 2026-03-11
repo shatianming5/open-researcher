@@ -14,8 +14,8 @@ from open_researcher.graph_protocol import (
 )
 from open_researcher.parallel_runtime import run_parallel_experiment_batch
 from open_researcher.research_events import (
-    RoleFailed,
     ReviewAutoConfirmed,
+    RoleFailed,
     SessionCompleted,
     SessionFailed,
     SessionStarted,

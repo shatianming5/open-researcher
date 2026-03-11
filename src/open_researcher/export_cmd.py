@@ -43,9 +43,10 @@ def generate_report(repo_path: Path) -> str:
     lines.append("")
     lines.append("| # | Status | Value | Description |")
     lines.append("|---|--------|-------|-------------|")
+
     def _esc(val: str) -> str:
         """Escape pipe characters in Markdown table cells."""
-        return val.replace('|', '\\|')
+        return val.replace("|", "\\|")
 
     for i, row in enumerate(rows, 1):
         lines.append(

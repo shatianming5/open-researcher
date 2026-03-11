@@ -1,8 +1,5 @@
 """Tests for the Review screen."""
 
-import json
-from pathlib import Path
-
 
 def test_review_screen_import():
     """ReviewScreen should be importable."""

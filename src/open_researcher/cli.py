@@ -101,11 +101,7 @@ def _dispatch_workflow(
 
     _print_notices(selection.notices)
     research_dir = repo_path / ".research"
-    use_bootstrap_flow = (
-        force_bootstrap
-        or not research_dir.is_dir()
-        or tag is not None
-    )
+    use_bootstrap_flow = force_bootstrap or not research_dir.is_dir() or tag is not None
 
     if research_dir.is_dir() and not force_bootstrap and goal is not None:
         console.print("[red]--goal is only valid when bootstrapping a new workflow.[/red]")

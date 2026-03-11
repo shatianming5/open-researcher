@@ -6,9 +6,8 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from open_researcher.control_plane import issue_control_command
 from open_researcher.config import ResearchConfig
-from open_researcher.research_graph import ResearchGraphStore
+from open_researcher.control_plane import issue_control_command
 from open_researcher.research_events import (
     AllIdeasProcessed,
     ClaimUpdated,
@@ -23,6 +22,7 @@ from open_researcher.research_events import (
     MemoryUpdated,
     NoPendingIdeas,
 )
+from open_researcher.research_graph import ResearchGraphStore
 from open_researcher.research_loop import ResearchLoop
 
 

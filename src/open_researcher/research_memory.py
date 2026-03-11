@@ -61,23 +61,17 @@ class ResearchMemoryStore:
         profile = repo_profile or graph.get("repo_profile", {})
         profile_key = str(profile.get("profile_key", "general_code")).strip() or "general_code"
         hypotheses = {
-            str(item.get("id", "")).strip(): item
-            for item in graph.get("hypotheses", [])
-            if isinstance(item, dict)
+            str(item.get("id", "")).strip(): item for item in graph.get("hypotheses", []) if isinstance(item, dict)
         }
         evidence = {
-            str(item.get("id", "")).strip(): item
-            for item in graph.get("evidence", [])
-            if isinstance(item, dict)
+            str(item.get("id", "")).strip(): item for item in graph.get("evidence", []) if isinstance(item, dict)
         }
 
         def _do(data):
             normalized = self._normalize(data)
             priors = normalized["repo_type_priors"]
             if include_repo_type_prior and not any(
-                str(item.get("profile_key", "")).strip() == profile_key
-                for item in priors
-                if isinstance(item, dict)
+                str(item.get("profile_key", "")).strip() == profile_key for item in priors if isinstance(item, dict)
             ):
                 priors.append(
                     {
