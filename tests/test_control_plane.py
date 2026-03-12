@@ -2,8 +2,8 @@
 
 import json
 
-from open_researcher.control_plane import issue_control_command, read_control
-from open_researcher.event_journal import EventJournal
+from paperfarm.control_plane import issue_control_command, read_control
+from paperfarm.event_journal import EventJournal
 
 
 def test_issue_control_command_writes_event_and_snapshot(tmp_path):

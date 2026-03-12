@@ -1,6 +1,6 @@
 # Example: nanoGPT Research
 
-Improve [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT) validation loss with Open Researcher — from baseline ~0.41 to ~0.33 in an overnight run.
+Improve [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT) validation loss with PaperFarm — from baseline ~0.41 to ~0.33 in an overnight run.
 
 ## Prerequisites
 
@@ -15,21 +15,21 @@ Improve [karpathy/nanoGPT](https://github.com/karpathy/nanoGPT) validation loss 
 git clone https://github.com/karpathy/nanoGPT.git
 cd nanoGPT
 
-# 2. Install Open Researcher
-pip install open-researcher
+# 2. Install PaperFarm
+pip install PaperFarm
 
 # 3. Optional: inspect what bootstrap will do
-open-researcher run --dry-run
+PaperFarm run --dry-run
 
-# 4. Launch — Scout will fill bootstrap.*, then Open Researcher will
+# 4. Launch — Scout will fill bootstrap.*, then PaperFarm will
 #    install deps, prepare Shakespeare data, run a smoke check, and
 #    enter the research-v1 loop automatically
-open-researcher run --agent claude-code
+PaperFarm run --agent claude-code
 
 # 5. Check progress in the morning
-open-researcher status --sparkline
-open-researcher results --chart primary
-open-researcher export --output report.md
+PaperFarm status --sparkline
+PaperFarm results --chart primary
+PaperFarm export > report.md
 ```
 
 ## What Happens
@@ -89,8 +89,8 @@ bootstrap:
 Then rerun:
 
 ```bash
-open-researcher doctor
-open-researcher run
+PaperFarm doctor
+PaperFarm run
 ```
 
 ## Metrics

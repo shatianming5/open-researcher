@@ -1,8 +1,8 @@
-# TUI 设计对比分析：Toad vs Open Researcher
+# TUI 设计对比分析：Toad vs PaperFarm
 
 ## 1. 架构复杂度
 
-| 维度 | Toad | Open Researcher |
+| 维度 | Toad | PaperFarm |
 |---|---|---|
 | **Widget 文件数** | **38 个**独立 widget 文件 | **1 个** widgets.py（所有 widget 挤在一起） |
 | **Screen 文件数** | 9 个 screen + 6 个独立 TCSS | 1 个 app.py + 1 个 review.py |
@@ -11,7 +11,7 @@
 
 ## 2. 视觉设计精细度
 
-| 维度 | Toad | Open Researcher |
+| 维度 | Toad | PaperFarm |
 |---|---|---|
 | **边框风格** | `round`, `panel`, `tall`, `heavy`, `wide` — 不同组件用不同边框 | 只用 `tall`，全场一种边框 |
 | **透明度/层次** | 大量用 `opacity: 90%`, `background: $primary 10%`, `text-opacity: 0.5` 做层次感 | 无透明度运用，只有实色背景 |
@@ -101,6 +101,6 @@ TerminalTool {
 
 - **Toad 作者**：Will McGugan — Textual 框架本身的作者，对框架能力的利用是专家级的
 - **Toad 定位**：通用 AI 编码助手终端界面，消费级产品
-- **Open Researcher 定位**：研究实验自动化监控面板，开发者工具
+- **PaperFarm 定位**：研究实验自动化监控面板，开发者工具
 
 Toad 是 Textual 框架的专业级应用，38 个精细化组件 + 多状态样式 + 动画 + 响应式。我们的 TUI 是功能可用但视觉粗糙，所有 widget 挤在一个文件里，CSS 不到 200 行，没有动画、层次感和交互反馈。

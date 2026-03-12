@@ -1,6 +1,6 @@
 """Tests for history-aware frontier retrieval and policy ranking."""
 
-from open_researcher.memory_policy import apply_history_policy, build_family_key
+from paperfarm.memory_policy import apply_history_policy, build_family_key
 
 
 def test_apply_history_policy_prefers_existing_repro_branch():

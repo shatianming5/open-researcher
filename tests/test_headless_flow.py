@@ -36,8 +36,8 @@ def test_headless_scout_phase(tmp_path):
 
     buf = StringIO()
 
-    with patch("open_researcher.headless._resolve_agent", return_value=mock_agent):
-        from open_researcher.headless import do_start_headless
+    with patch("paperfarm.headless._resolve_agent", return_value=mock_agent):
+        from paperfarm.headless import do_start_headless
 
         do_start_headless(
             repo_path=tmp_path,
@@ -136,10 +136,10 @@ def test_headless_max_experiments_limit(tmp_path):
     buf = StringIO()
 
     with patch(
-        "open_researcher.headless._resolve_agent",
+        "paperfarm.headless._resolve_agent",
         side_effect=[scout_agent, manager_agent, critic_agent, exp_agent],
     ):
-        from open_researcher.headless import do_start_headless
+        from paperfarm.headless import do_start_headless
 
         do_start_headless(
             repo_path=tmp_path,
@@ -174,8 +174,8 @@ def test_headless_empty_frontier_completes_session(tmp_path):
 
     buf = StringIO()
 
-    with patch("open_researcher.headless._resolve_agent", return_value=mock_agent):
-        from open_researcher.headless import do_start_headless
+    with patch("paperfarm.headless._resolve_agent", return_value=mock_agent):
+        from paperfarm.headless import do_start_headless
 
         do_start_headless(
             repo_path=tmp_path,
@@ -208,8 +208,8 @@ def test_headless_scout_failure_stops(tmp_path):
 
     buf = StringIO()
 
-    with patch("open_researcher.headless._resolve_agent", return_value=mock_agent):
-        from open_researcher.headless import do_start_headless
+    with patch("paperfarm.headless._resolve_agent", return_value=mock_agent):
+        from paperfarm.headless import do_start_headless
 
         do_start_headless(
             repo_path=tmp_path,
@@ -231,7 +231,7 @@ def test_headless_scout_failure_stops(tmp_path):
 def test_headless_research_v1_emits_manager_and_critic_events(tmp_path):
     _make_git_repo(tmp_path)
 
-    from open_researcher.init_cmd import do_init
+    from paperfarm.init_cmd import do_init
 
     do_init(tmp_path, tag="test")
     _set_bootstrap_auto_prepare(tmp_path, False)
@@ -329,10 +329,10 @@ def test_headless_research_v1_emits_manager_and_critic_events(tmp_path):
     buf = StringIO()
 
     with patch(
-        "open_researcher.headless._resolve_agent",
+        "paperfarm.headless._resolve_agent",
         side_effect=[scout_agent, manager_agent, critic_agent, exp_agent],
     ):
-        from open_researcher.headless import do_start_headless
+        from paperfarm.headless import do_start_headless
 
         do_start_headless(
             repo_path=tmp_path,
@@ -408,10 +408,10 @@ def test_headless_manager_failure_emits_session_failed(tmp_path):
     buf = StringIO()
 
     with patch(
-        "open_researcher.headless._resolve_agent",
+        "paperfarm.headless._resolve_agent",
         side_effect=[scout_agent, manager_agent, critic_agent, exp_agent],
     ):
-        from open_researcher.headless import do_start_headless
+        from paperfarm.headless import do_start_headless
 
         exit_code = do_start_headless(
             repo_path=tmp_path,
@@ -487,10 +487,10 @@ def test_headless_experiment_failure_emits_session_failed(tmp_path):
     buf = StringIO()
 
     with patch(
-        "open_researcher.headless._resolve_agent",
+        "paperfarm.headless._resolve_agent",
         side_effect=[scout_agent, manager_agent, critic_agent, exp_agent],
     ):
-        from open_researcher.headless import do_start_headless
+        from paperfarm.headless import do_start_headless
 
         exit_code = do_start_headless(
             repo_path=tmp_path,
@@ -512,7 +512,7 @@ def test_headless_experiment_failure_emits_session_failed(tmp_path):
 def test_do_run_headless_continues_existing_workspace_without_scout(tmp_path):
     _make_git_repo(tmp_path)
 
-    from open_researcher.init_cmd import do_init
+    from paperfarm.init_cmd import do_init
 
     do_init(tmp_path, tag="test")
     _set_bootstrap_auto_prepare(tmp_path, False)
@@ -573,10 +573,10 @@ def test_do_run_headless_continues_existing_workspace_without_scout(tmp_path):
     buf = StringIO()
 
     with patch(
-        "open_researcher.headless._resolve_agent",
+        "paperfarm.headless._resolve_agent",
         side_effect=[manager_agent, critic_agent, exp_agent],
     ):
-        from open_researcher.headless import do_run_headless
+        from paperfarm.headless import do_run_headless
 
         exit_code = do_run_headless(
             repo_path=tmp_path,

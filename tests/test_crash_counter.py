@@ -1,6 +1,6 @@
 """Tests for crash counter."""
 
-from open_researcher.crash_counter import CrashCounter
+from paperfarm.crash_counter import CrashCounter
 
 
 def test_crash_counter_triggers_at_limit():

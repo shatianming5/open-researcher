@@ -8,9 +8,9 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from open_researcher.config import ResearchConfig
-from open_researcher.control_plane import issue_control_command
-from open_researcher.research_events import (
+from paperfarm.config import ResearchConfig
+from paperfarm.control_plane import issue_control_command
+from paperfarm.research_events import (
     AllIdeasProcessed,
     ClaimUpdated,
     CriticReviewStarted,
@@ -24,8 +24,8 @@ from open_researcher.research_events import (
     MemoryUpdated,
     NoPendingIdeas,
 )
-from open_researcher.research_graph import ResearchGraphStore
-from open_researcher.research_loop import ResearchLoop, read_latest_status
+from paperfarm.research_graph import ResearchGraphStore
+from paperfarm.research_loop import ResearchLoop, read_latest_status
 
 
 def _init_git_repo(path: Path) -> None:

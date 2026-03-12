@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from open_researcher.demo_cmd import _build_idea_pool, _build_results_tsv, _populate_research, _setup_demo_repo
+from paperfarm.demo_cmd import _build_idea_pool, _build_results_tsv, _populate_research, _setup_demo_repo
 
 
 def test_build_results_tsv():
@@ -69,7 +69,7 @@ def test_populate_research():
 def test_demo_cli_help():
     """Demo command is registered and shows in help."""
     result = subprocess.run(
-        [sys.executable, "-m", "open_researcher.cli", "--help"],
+        [sys.executable, "-m", "paperfarm.cli", "--help"],
         capture_output=True,
         text=True,
     )
@@ -79,7 +79,7 @@ def test_demo_cli_help():
 def test_demo_cli_serve_option():
     """Demo command exposes --serve and --port options."""
     result = subprocess.run(
-        [sys.executable, "-m", "open_researcher.cli", "demo", "--help"],
+        [sys.executable, "-m", "paperfarm.cli", "demo", "--help"],
         capture_output=True,
         text=True,
     )
@@ -102,7 +102,7 @@ def test_setup_demo_repo_creates_git_and_research(tmp_path):
 
 def test_do_demo_serve_missing_import_prints_error(capsys):
     """do_demo(serve=True) prints a helpful error when textual-serve is absent."""
-    from open_researcher.demo_cmd import do_demo
+    from paperfarm.demo_cmd import do_demo
 
     with patch.dict("sys.modules", {"textual_serve": None, "textual_serve.server": None}):
         do_demo(serve=True)
@@ -119,9 +119,9 @@ def test_do_demo_serve_launches_server(tmp_path):
     mock_textual_serve.Server = mock_server_class
 
     with patch.dict("sys.modules", {"textual_serve": MagicMock(), "textual_serve.server": mock_textual_serve}):
-        with patch("open_researcher.demo_cmd._setup_demo_repo"):
-            with patch("open_researcher.demo_cmd._populate_research"):
-                from open_researcher.demo_cmd import do_demo
+        with patch("paperfarm.demo_cmd._setup_demo_repo"):
+            with patch("paperfarm.demo_cmd._populate_research"):
+                from paperfarm.demo_cmd import do_demo
 
                 do_demo(serve=True, port=9999)
 

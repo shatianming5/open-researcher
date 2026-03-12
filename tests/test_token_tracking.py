@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from open_researcher.token_tracking import (
+from paperfarm.token_tracking import (
     BudgetCheckResult,
     TokenLedger,
     TokenMetrics,

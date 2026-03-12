@@ -7,9 +7,9 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from open_researcher.idea_pool import IdeaPool
-from open_researcher.storage import atomic_write_json
-from open_researcher.worktree import create_worktree, remove_worktree, worktrees_root
+from paperfarm.idea_pool import IdeaPool
+from paperfarm.storage import atomic_write_json
+from paperfarm.worktree import create_worktree, remove_worktree, worktrees_root
 
 
 def _init_git_repo(path: Path) -> None:
@@ -81,6 +81,13 @@ def test_create_and_remove_worktree():
         # Clean up
         remove_worktree(repo, wt_path)
         assert not wt_path.exists()
+
+
+def test_worktrees_root_uses_paperfarm_prefix():
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        root = worktrees_root(repo)
+        assert root.name.startswith(".paperfarm-worktrees-")
 
 
 def test_worktree_applies_tracked_overlay_and_ignored_source_file():
@@ -272,7 +279,7 @@ def test_worker_uses_worktree_isolation():
         _init_git_repo(repo)
         research = _setup_research(repo)
 
-        from open_researcher.worker import WorkerManager
+        from paperfarm.worker import WorkerManager
 
         ideas = [
             {

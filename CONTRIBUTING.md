@@ -1,12 +1,12 @@
-# Contributing to Open Researcher
+# Contributing to PaperFarm
 
 Thanks for your interest in contributing!
 
 ## Development Setup
 
 ```bash
-git clone https://github.com/open-researcher/open-researcher.git
-cd open-researcher
+git clone https://github.com/shatianming5/PaperFarm.git
+cd PaperFarm
 python -m venv .venv
 source .venv/bin/activate
 make dev
@@ -29,7 +29,7 @@ make format  # auto-fix
 
 ## Adding a New Agent Adapter
 
-1. Create `src/open_researcher/agents/your_agent.py`
+1. Create `src/paperfarm/agents/your_agent.py`
 2. Implement the `AgentAdapter` interface (see `base.py`)
 3. Add the `@register` decorator
 4. Add tests in `tests/test_agents.py`

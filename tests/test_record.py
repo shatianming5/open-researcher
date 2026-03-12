@@ -6,7 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-RECORD_SCRIPT = Path(__file__).parent.parent / "src" / "open_researcher" / "scripts" / "record.py"
+RECORD_SCRIPT = Path(__file__).parent.parent / "src" / "paperfarm" / "scripts" / "record.py"
 
 
 def test_record_appends_to_tsv():

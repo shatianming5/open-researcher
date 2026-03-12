@@ -9,7 +9,7 @@ import pytest
 
 def test_app_state_default():
     """ResearchApp should default to EXPERIMENTING state."""
-    from open_researcher.tui.app import ResearchApp
+    from paperfarm.tui.app import ResearchApp
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
@@ -24,7 +24,7 @@ def test_app_state_default():
 
 def test_app_state_scouting():
     """ResearchApp should support scouting state."""
-    from open_researcher.tui.app import ResearchApp
+    from paperfarm.tui.app import ResearchApp
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
@@ -38,7 +38,7 @@ def test_app_state_scouting():
 
 
 def test_app_bindings_expose_command_center_tabs():
-    from open_researcher.tui.app import ResearchApp
+    from paperfarm.tui.app import ResearchApp
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
@@ -59,9 +59,9 @@ def test_app_bindings_expose_command_center_tabs():
 async def test_docs_sidebar_selection_switches_doc(tmp_path: Path):
     from textual.widgets import Input, OptionList, Static
 
-    from open_researcher.tui.app import ResearchApp
-    from open_researcher.tui.view_model import build_docs_workbench
-    from open_researcher.tui.widgets import DocsSidebarPanel, DocViewer
+    from paperfarm.tui.app import ResearchApp
+    from paperfarm.tui.view_model import build_docs_workbench
+    from paperfarm.tui.widgets import DocsSidebarPanel, DocViewer
 
     research = tmp_path / ".research"
     research.mkdir()
@@ -118,9 +118,9 @@ async def test_docs_sidebar_selection_switches_doc(tmp_path: Path):
 async def test_frontier_selection_updates_detail_drawer(tmp_path: Path):
     from textual.widgets import OptionList
 
-    from open_researcher.tui.app import ResearchApp
-    from open_researcher.tui.view_model import build_dashboard_state
-    from open_researcher.tui.widgets import FrontierDetailPanel
+    from paperfarm.tui.app import ResearchApp
+    from paperfarm.tui.view_model import build_dashboard_state
+    from paperfarm.tui.widgets import FrontierDetailPanel
 
     research = tmp_path / ".research"
     research.mkdir()

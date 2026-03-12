@@ -1,6 +1,6 @@
 # Example: YOLO Tiny Object Detection
 
-Maximize [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) mAP50 on COCO8 with Open Researcher — from baseline ~50% to ~65%+ by tuning training and architecture.
+Maximize [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) mAP50 on COCO8 with PaperFarm — from baseline ~50% to ~65%+ by tuning training and architecture.
 
 ## Prerequisites
 
@@ -20,15 +20,15 @@ pip install ultralytics
 #   - Trains for 10 epochs
 #   - Prints mAP50 at the end
 
-# 2. Initialize Open Researcher
-pip install open-researcher
-open-researcher init --tag yolo
+# 2. Initialize PaperFarm
+pip install PaperFarm
+PaperFarm init --tag yolo
 
 # 3. Launch autonomous research
-open-researcher run --agent claude-code
+PaperFarm run --agent claude-code
 
 # Or run headless with a specific goal
-open-researcher start --mode headless \
+PaperFarm run --mode headless \
   --goal "Maximize mAP50 on COCO8 object detection by tuning YOLOv8 training hyperparameters, augmentation strategies, and model architecture choices" \
   --max-experiments 20
 ```

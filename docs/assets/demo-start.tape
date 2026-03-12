@@ -1,4 +1,4 @@
-# VHS Tape: open-researcher start 完整流程
+# VHS Tape: PaperFarm run 完整流程
 # 用法: vhs docs/assets/demo-start.tape
 # 需要: 一个已 init 的项目目录
 
@@ -12,11 +12,11 @@ Set Theme "Tokyo Night"
 Set Padding 20
 Set Framerate 30
 
-Type "# Open Researcher — 零配置自动研究流程"
+Type "# PaperFarm — 零配置自动研究流程"
 Enter
 Sleep 1s
 
-Type "open-researcher start --agent claude-code"
+Type "PaperFarm run --agent claude-code"
 Sleep 500ms
 Enter
 Sleep 8s

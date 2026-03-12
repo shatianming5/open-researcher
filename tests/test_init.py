@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from open_researcher.init_cmd import do_init
+from paperfarm.init_cmd import do_init
 
 
 @pytest.fixture
@@ -129,7 +129,7 @@ def test_init_creates_shared_files(tmp_path):
 def test_experiment_program_serial_mode():
     from jinja2 import Environment, PackageLoader
 
-    env = Environment(loader=PackageLoader("open_researcher", "templates"))
+    env = Environment(loader=PackageLoader("paperfarm", "templates"))
     tmpl = env.get_template("experiment_program.md.j2")
     result = tmpl.render(tag="demo")
     assert "Research-v1 Job Runner" in result
@@ -187,7 +187,7 @@ def test_scout_program_template():
     """scout_program.md.j2 should render with goal variable."""
     from jinja2 import Environment, PackageLoader
 
-    env = Environment(loader=PackageLoader("open_researcher", "templates"))
+    env = Environment(loader=PackageLoader("paperfarm", "templates"))
     tmpl = env.get_template("scout_program.md.j2")
 
     # With goal
@@ -207,7 +207,7 @@ def test_research_strategy_template():
     """research-strategy.md.j2 should render as empty scaffold."""
     from jinja2 import Environment, PackageLoader
 
-    env = Environment(loader=PackageLoader("open_researcher", "templates"))
+    env = Environment(loader=PackageLoader("paperfarm", "templates"))
     tmpl = env.get_template("research-strategy.md.j2")
     result = tmpl.render(tag="test")
     assert "Research Direction" in result

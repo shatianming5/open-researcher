@@ -15,7 +15,7 @@ def _make_git_repo(tmp_path: Path) -> Path:
 
 def test_bootstrap_init_auto_inits(tmp_path):
     """Bootstrap should auto-create `.research/` when it doesn't exist."""
-    from open_researcher.run_cmd import do_start_init
+    from paperfarm.run_cmd import do_start_init
 
     _make_git_repo(tmp_path)
     research = do_start_init(tmp_path, tag="test")
@@ -26,7 +26,7 @@ def test_bootstrap_init_auto_inits(tmp_path):
 
 def test_bootstrap_init_skips_if_exists(tmp_path):
     """Bootstrap should not re-init when `.research/` already exists."""
-    from open_researcher.run_cmd import do_start_init
+    from paperfarm.run_cmd import do_start_init
 
     _make_git_repo(tmp_path)
     research = tmp_path / ".research"
@@ -42,7 +42,7 @@ def test_bootstrap_init_skips_if_exists(tmp_path):
 
 def test_render_scout_program_with_goal(tmp_path):
     """Scout program should include goal when provided."""
-    from open_researcher.run_cmd import render_scout_program
+    from paperfarm.run_cmd import render_scout_program
 
     _make_git_repo(tmp_path)
     research = tmp_path / ".research"
@@ -55,7 +55,7 @@ def test_render_scout_program_with_goal(tmp_path):
 
 def test_render_scout_program_without_goal(tmp_path):
     """Scout program should work without goal."""
-    from open_researcher.run_cmd import render_scout_program
+    from paperfarm.run_cmd import render_scout_program
 
     _make_git_repo(tmp_path)
     research = tmp_path / ".research"

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from open_researcher.tui.view_model import build_dashboard_state, build_docs_workbench
+from paperfarm.tui.view_model import build_dashboard_state, build_docs_workbench
 
 
 def test_build_dashboard_state_aggregates_graph_and_roles(tmp_path: Path):

@@ -2,7 +2,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from open_researcher.results_cmd import (
+from paperfarm.results_cmd import (
     derive_final_results,
     load_results,
     print_results,
@@ -63,7 +63,7 @@ def test_results_json_output(tmp_path, capsys):
         "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
         "2026-03-08T10:00:00\ta1b\tacc\t0.85\t{}\tkeep\tbaseline\n"
     )
-    from open_researcher.results_cmd import print_results_json
+    from paperfarm.results_cmd import print_results_json
 
     print_results_json(tmp_path)
     captured = capsys.readouterr()
@@ -85,7 +85,7 @@ def test_results_chart_no_crash(tmp_path):
         "2026-03-08\ta2b\tacc\t0.87\t{}\tkeep\texp1\n"
         "2026-03-08\ta3b\tacc\t0.83\t{}\tdiscard\texp2\n"
     )
-    from open_researcher.results_cmd import print_results_chart
+    from paperfarm.results_cmd import print_results_chart
 
     # Should not raise
     print_results_chart(tmp_path)
@@ -97,7 +97,7 @@ def test_results_chart_empty(tmp_path, capsys):
     (research / "results.tsv").write_text(
         "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
     )
-    from open_researcher.results_cmd import print_results_chart
+    from paperfarm.results_cmd import print_results_chart
 
     print_results_chart(tmp_path)
     captured = capsys.readouterr()

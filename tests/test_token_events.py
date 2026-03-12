@@ -1,4 +1,4 @@
-from open_researcher.research_events import (
+from paperfarm.research_events import (
     TokenMetricsUpdated,
     TokenBudgetWarning,
     TokenBudgetExceeded,

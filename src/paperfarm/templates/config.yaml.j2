@@ -1,0 +1,141 @@
+# .research/config.yaml
+# Research configuration — edit this file to control agent behavior
+
+# Intervention mode
+# autonomous: agent runs freely, only pauses on crashes
+# collaborative: agent pauses after each phase for human review
+mode: autonomous
+
+# Experiment control
+experiment:
+  timeout: 600                  # seconds per experiment before kill
+  max_consecutive_crashes: 3    # pause after N consecutive crashes
+  max_experiments: 0            # 0 = unlimited; set to N to stop after N experiments
+  max_parallel_workers: 0       # 0 = auto; runtime packs jobs by available resources
+  # token_budget: 0              # total token budget per session, 0 = unlimited
+  # budget_policy: warn          # warn | pause | stop
+  # budget_warning_threshold: 0.8
+  # context_token_limit: 50000   # max tokens for graph context, 0 = unlimited
+  worker_agent: ""              # agent for sub-workers (default: same as master)
+
+# Metrics (filled by agent in Phase 2)
+metrics:
+  primary:
+    name: ""                    # e.g. accuracy, val_loss, test_pass_rate
+    direction: ""               # higher_is_better | lower_is_better
+
+# Execution environment
+# Describe how to run commands for this project.
+# The agent reads this and follows your instructions.
+environment: |
+  # Examples:
+  # Local:  just run commands directly
+  # Remote: ssh user@host "cd /path && ..."
+  # Docker: docker exec container_name ...
+
+bootstrap:
+  auto_prepare: true         # run install/data/smoke automatically before review/runtime
+  working_dir: "."           # relative to repo root
+  python: ""                 # optional explicit Python executable
+  install_command: ""        # optional explicit dependency install command
+  data_command: ""           # optional explicit dataset/setup command
+  smoke_command: ""          # optional explicit readiness smoke/eval command
+  expected_paths: []         # files/dirs expected after data/setup, relative to repo root
+  requires_gpu: false        # fail prepare if no GPU is present
+
+research:
+  web_search: true          # let agent use web search if available
+  search_interval: 5        # refresh ideas every N experiments
+  protocol: research-v1     # normalized at load time; older protocol names auto-upgrade
+  manager_batch_size: 3     # frontier batch size for research-v1 manager
+  critic_repro_policy: best_or_surprising  # none | best_or_surprising | always
+
+scheduler:
+  objective: gain_per_resource_hour   # generic scheduler objective across GPU/CPU jobs
+  allow_backfill: true                # allow short shareable jobs to fill idle capacity
+  backfill_threshold_minutes: 30      # jobs at or below this runtime may backfill
+  preemption: none                    # non-preemptive scheduling; running jobs are never killed
+
+scheduler:
+  objective: gain_per_resource_hour   # rank jobs by expected value / resource-time
+  allow_backfill: true                # opportunistically run short shareable jobs
+  backfill_threshold_minutes: 30      # jobs at or below this can backfill
+  preemption: none                    # runtime never kills active jobs for higher-priority work
+
+memory:
+  ideation: true           # research-v1: keep long-horizon ideation memory
+  experiment: true         # research-v1: keep experiment/evidence memory
+  repo_type_prior: true    # research-v1: store repo-profile priors
+
+runtime:
+  gpu_allocation: true      # advanced plugin: GPU scheduling/allocation
+  failure_memory: true      # advanced plugin: rank historical fixes
+  worktree_isolation: true  # advanced plugin: isolated git worktrees
+
+# GPU configuration (for parallel experiment workers)
+gpu:
+  # Remote hosts for GPU allocation (optional)
+  # remote_hosts:
+  #   - host: "192.168.1.100"
+  #     user: "researcher"
+  #   - host: "192.168.1.101"
+  #     user: "researcher"
+  remote_hosts: []
+  default_memory_per_worker_mb: 4096  # default per-job GPU memory budget for packing
+  allow_same_gpu_packing: true        # permit multiple jobs on one GPU if memory budget allows
+  packing_signal: memory_only         # packing decision signal used by the scheduler
+
+resources:
+  profiles: {}                        # optional repo-declared launch/resource shapes for the scheduler
+  default_memory_per_worker_mb: 4096  # default single-job GPU memory budget
+  allow_same_gpu_packing: true        # permit multiple jobs per physical GPU
+  packing_signal: memory_only         # use free/reserved memory, not utilization
+
+# Optional repo-declared execution/resource profiles.
+# These let the manager choose among shapes the repo already exposes.
+# resources:
+#   profiles:
+#     single_gpu_amp:
+#       gpu_count: 1
+#       gpu_mem_mb: 12000
+#       env:
+#         TORCH_COMPILE: "0"
+#     ddp_2gpu:
+#       gpu_count: 2
+#       gpu_mem_mb: 16000
+#       launcher: torchrun
+
+# Agent configuration (optional — override defaults per agent)
+# agents:
+#   claude-code:
+#     model: ""                          # e.g., claude-sonnet-4-5-20250514
+#     allowed_tools: "Edit,Write,Bash,Read,Glob,Grep"
+#     extra_flags: []                    # e.g., ["--max-turns", "50"]
+#   codex:
+#     model: "gpt-5.3-codex"
+#     sandbox: "workspace-write"         # workspace-write | read-only | danger-full-access | full-auto
+#     extra_flags: []
+#   aider:
+#     model: ""                          # uses aider default
+#     extra_flags: []                    # e.g., ["--no-git"]
+#   opencode:
+#     model: ""                          # provider/model, e.g. openai/gpt-5
+#     agent: ""                          # optional opencode agent profile
+#     extra_flags: []
+#   kimi-cli:
+#     model: ""                          # optional model override
+#     agent: ""                          # built-in agent name (e.g. default, okabe)
+#     agent_file: ""                     # custom agent file path (mutually exclusive with agent)
+#     extra_flags: []                    # e.g., ["--thinking"]
+#   gemini-cli:
+#     model: "gemini-3.1-pro"            # override default model
+#     sandbox: ""                        # optional sandbox mode
+#     extra_flags: []
+
+# Optional role-to-agent overrides.
+# Empty values mean "use the primary --agent selection".
+# roles:
+#   scout_agent: ""
+#   manager_agent: ""
+#   critic_agent: ""
+#   experiment_agent: ""

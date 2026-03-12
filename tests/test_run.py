@@ -35,7 +35,7 @@ def _setup_research_dir(repo: Path) -> Path:
 
 
 def test_run_fails_without_research_dir():
-    from open_researcher.run_cmd import do_run
+    from paperfarm.run_cmd import do_run
 
     with tempfile.TemporaryDirectory() as tmp:
         with pytest.raises(SystemExit):
@@ -43,16 +43,16 @@ def test_run_fails_without_research_dir():
 
 
 def test_run_fails_when_no_agent_found():
-    from open_researcher.run_cmd import do_run
+    from paperfarm.run_cmd import do_run
 
     with tempfile.TemporaryDirectory() as tmp:
         _setup_research_dir(Path(tmp))
-        with patch("open_researcher.run_cmd.detect_agent", return_value=None), pytest.raises(SystemExit):
+        with patch("paperfarm.run_cmd.detect_agent", return_value=None), pytest.raises(SystemExit):
             do_run(Path(tmp), agent_name=None, dry_run=False)
 
 
 def test_run_dry_run_prints_research_roles(capsys):
-    from open_researcher.run_cmd import do_run
+    from paperfarm.run_cmd import do_run
 
     with tempfile.TemporaryDirectory() as tmp:
         repo = _setup_research_dir(Path(tmp))
@@ -60,7 +60,7 @@ def test_run_dry_run_prints_research_roles(capsys):
         mock_agent.name = "test-agent"
         mock_agent.build_command.return_value = ["test-cmd", "--flag"]
 
-        with patch("open_researcher.run_cmd.get_agent", return_value=mock_agent):
+        with patch("paperfarm.run_cmd.get_agent", return_value=mock_agent):
             do_run(repo, agent_name="test-agent", dry_run=True)
 
         captured = capsys.readouterr()
@@ -71,7 +71,7 @@ def test_run_dry_run_prints_research_roles(capsys):
 
 
 def test_run_launches_graph_protocol():
-    from open_researcher.run_cmd import do_run
+    from paperfarm.run_cmd import do_run
 
     with tempfile.TemporaryDirectory() as tmp:
         repo = _setup_research_dir(Path(tmp))
@@ -87,13 +87,13 @@ def test_run_launches_graph_protocol():
             kwargs["setup"](app, renderer)
 
         with (
-            patch("open_researcher.run_cmd.get_agent", return_value=mock_agent),
-            patch("open_researcher.run_cmd.start_daemon", side_effect=lambda target: target()),
-            patch("open_researcher.run_cmd.run_tui_session", side_effect=fake_run_tui_session),
-            patch("open_researcher.run_cmd.print_exit_summary", return_value=None),
-            patch("open_researcher.status_cmd.print_status", return_value=None),
+            patch("paperfarm.run_cmd.get_agent", return_value=mock_agent),
+            patch("paperfarm.run_cmd.start_daemon", side_effect=lambda target: target()),
+            patch("paperfarm.run_cmd.run_tui_session", side_effect=fake_run_tui_session),
+            patch("paperfarm.run_cmd.print_exit_summary", return_value=None),
+            patch("paperfarm.status_cmd.print_status", return_value=None),
             patch(
-                "open_researcher.research_loop.ResearchLoop.run_graph_protocol",
+                "paperfarm.research_loop.ResearchLoop.run_graph_protocol",
                 return_value={"manager": 0, "critic": 0, "exp": 0},
             ) as mock_run_graph,
         ):

@@ -2,14 +2,14 @@
 
 import json
 
-from open_researcher.research_events import (
+from paperfarm.research_events import (
     ClaimUpdated,
     EvidenceRecorded,
     ExperimentCompleted,
     ExperimentStarted,
     FrontierSynced,
 )
-from open_researcher.tui.events import TUIEventRenderer
+from paperfarm.tui.events import TUIEventRenderer
 
 
 class _DummyApp:

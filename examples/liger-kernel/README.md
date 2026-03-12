@@ -1,6 +1,6 @@
 # Example: Liger-Kernel Research
 
-This example shows how to use Open Researcher with [linkedin/Liger-Kernel](https://github.com/linkedin/Liger-Kernel) to optimize Triton GPU kernels for LLM training.
+This example shows how to use PaperFarm with [linkedin/Liger-Kernel](https://github.com/linkedin/Liger-Kernel) to optimize Triton GPU kernels for LLM training.
 
 ## Setup
 
@@ -9,11 +9,11 @@ git clone https://github.com/linkedin/Liger-Kernel.git
 cd Liger-Kernel
 pip install -e ".[dev]"
 
-# Initialize Open Researcher
-open-researcher init --tag liger
+# Initialize PaperFarm
+PaperFarm init --tag liger
 
 # Launch research
-open-researcher run --agent claude-code
+PaperFarm run --agent claude-code
 ```
 
 ## What the Agent Will Try

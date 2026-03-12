@@ -7,7 +7,7 @@ import subprocess
 import pytest
 import yaml
 
-from open_researcher.doctor_cmd import run_doctor
+from paperfarm.doctor_cmd import run_doctor
 
 
 @pytest.fixture
@@ -199,7 +199,7 @@ def test_doctor_returns_all_checks(valid_repo):
 
 
 def test_doctor_reports_opencode_run_capability(valid_repo, monkeypatch):
-    import open_researcher.doctor_cmd as doctor_cmd
+    import paperfarm.doctor_cmd as doctor_cmd
 
     def fake_which(binary: str) -> str | None:
         return f"/usr/bin/{binary}"
@@ -231,7 +231,7 @@ def test_doctor_reports_opencode_run_capability(valid_repo, monkeypatch):
 
 def test_doctor_gpu_with_nvidia_smi(valid_repo, monkeypatch):
     """GPU checks report OK when nvidia-smi is available and returns GPU data."""
-    import open_researcher.doctor_cmd as doctor_cmd
+    import paperfarm.doctor_cmd as doctor_cmd
 
     original_which = shutil.which
 
@@ -276,7 +276,7 @@ def test_doctor_gpu_with_nvidia_smi(valid_repo, monkeypatch):
 
 def test_doctor_gpu_no_nvidia_smi(valid_repo, monkeypatch):
     """GPU checks return WARN when nvidia-smi is not installed."""
-    import open_researcher.doctor_cmd as doctor_cmd
+    import paperfarm.doctor_cmd as doctor_cmd
 
     original_which = shutil.which
 
@@ -296,7 +296,7 @@ def test_doctor_gpu_no_nvidia_smi(valid_repo, monkeypatch):
 
 def test_doctor_gpu_nvidia_smi_fails(valid_repo, monkeypatch):
     """GPU checks return WARN when nvidia-smi is present but returns non-zero."""
-    import open_researcher.doctor_cmd as doctor_cmd
+    import paperfarm.doctor_cmd as doctor_cmd
 
     original_which = shutil.which
 

@@ -1,6 +1,6 @@
 """Tests for Textual TUI components."""
 
-from open_researcher.tui.view_model import (
+from paperfarm.tui.view_model import (
     BootstrapSummary,
     ClaimItem,
     DocNavItem,
@@ -11,7 +11,7 @@ from open_researcher.tui.view_model import (
     SessionChrome,
     TimelineItem,
 )
-from open_researcher.tui.widgets import (
+from paperfarm.tui.widgets import (
     BootstrapStatusPanel,
     DocsSidebarPanel,
     ExperimentStatusPanel,

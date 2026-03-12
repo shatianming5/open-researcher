@@ -1,6 +1,6 @@
 # Example: CartPole Reinforcement Learning
 
-Maximize [CartPole-v1](https://gymnasium.farama.org/environments/classic_control/cart_pole/) average reward with Open Researcher — from baseline ~150 to the maximum score of 500.
+Maximize [CartPole-v1](https://gymnasium.farama.org/environments/classic_control/cart_pole/) average reward with PaperFarm — from baseline ~150 to the maximum score of 500.
 
 ## Prerequisites
 
@@ -22,15 +22,15 @@ pip install torch gymnasium
 #   - Trains on CartPole-v1
 #   - Prints avg_reward at the end
 
-# 2. Initialize Open Researcher
-pip install open-researcher
-open-researcher init --tag cartpole
+# 2. Initialize PaperFarm
+pip install PaperFarm
+PaperFarm init --tag cartpole
 
 # 3. Launch autonomous research
-open-researcher run --agent claude-code
+PaperFarm run --agent claude-code
 
 # Or run headless with a specific goal
-open-researcher start --mode headless \
+PaperFarm run --mode headless \
   --goal "Maximize average reward on CartPole-v1 by improving the RL algorithm, network architecture, reward shaping, and exploration strategy" \
   --max-experiments 20
 ```

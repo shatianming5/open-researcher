@@ -2,7 +2,7 @@
 
 import pytest
 
-from open_researcher.workflow_options import build_workflow_selection
+from paperfarm.workflow_options import build_workflow_selection
 
 
 def test_build_workflow_selection_defaults():

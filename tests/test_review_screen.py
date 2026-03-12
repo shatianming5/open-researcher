@@ -3,7 +3,7 @@
 
 def test_review_screen_import():
     """ReviewScreen should be importable."""
-    from open_researcher.tui.review import ReviewScreen
+    from paperfarm.tui.review import ReviewScreen
 
     assert ReviewScreen is not None
 
@@ -12,14 +12,14 @@ def test_review_screen_is_screen():
     """ReviewScreen should be a Textual Screen."""
     from textual.screen import Screen
 
-    from open_researcher.tui.review import ReviewScreen
+    from paperfarm.tui.review import ReviewScreen
 
     assert issubclass(ReviewScreen, Screen)
 
 
 def test_review_screen_loads_files(tmp_path):
     """ReviewScreen should load strategy, evaluation, and understanding files."""
-    from open_researcher.tui.review import load_review_data
+    from paperfarm.tui.review import load_review_data
 
     research = tmp_path / ".research"
     research.mkdir()
@@ -38,7 +38,7 @@ def test_review_screen_loads_files(tmp_path):
 
 def test_review_screen_handles_missing_files(tmp_path):
     """ReviewScreen should handle missing files gracefully."""
-    from open_researcher.tui.review import load_review_data
+    from paperfarm.tui.review import load_review_data
 
     research = tmp_path / ".research"
     research.mkdir()

@@ -24,7 +24,7 @@
 
 - **🚀 One `run` Command**: `PaperFarm run` bootstraps a new workflow when `.research/` is missing, or resumes an existing workflow when it already exists.
 
-- **🤖 Multi-Agent Support**: Works with Claude Code, Codex CLI, Aider, OpenCode, and Gemini CLI — auto-detects the first installed agent, or pick your own.
+- **🤖 Multi-Agent Support**: Works with Claude Code, Codex CLI, Aider, OpenCode, Kimi CLI, and Gemini CLI — auto-detects the first installed agent, or pick your own.
 
 - **🔬 Scout → Prepare → Review → Experiment Flow**: AI agent analyzes your codebase, resolves install/data/smoke bootstrap steps, then runs the `research-v1` loop — keeping what works, discarding what doesn't.
 
@@ -50,6 +50,8 @@ pip install PaperFarm
 cd your-project
 PaperFarm run
 ```
+
+Legacy CLI alias: `open-researcher` still works, but `PaperFarm` is the canonical command going forward.
 
 This launches a **4-phase flow**:
 
@@ -110,7 +112,7 @@ PaperFarm results --chart primary
 
 ## 🚜 How It Works
 
-Open Researcher generates a `.research/` directory in your repo with everything needed for autonomous research.
+PaperFarm generates a `.research/` directory in your repo with everything needed for autonomous research.
 
 <details>
 <summary><b>📂 .research/ Directory Structure</b></summary>
@@ -220,9 +222,10 @@ If a command cannot be resolved safely, `run` stops before the review/runtime st
 | [Codex CLI](https://github.com/openai/codex) | `--agent codex` | Supported |
 | [Aider](https://github.com/paul-gauthier/aider) | `--agent aider` | Supported |
 | [OpenCode](https://github.com/opencode-ai/opencode) | `--agent opencode` | Supported |
+| [Kimi CLI](https://moonshotai.github.io/kimi-cli/en/reference/kimi-command.html) | `--agent kimi-cli` | Supported |
 | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `--agent gemini-cli` | Supported |
 
-Auto-detection: If you don't specify `--agent`, Open Researcher finds the first installed one.
+Auto-detection: If you don't specify `--agent`, PaperFarm finds the first installed one.
 
 <details>
 <summary><b>⚙️ Agent Configuration</b></summary>
@@ -246,6 +249,10 @@ agents:
     model: "openai/gpt-5"
     agent: "builder"
     extra_flags: ["--share"]
+  kimi-cli:
+    model: ""                       # optional model override
+    agent: "okabe"                  # optional built-in agent profile
+    extra_flags: ["--thinking"]
   gemini-cli:
     model: "gemini-3.1-pro"          # override default model
     sandbox: ""                       # optional sandbox mode
@@ -263,17 +270,17 @@ The interactive UI is now a **research-v1 command center**, not a generic tabbed
 ### Screenshots
 
 <p align="center">
-  <img src="imgs/overview.png" alt="Open Researcher overview dashboard" width="100%" />
+  <img src="imgs/overview.png" alt="PaperFarm overview dashboard" width="100%" />
 </p>
 <p align="center"><em>Field Overview</em>: research command center with frontier focus, lineage, and live role activity.</p>
 
 <p align="center">
-  <img src="imgs/execution.png" alt="Open Researcher execution dashboard" width="100%" />
+  <img src="imgs/execution.png" alt="PaperFarm execution dashboard" width="100%" />
 </p>
 <p align="center"><em>Harvest In Progress</em>: metric trend, run summary, and recent experiment results.</p>
 
 <p align="center">
-  <img src="imgs/docs.png" alt="Open Researcher docs dashboard" width="100%" />
+  <img src="imgs/docs.png" alt="PaperFarm docs dashboard" width="100%" />
 </p>
 <p align="center"><em>Docs</em>: searchable research documents with grouped navigation and live preview.</p>
 
@@ -334,7 +341,7 @@ The interactive UI is now a **research-v1 command center**, not a generic tabbed
 
 ## 🚜 Installation
 
-Open Researcher supports **Linux**, **macOS**, and **Windows**. Python 3.10+ required.
+PaperFarm supports **Linux**, **macOS**, and **Windows**. Python 3.10+ required.
 
 ### Option A: pip install (recommended)
 
@@ -522,6 +529,7 @@ agents:                       # per-agent overrides (optional)
 | `codex.py` | Codex CLI adapter |
 | `aider.py` | Aider adapter |
 | `opencode.py` | OpenCode adapter |
+| `kimi.py` | Kimi CLI adapter |
 | `gemini.py` | Gemini CLI adapter |
 
 </details>

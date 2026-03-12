@@ -1,6 +1,6 @@
 # Example: Code Performance Optimization
 
-Maximize Python JSON parsing throughput with Open Researcher — from baseline ~5,000 ops/sec to ~50,000+ ops/sec through pure code optimization.
+Maximize Python JSON parsing throughput with PaperFarm — from baseline ~5,000 ops/sec to ~50,000+ ops/sec through pure code optimization.
 
 ## Prerequisites
 
@@ -21,15 +21,15 @@ mkdir code-perf && cd code-perf
 #   - Measures ops/sec (parse operations per second)
 #   - Prints ops_per_sec at the end
 
-# 2. Initialize Open Researcher
-pip install open-researcher
-open-researcher init --tag code-perf
+# 2. Initialize PaperFarm
+pip install PaperFarm
+PaperFarm init --tag code-perf
 
 # 3. Launch autonomous research
-open-researcher run --agent claude-code
+PaperFarm run --agent claude-code
 
 # Or run headless with a specific goal
-open-researcher start --mode headless \
+PaperFarm run --mode headless \
   --goal "Maximize JSON parsing throughput (ops/sec) by optimizing the Python parser implementation with better algorithms, data structures, caching, and code-level optimizations" \
   --max-experiments 20
 ```

@@ -3,7 +3,7 @@
 import json
 from io import StringIO
 
-from open_researcher.headless import HeadlessLogger
+from paperfarm.headless import HeadlessLogger
 
 
 def test_emit_writes_jsonl_to_stream():
