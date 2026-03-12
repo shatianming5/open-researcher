@@ -40,6 +40,7 @@ dependencies = [
 
 [project.optional-dependencies]
 tokens = ["tiktoken>=0.7.0"]
+serve = ["textual-serve>=1.1.0"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",

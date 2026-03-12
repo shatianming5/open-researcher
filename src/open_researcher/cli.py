@@ -211,11 +211,14 @@ def _dispatch_workflow(
 
 
 @app.command()
-def demo():
+def demo(
+    serve: bool = typer.Option(False, "--serve", help="Serve the TUI in a browser via textual-serve."),
+    port: int = typer.Option(8000, "--port", help="Port for the web server (only used with --serve)."),
+):
     """Launch the TUI with sample data — no agent or project needed."""
     from open_researcher.demo_cmd import do_demo
 
-    do_demo()
+    do_demo(serve=serve, port=port)
 
 
 @app.command()

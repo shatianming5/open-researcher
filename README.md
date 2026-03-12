@@ -99,7 +99,12 @@ PaperFarm status --sparkline
 PaperFarm results --chart primary
 ```
 
-> Try the interactive demo — no agent or API key needed: `PaperFarm demo`
+> Try the interactive demo — no agent or API key needed:
+> ```bash
+> PaperFarm demo              # run in terminal
+> PaperFarm demo --serve      # open in browser at http://localhost:8000
+> PaperFarm demo --serve --port 9000
+> ```
 
 ---
 
@@ -332,7 +337,11 @@ Open Researcher supports **Linux**, **macOS**, and **Windows**. Python 3.10+ req
 pip install PaperFarm
 
 # Try the demo first (no agent or API key needed)
-PaperFarm demo
+PaperFarm demo                   # run in terminal
+PaperFarm demo --serve           # open in browser at http://localhost:8000
+
+# Install browser support (optional)
+pip install "PaperFarm[serve]"
 
 # Then use it for real
 cd your-project
@@ -373,6 +382,7 @@ make lint   # run linter
 | `start` | Legacy alias for bootstrap mode |
 | `init [--tag NAME]` | Initialize `.research/` directory |
 | `demo` | Try the TUI with sample data (no agent needed) |
+| `demo --serve [--port N]` | Serve the demo TUI in a browser (requires `PaperFarm[serve]`) |
 
 </details>
 

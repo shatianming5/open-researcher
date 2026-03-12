@@ -286,42 +286,88 @@ def _inject_logs(app, delay: float = 0.3) -> None:
         time.sleep(delay)
 
 
-def do_demo() -> None:
+def _setup_demo_repo(repo: Path) -> None:
+    """Initialize a minimal git repo and populate .research/ with sample data."""
+    subprocess.run(["git", "init", "--quiet"], cwd=str(repo), capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "demo@open-researcher.dev"],
+        cwd=str(repo),
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Demo"],
+        cwd=str(repo),
+        capture_output=True,
+    )
+    (repo / "train.py").write_text("# nanoGPT training script\n")
+    (repo / "model.py").write_text("# GPT model definition\n")
+    subprocess.run(["git", "add", "."], cwd=str(repo), capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "initial", "--quiet"],
+        cwd=str(repo),
+        capture_output=True,
+    )
+    research = repo / ".research"
+    research.mkdir()
+    _populate_research(research)
+
+
+def do_demo(serve: bool = False, port: int = 8000) -> None:
     """Launch the TUI with pre-populated sample data for a hands-on demo."""
     console.print("[bold green]Open Researcher Demo[/bold green]")
+
+    if serve:
+        try:
+            from textual_serve.server import Server
+        except ImportError:
+            console.print(
+                "[red]textual-serve is not installed.[/red]\n"
+                "Install it with: [bold]pip install open-researcher[serve][/bold]"
+            )
+            return
+
+        import atexit
+
+        tmp_obj = tempfile.TemporaryDirectory(prefix="or-demo-")
+        repo = Path(tmp_obj.name)
+        atexit.register(tmp_obj.cleanup)
+
+        _setup_demo_repo(repo)
+
+        # Write a self-contained launcher script that textual-serve can execute
+        python_exe = str(Path(__file__).parents[1] / ".." / ".." / ".venv" / "bin" / "python")
+        # Resolve to absolute path; fall back to sys.executable if venv not found
+        import sys as _sys
+
+        python_exe = str(Path(python_exe).resolve()) if Path(python_exe).exists() else _sys.executable
+
+        launcher = repo / "_serve_launcher.py"
+        launcher.write_text(
+            "import threading\n"
+            "from pathlib import Path\n"
+            "from open_researcher.tui.app import ResearchApp\n"
+            "from open_researcher.demo_cmd import _inject_logs\n"
+            f"repo_path = Path({str(repo)!r})\n"
+            "app = ResearchApp(repo_path)\n"
+            "def on_ready():\n"
+            "    t = threading.Thread(target=_inject_logs, args=(app,), daemon=True)\n"
+            "    t.start()\n"
+            "app._on_ready = on_ready\n"
+            "app.run()\n"
+        )
+
+        console.print(f"Launching TUI in browser at [bold]http://localhost:{port}[/bold]\n")
+        console.print("[dim]Press Ctrl+C to stop the server.[/dim]\n")
+        server = Server(f"{python_exe} {launcher}", port=port)
+        server.serve()
+        return
+
     console.print("Launching TUI with sample nanoGPT experiment data...\n")
 
     with tempfile.TemporaryDirectory(prefix="or-demo-") as tmp:
         repo = Path(tmp)
+        _setup_demo_repo(repo)
 
-        # Init a minimal git repo (required for git-based features)
-        subprocess.run(["git", "init", "--quiet"], cwd=str(repo), capture_output=True)
-        subprocess.run(
-            ["git", "config", "user.email", "demo@open-researcher.dev"],
-            cwd=str(repo),
-            capture_output=True,
-        )
-        subprocess.run(
-            ["git", "config", "user.name", "Demo"],
-            cwd=str(repo),
-            capture_output=True,
-        )
-        # Create a dummy file and initial commit
-        (repo / "train.py").write_text("# nanoGPT training script\n")
-        (repo / "model.py").write_text("# GPT model definition\n")
-        subprocess.run(["git", "add", "."], cwd=str(repo), capture_output=True)
-        subprocess.run(
-            ["git", "commit", "-m", "initial", "--quiet"],
-            cwd=str(repo),
-            capture_output=True,
-        )
-
-        # Populate .research/ with sample data
-        research = repo / ".research"
-        research.mkdir()
-        _populate_research(research)
-
-        # Launch TUI
         from open_researcher.tui.app import ResearchApp
 
         def on_ready():
