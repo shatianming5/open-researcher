@@ -8,7 +8,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from open_researcher.control_plane import issue_control_command
 from open_researcher.idea_pool import IdeaPool
@@ -1011,19 +1011,27 @@ def test_worker_manager_augments_result_row_with_single_gpu_saturation_metadata(
             agent.terminate = MagicMock()
             return agent
 
-        wm = WorkerManager(
-            repo_path=tmp_path,
-            research_dir=research,
-            gpu_manager=None,
-            idea_pool=idea_pool,
-            agent_factory=mock_agent_factory,
-            max_workers=1,
-            on_output=lambda line: None,
-            runtime_plugins=WorkerRuntimePlugins(gpu_allocator=FixedAllocator()),
-        )
+        call_counter = {"count": 0}
 
-        wm.start()
-        wm.join(timeout=5)
+        def fake_gpu_snapshot(devices):
+            call_counter["count"] += 1
+            used_mb = 1000 if call_counter["count"] == 1 else 16000
+            return {0: {"memory_total": 49152, "memory_used": used_mb, "memory_free": 49152 - used_mb}}
+
+        with patch.object(WorkerManager, "_local_gpu_memory_snapshot", side_effect=fake_gpu_snapshot):
+            wm = WorkerManager(
+                repo_path=tmp_path,
+                research_dir=research,
+                gpu_manager=None,
+                idea_pool=idea_pool,
+                agent_factory=mock_agent_factory,
+                max_workers=1,
+                on_output=lambda line: None,
+                runtime_plugins=WorkerRuntimePlugins(gpu_allocator=FixedAllocator()),
+            )
+
+            wm.start()
+            wm.join(timeout=5)
 
         rows = list(csv.DictReader(results_path.open(), delimiter="\t"))
         assert len(rows) == 1
