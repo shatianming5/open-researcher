@@ -119,9 +119,7 @@ Open Researcher generates a `.research/` directory in your repo with everything 
 | File | Purpose |
 |:---|:---|
 | `scout_program.md` | Scout agent instructions — project analysis phase |
-| `manager_program.md` | Research manager instructions — hypothesis and frontier policy |
-| `critic_program.md` | Research critic instructions — falsification and evidence review |
-| `experiment_program.md` | Experiment agent instructions — run & evaluate |
+| `.internal/role_programs/*.md` | Internal runtime role prompts (manager / critic / experiment), auto-managed |
 | `config.yaml` | Mode, metrics, timeout, experiment limits, agent settings, and `bootstrap.*` overrides |
 | `project-understanding.md` | Agent fills: what the project does |
 | `research-strategy.md` | Agent fills: research direction and focus areas |

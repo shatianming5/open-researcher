@@ -71,8 +71,11 @@ def valid_repo(tmp_path):
             }
         )
     )
-    for name in ["scout_program.md", "manager_program.md", "critic_program.md", "experiment_program.md"]:
-        (research / name).write_text(f"# {name}\n")
+    (research / "scout_program.md").write_text("# scout_program.md\n")
+    internal = research / ".internal" / "role_programs"
+    internal.mkdir(parents=True, exist_ok=True)
+    for name in ["manager.md", "critic.md", "experiment.md"]:
+        (internal / name).write_text(f"# {name}\n")
     return tmp_path
 
 

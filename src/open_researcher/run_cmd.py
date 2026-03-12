@@ -34,6 +34,7 @@ from open_researcher.research_loop import (
 from open_researcher.research_loop import (
     set_paused as _set_paused,
 )
+from open_researcher.role_programs import resolve_role_program_file
 from open_researcher.tui_runner import (
     print_exit_summary,
     run_tui_session,
@@ -221,8 +222,9 @@ def do_run(
         console.print(f"[bold]Experiment Agent:[/bold] {exp_agent.name}")
         for line in format_bootstrap_dry_run(repo_path, research, cfg):
             console.print(line)
+        exp_program = research / resolve_role_program_file(research, "experiment")
         console.print(
-            f"[bold]Command:[/bold] {' '.join(exp_agent.build_command(research / 'experiment_program.md', repo_path))}"
+            f"[bold]Command:[/bold] {' '.join(exp_agent.build_command(exp_program, repo_path))}"
         )
         console.print(f"[bold]Working directory:[/bold] {repo_path}")
         console.print("\n[dim]Dry run -- no runtime launched.[/dim]")

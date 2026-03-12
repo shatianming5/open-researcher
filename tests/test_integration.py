@@ -27,7 +27,7 @@ def test_full_workflow():
         # 1. Init
         do_init(repo, tag="test1")
         assert (repo / ".research" / "scout_program.md").exists()
-        assert (repo / ".research" / "manager_program.md").exists()
+        assert (repo / ".research" / ".internal" / "role_programs" / "manager.md").exists()
         assert (repo / ".research" / "scripts" / "record.py").exists()
 
         # 2. Simulate agent filling in config
@@ -115,9 +115,9 @@ def test_research_v1_init_creates_all_runtime_files(tmp_path):
     assert (research / "activity.json").exists()
     assert (research / "control.json").exists()
     assert (research / "scout_program.md").exists()
-    assert (research / "manager_program.md").exists()
-    assert (research / "critic_program.md").exists()
-    assert (research / "experiment_program.md").exists()
+    assert (research / ".internal" / "role_programs" / "manager.md").exists()
+    assert (research / ".internal" / "role_programs" / "critic.md").exists()
+    assert (research / ".internal" / "role_programs" / "experiment.md").exists()
 
     # Verify idea_pool.json structure
     pool = json_mod.loads((research / "idea_pool.json").read_text())

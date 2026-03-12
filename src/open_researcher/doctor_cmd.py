@@ -11,13 +11,7 @@ from rich.table import Table
 
 from open_researcher.bootstrap import resolve_bootstrap_plan
 from open_researcher.config import RESEARCH_PROTOCOL, load_config
-
-REQUIRED_ROLE_PROGRAMS = [
-    "scout_program.md",
-    "manager_program.md",
-    "critic_program.md",
-    "experiment_program.md",
-]
+from open_researcher.role_programs import missing_role_programs, resolve_role_program_file
 
 
 def _load_json_object(path: Path) -> tuple[dict | None, str | None]:
@@ -270,12 +264,16 @@ def run_doctor(repo_path: Path) -> list[dict]:
         results.append({"check": "activity.json", "status": "WARN", "detail": "File not found"})
 
     # 9. required role programs present
-    missing_programs = [name for name in REQUIRED_ROLE_PROGRAMS if not (research / name).exists()]
+    missing_programs = missing_role_programs(research)
     if not missing_programs:
-        results.append({"check": "role programs", "status": "OK", "detail": ", ".join(REQUIRED_ROLE_PROGRAMS)})
+        details = []
+        for role in ("manager", "critic", "experiment"):
+            details.append(f"{role}={resolve_role_program_file(research, role)}")
+        details.append("scout=scout_program.md")
+        results.append({"check": "role programs", "status": "OK", "detail": ", ".join(details)})
     else:
         results.append(
-            {"check": "role programs", "status": "FAIL", "detail": f"Missing: {', '.join(missing_programs)}"}
+            {"check": "role programs", "status": "FAIL", "detail": f"Missing roles: {', '.join(missing_programs)}"}
         )
 
     # 10. experiment_progress.json parseable

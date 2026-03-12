@@ -48,9 +48,9 @@
   - `memory.ideation|experiment|repo_type_prior`
 - 运行期状态：
   - `.research/scout_program.md`
-  - `.research/manager_program.md`
-  - `.research/critic_program.md`
-  - `.research/experiment_program.md`
+  - `.research/.internal/role_programs/manager.md`
+  - `.research/.internal/role_programs/critic.md`
+  - `.research/.internal/role_programs/experiment.md`
   - `.research/idea_pool.json`
   - `.research/results.tsv`
   - `.research/events.jsonl`

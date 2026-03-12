@@ -37,9 +37,9 @@ def test_init_creates_research_directory():
         assert (research / "literature.md").is_file()
         assert (research / "ideas.md").is_file()
         assert (research / "scout_program.md").is_file()
-        assert (research / "manager_program.md").is_file()
-        assert (research / "critic_program.md").is_file()
-        assert (research / "experiment_program.md").is_file()
+        assert (research / ".internal" / "role_programs" / "manager.md").is_file()
+        assert (research / ".internal" / "role_programs" / "critic.md").is_file()
+        assert (research / ".internal" / "role_programs" / "experiment.md").is_file()
         assert (research / "results.tsv").is_file()
         assert (research / "final_results.tsv").is_file()
         assert (research / "bootstrap_state.json").is_file()
@@ -48,7 +48,7 @@ def test_init_creates_research_directory():
         assert (research / "scripts" / "rollback.sh").is_file()
         assert (research / "scripts" / "launch_detached.py").is_file()
 
-        experiment = (research / "experiment_program.md").read_text()
+        experiment = (research / ".internal" / "role_programs" / "experiment.md").read_text()
         assert "research/test1" in experiment
 
         # Check results.tsv has header
@@ -83,7 +83,7 @@ def test_init_generates_default_tag():
 
         do_init(repo_path=Path(tmpdir), tag=None)
 
-        experiment = (Path(tmpdir) / ".research" / "experiment_program.md").read_text()
+        experiment = (Path(tmpdir) / ".research" / ".internal" / "role_programs" / "experiment.md").read_text()
         assert "research/" in experiment
 
 
@@ -119,9 +119,9 @@ def test_init_creates_shared_files(tmp_path):
     assert events.exists()
     assert events.read_text() == ""
 
-    assert (research / "manager_program.md").exists()
-    assert (research / "critic_program.md").exists()
-    assert (research / "experiment_program.md").exists()
+    assert (research / ".internal" / "role_programs" / "manager.md").exists()
+    assert (research / ".internal" / "role_programs" / "critic.md").exists()
+    assert (research / ".internal" / "role_programs" / "experiment.md").exists()
     assert (research / "research_graph.json").exists()
     assert (research / "research_memory.json").exists()
     assert (research / "bootstrap_state.json").exists()

@@ -1429,9 +1429,6 @@ class DocViewer(Static):
         "literature.md",
         "evaluation.md",
         "research-strategy.md",
-        "manager_program.md",
-        "critic_program.md",
-        "experiment_program.md",
         "projected_backlog.md",
     ]
 

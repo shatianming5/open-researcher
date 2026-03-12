@@ -13,6 +13,7 @@ from jinja2 import Environment, PackageLoader
 from open_researcher.bootstrap import ensure_bootstrap_state
 from open_researcher.research_graph import ResearchGraphStore
 from open_researcher.research_memory import ResearchMemoryStore
+from open_researcher.role_programs import ensure_internal_role_programs
 
 
 def _git_info_exclude_path(repo_path: Path) -> Path | None:
@@ -79,15 +80,13 @@ def do_init(repo_path: Path, tag: str | None = None) -> None:
         ("evaluation.md.j2", "evaluation.md"),
         ("literature.md.j2", "literature.md"),
         ("ideas.md.j2", "ideas.md"),
-        ("manager_program.md.j2", "manager_program.md"),
-        ("critic_program.md.j2", "critic_program.md"),
-        ("experiment_program.md.j2", "experiment_program.md"),
         ("scout_program.md.j2", "scout_program.md"),
         ("research-strategy.md.j2", "research-strategy.md"),
     ]:
         template = env.get_template(template_name)
         content = template.render(context)
         (research_dir / output_name).write_text(content)
+    ensure_internal_role_programs(research_dir, env=env, context=context)
 
     # Create results.tsv with header
     header = "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"

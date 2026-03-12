@@ -55,6 +55,7 @@ from open_researcher.research_events import (
 from open_researcher.research_graph import ResearchGraphStore
 from open_researcher.research_memory import ResearchMemoryStore
 from open_researcher.results_cmd import load_results, write_final_results_tsv
+from open_researcher.role_programs import resolve_role_program_file
 from open_researcher.storage import atomic_write_json, locked_read_json
 from open_researcher.token_tracking import (
     BudgetCheckResult,
@@ -556,7 +557,7 @@ class ResearchLoop:
                     code = self._run_agent(
                         exp_agent,
                         phase="experimenting",
-                        program_file="experiment_program.md",
+                        program_file=resolve_role_program_file(self.research_dir, "experiment"),
                         error_tag="exp",
                         env=self._trace_env(trace),
                     )
@@ -842,7 +843,7 @@ class ResearchLoop:
             manager_code = self._run_agent(
                 manager_agent,
                 phase="experimenting",
-                program_file="manager_program.md",
+                program_file=resolve_role_program_file(self.research_dir, "manager"),
                 error_tag="manager",
             )
             self._accumulate_token_metrics(manager_agent, phase="experimenting")
@@ -900,7 +901,7 @@ class ResearchLoop:
                 critic_code = self._run_agent(
                     critic_agent,
                     phase="experimenting",
-                    program_file="critic_program.md",
+                    program_file=resolve_role_program_file(self.research_dir, "critic"),
                     error_tag="critic",
                 )
                 exit_codes["critic"] = critic_code
@@ -1060,7 +1061,7 @@ class ResearchLoop:
                 critic_code = self._run_agent(
                     critic_agent,
                     phase="experimenting",
-                    program_file="critic_program.md",
+                    program_file=resolve_role_program_file(self.research_dir, "critic"),
                     error_tag="critic",
                 )
                 exit_codes["critic"] = critic_code

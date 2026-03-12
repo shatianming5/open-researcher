@@ -23,7 +23,7 @@ def test_init_via_cli():
         assert result.exit_code == 0
         assert Path(".research").is_dir()
         assert Path(".research/scout_program.md").exists()
-        assert Path(".research/manager_program.md").exists()
+        assert Path(".research/.internal/role_programs/manager.md").exists()
 
 
 def test_init_refuses_duplicate():

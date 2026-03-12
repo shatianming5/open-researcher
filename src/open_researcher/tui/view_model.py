@@ -431,8 +431,6 @@ def _doc_title(filename: str) -> str:
 def _doc_group(filename: str) -> str:
     if filename in {"research_graph.md", "research_memory.md", "projected_backlog.md", "bootstrap_state.md"}:
         return "Research State"
-    if filename in {"manager_program.md", "critic_program.md", "experiment_program.md"}:
-        return "Role Programs"
     return "Research Notes"
 
 

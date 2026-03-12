@@ -22,6 +22,7 @@ from open_researcher.gpu_manager import GPUManager
 from open_researcher.idea_pool import IdeaPool
 from open_researcher.results_cmd import load_results
 from open_researcher.storage import atomic_write_json
+from open_researcher.role_programs import resolve_role_program_file
 from open_researcher.watchdog import TimeoutWatchdog
 from open_researcher.worker_plugins import (
     WorkerRuntimePlugins,
@@ -692,7 +693,7 @@ class WorkerManager:
                         code = agent.run(
                             workdir,
                             on_output=self.on_output,
-                            program_file="experiment_program.md",
+                            program_file=resolve_role_program_file(self.research_dir, "experiment"),
                             env=run_env,
                         )
                     finally:
