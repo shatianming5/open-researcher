@@ -225,28 +225,27 @@ def _load_observability_state(research: Path) -> dict:
     parse_errors = 0
     if events_path.exists():
         try:
-            lines = events_path.read_text(encoding="utf-8").splitlines()
+            with events_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    try:
+                        payload = json.loads(line)
+                    except (json.JSONDecodeError, TypeError):
+                        parse_errors += 1
+                        continue
+                    if not isinstance(payload, dict):
+                        parse_errors += 1
+                        continue
+                    event_count += 1
+                    try:
+                        seq = int(payload.get("seq"))
+                    except (TypeError, ValueError):
+                        seq = None
+                    if seq is not None and seq > 0:
+                        last_seq = seq
         except (OSError, UnicodeDecodeError):
-            lines = []
             parse_errors += 1
-        for line in lines:
-            if not line.strip():
-                continue
-            try:
-                payload = json.loads(line)
-            except (json.JSONDecodeError, TypeError):
-                parse_errors += 1
-                continue
-            if not isinstance(payload, dict):
-                parse_errors += 1
-                continue
-            event_count += 1
-            try:
-                seq = int(payload.get("seq"))
-            except (TypeError, ValueError):
-                seq = None
-            if seq is not None and seq > 0:
-                last_seq = seq
 
     runtime_dir = research / "runtime"
     runtime_registrations = len(list(runtime_dir.glob("*.json"))) if runtime_dir.exists() else 0

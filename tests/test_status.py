@@ -396,6 +396,27 @@ def test_parse_state_observability_handles_invalid_utf8_events_file(tmp_path):
     assert observability["parse_errors"] >= 1
 
 
+def test_observability_loader_streams_without_read_text(tmp_path, monkeypatch):
+    from open_researcher.status_cmd import _load_observability_state
+
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "events.jsonl").write_text(
+        '{"seq":1,"event":"session_started"}\n'
+        '{"seq":2,"event":"step"}\n'
+    )
+
+    def _fail_read_text(*_args, **_kwargs):
+        raise AssertionError("read_text should not be used by observability loader")
+
+    monkeypatch.setattr(Path, "read_text", _fail_read_text)
+
+    observability = _load_observability_state(research)
+    assert observability["event_count"] == 2
+    assert observability["last_seq"] == 2
+    assert observability["parse_errors"] == 0
+
+
 def test_print_status_shows_runtime_profile_and_observability(tmp_path, capsys):
     research = tmp_path / ".research"
     research.mkdir()
