@@ -22,6 +22,10 @@ class ResearchConfig:
     max_crashes: int = 3
     max_experiments: int = 0
     max_workers: int = 0
+    token_budget: int = 0
+    budget_policy: str = "warn"
+    budget_warning_threshold: float = 0.8
+    context_token_limit: int = 50000
     worker_agent: str = ""
     primary_metric: str = ""
     direction: str = ""
@@ -91,6 +95,9 @@ def load_config(research_dir: Path, *, strict: bool = False) -> ResearchConfig:
     resources = raw.get("resources", {})
     raw_protocol = str(research.get("protocol", RESEARCH_PROTOCOL) or RESEARCH_PROTOCOL).strip()
     protocol = PROTOCOL_ALIASES.get(raw_protocol, raw_protocol)
+    _policy = str(exp.get("budget_policy", "warn") or "warn")
+    if _policy not in ("warn", "pause", "stop"):
+        _policy = "warn"
     return ResearchConfig(
         mode=raw.get("mode", "autonomous"),
         timeout=exp.get("timeout", 600),
@@ -98,6 +105,10 @@ def load_config(research_dir: Path, *, strict: bool = False) -> ResearchConfig:
         max_experiments=exp.get("max_experiments", 0),
         max_workers=exp.get("max_parallel_workers", 0),
         worker_agent=exp.get("worker_agent", ""),
+        token_budget=max(int(exp.get("token_budget", 0) or 0), 0),
+        budget_policy=_policy,
+        budget_warning_threshold=float(exp.get("budget_warning_threshold", 0.8) or 0.8),
+        context_token_limit=max(int(exp.get("context_token_limit", 50000) or 50000), 0),
         primary_metric=metrics.get("name", ""),
         direction=metrics.get("direction", ""),
         web_search=research.get("web_search", True),

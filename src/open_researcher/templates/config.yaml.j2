@@ -12,6 +12,10 @@ experiment:
   max_consecutive_crashes: 3    # pause after N consecutive crashes
   max_experiments: 0            # 0 = unlimited; set to N to stop after N experiments
   max_parallel_workers: 0       # 0 = auto; runtime packs jobs by available resources
+  # token_budget: 0              # total token budget per session, 0 = unlimited
+  # budget_policy: warn          # warn | pause | stop
+  # budget_warning_threshold: 0.8
+  # context_token_limit: 50000   # max tokens for graph context, 0 = unlimited
   worker_agent: ""              # agent for sub-workers (default: same as master)
 
 # Metrics (filled by agent in Phase 2)
