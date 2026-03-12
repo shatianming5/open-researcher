@@ -136,6 +136,29 @@ def _check_gpu_info() -> list[dict]:
     return results
 
 
+def _role_program_check(research: Path) -> dict:
+    """Summarize role-program readiness with minimal internal-path leakage."""
+    missing = list(missing_role_programs(research))
+    if not (research / "scout_program.md").exists():
+        missing.append("scout")
+    if missing:
+        # Keep original order while removing duplicates.
+        deduped = list(dict.fromkeys(missing))
+        return {"check": "role programs", "status": "FAIL", "detail": f"Missing roles: {', '.join(deduped)}"}
+
+    resolved = {
+        role: resolve_role_program_file(research, role)
+        for role in ("manager", "critic", "experiment")
+    }
+    internal_count = sum(1 for rel in resolved.values() if rel.startswith(".internal/"))
+    legacy_count = len(resolved) - internal_count
+    detail = (
+        "runtime prompts ready "
+        f"({internal_count} internal, {legacy_count} legacy fallback), scout prompt present"
+    )
+    return {"check": "role programs", "status": "OK", "detail": detail}
+
+
 def run_doctor(repo_path: Path) -> list[dict]:
     """Run health checks. Returns list of {check, status, detail}."""
     results: list[dict] = []
@@ -264,17 +287,7 @@ def run_doctor(repo_path: Path) -> list[dict]:
         results.append({"check": "activity.json", "status": "WARN", "detail": "File not found"})
 
     # 9. required role programs present
-    missing_programs = missing_role_programs(research)
-    if not missing_programs:
-        details = []
-        for role in ("manager", "critic", "experiment"):
-            details.append(f"{role}={resolve_role_program_file(research, role)}")
-        details.append("scout=scout_program.md")
-        results.append({"check": "role programs", "status": "OK", "detail": ", ".join(details)})
-    else:
-        results.append(
-            {"check": "role programs", "status": "FAIL", "detail": f"Missing roles: {', '.join(missing_programs)}"}
-        )
+    results.append(_role_program_check(research))
 
     # 10. experiment_progress.json parseable
     progress_path = research / "experiment_progress.json"
@@ -336,7 +349,9 @@ def run_doctor(repo_path: Path) -> list[dict]:
             )
         else:
             detail = (
-                f"python={plan.get('python_env', {}).get('source', '')}, "
+                f"python={plan.get('python_env', {}).get('source', '') or 'auto'}, "
+                f"install={plan.get('install', {}).get('source', '') or 'explicit'}, "
+                f"data={plan.get('data', {}).get('source', '') or 'explicit'}, "
                 f"smoke={plan.get('smoke', {}).get('source', '') or 'explicit'}"
             )
             results.append({"check": "bootstrap resolution", "status": "OK", "detail": detail})

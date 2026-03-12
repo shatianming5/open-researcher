@@ -98,6 +98,16 @@ def test_doctor_valid_repo(valid_repo):
     assert check_map["Python >= 3.10"] == "OK"
 
 
+def test_doctor_missing_scout_program_fails_role_programs(valid_repo):
+    (valid_repo / ".research" / "scout_program.md").unlink()
+
+    checks = run_doctor(valid_repo)
+    check_map = {c["check"]: c for c in checks}
+
+    assert check_map["role programs"]["status"] == "FAIL"
+    assert "scout" in check_map["role programs"]["detail"]
+
+
 def test_doctor_no_git(valid_repo):
     """Git check fails when .git is missing."""
     import shutil
@@ -230,6 +240,34 @@ def test_doctor_reports_opencode_run_capability(valid_repo, monkeypatch):
     assert check_map["OpenCode CLI"]["status"] == "OK"
     assert "1.1.48" in check_map["OpenCode CLI"]["detail"]
     assert "`run` subcommand available" in check_map["OpenCode CLI"]["detail"]
+
+
+def test_doctor_bootstrap_resolution_detail_includes_expected_sources(valid_repo, monkeypatch):
+    import open_researcher.doctor_cmd as doctor_cmd
+
+    def fake_plan(repo_path, research, cfg):
+        return {
+            "python_env": {"source": "active-venv"},
+            "install": {"source": "from-config"},
+            "data": {"source": "none"},
+            "smoke": {"source": "from-evaluation"},
+            "errors": [],
+            "unresolved": [],
+            "expected_path_status": [],
+        }
+
+    monkeypatch.setattr(doctor_cmd, "resolve_bootstrap_plan", fake_plan)
+
+    checks = run_doctor(valid_repo)
+    check_map = {c["check"]: c for c in checks}
+    detail = check_map["bootstrap resolution"]["detail"]
+
+    assert check_map["bootstrap resolution"]["status"] == "OK"
+    assert "python=active-venv" in detail
+    assert "install=from-config" in detail
+    assert "data=none" in detail
+    assert "smoke=from-evaluation" in detail
+    assert detail.count("smoke=") == 1
 
 
 def test_doctor_gpu_with_nvidia_smi(valid_repo, monkeypatch):
