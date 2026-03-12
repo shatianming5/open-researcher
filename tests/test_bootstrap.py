@@ -183,6 +183,116 @@ def test_run_bootstrap_prepare_retries_smoke_before_falling_back_to_install(tmp_
     assert "data ==" not in prepare_log
 
 
+def test_run_bootstrap_prepare_explicit_smoke_retries_in_ambient_env(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    research = tmp_path / ".research"
+    research.mkdir()
+    smoke_command = (
+        "import os; "
+        "from pathlib import Path; "
+        "active = bool(os.environ.get('VIRTUAL_ENV')); "
+        "(not active) and Path('ambient.ok').write_text('ok'); "
+        "print('ambient smoke ok' if not active else 'project env blocked'); "
+        "raise SystemExit(7 if active else 0)"
+    )
+    cfg = ResearchConfig(
+        bootstrap_auto_prepare=True,
+        bootstrap_install_command=_py_inline("raise SystemExit(9)"),
+        bootstrap_data_command=_py_inline("raise SystemExit(8)"),
+        bootstrap_smoke_command=_py_inline(smoke_command),
+    )
+
+    code, state = run_bootstrap_prepare(tmp_path, research, cfg)
+
+    assert code == 0
+    assert state["status"] == "completed"
+    assert state["install"]["status"] == "skipped"
+    assert state["data"]["status"] == "skipped"
+    assert state["smoke"]["status"] == "completed"
+    assert (tmp_path / "ambient.ok").exists()
+    assert any("ambient environment" in item.lower() for item in state["warnings"])
+    prepare_log = (research / "prepare.log").read_text(encoding="utf-8")
+    assert "[env_mode=project]" in prepare_log
+    assert "[env_mode=ambient]" in prepare_log
+    assert "install ==" not in prepare_log
+    assert "data ==" not in prepare_log
+
+
+def test_run_bootstrap_prepare_explicit_smoke_failfast_suppresses_install_fallback(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    (tmp_path / "requirements.txt").write_text("pytest\n", encoding="utf-8")
+    research = tmp_path / ".research"
+    research.mkdir()
+    seen_events: list[tuple[str, str]] = []
+    cfg = ResearchConfig(
+        bootstrap_auto_prepare=True,
+        bootstrap_smoke_command=_py_inline("raise SystemExit(7)"),
+    )
+
+    code, state = run_bootstrap_prepare(
+        tmp_path,
+        research,
+        cfg,
+        on_prepare_event=lambda event: seen_events.append((type(event).__name__, getattr(event, "step", ""))),
+    )
+
+    assert code == 1
+    assert state["status"] == "failed"
+    assert state["smoke"]["status"] == "failed"
+    assert state["install"]["status"] == "skipped"
+    assert state["data"]["status"] == "skipped"
+    assert "install fallback suppressed" in state["smoke"]["detail"].lower()
+    assert ("PrepareFailed", "smoke") in seen_events
+    assert ("PrepareStepStarted", "install") not in seen_events
+    prepare_log = (research / "prepare.log").read_text(encoding="utf-8")
+    assert "smoke_preflight ==" in prepare_log
+    assert "smoke_preflight_retry_2 ==" in prepare_log
+    assert "[env_mode=project]" in prepare_log
+    assert "[env_mode=ambient]" in prepare_log
+    assert "install ==" not in prepare_log
+    assert "data ==" not in prepare_log
+
+
+def test_run_bootstrap_prepare_resets_step_runtime_state_between_runs(tmp_path: Path) -> None:
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_install_flag.py").write_text(
+        "from pathlib import Path\n\n"
+        "def test_install_flag() -> None:\n"
+        "    assert Path('install.ok').exists()\n",
+        encoding="utf-8",
+    )
+    research = tmp_path / ".research"
+    research.mkdir()
+    first_cfg = ResearchConfig(
+        bootstrap_auto_prepare=True,
+        bootstrap_install_command=_py_inline("from pathlib import Path; Path('install.ok').write_text('ok')"),
+    )
+
+    code, _ = run_bootstrap_prepare(tmp_path, research, first_cfg)
+    assert code == 0
+    first_state = read_bootstrap_state(research / "bootstrap_state.json")
+    assert first_state["install"]["status"] == "completed"
+    assert first_state["install"]["started_at"]
+    assert first_state["install"]["finished_at"]
+
+    second_cfg = ResearchConfig(
+        bootstrap_auto_prepare=True,
+        bootstrap_install_command=_py_inline("raise SystemExit(9)"),
+        bootstrap_smoke_command=_py_inline("print('ready already')"),
+    )
+
+    code, _ = run_bootstrap_prepare(tmp_path, research, second_cfg)
+
+    assert code == 0
+    second_state = read_bootstrap_state(research / "bootstrap_state.json")
+    assert second_state["install"]["status"] == "skipped"
+    assert second_state["install"]["started_at"] == ""
+    assert second_state["install"]["finished_at"] == ""
+    assert second_state["install"]["detail"] != "Completed successfully"
+
+
 def test_format_bootstrap_dry_run_surfaces_expected_paths_and_unresolved(tmp_path: Path) -> None:
     research = tmp_path / ".research"
     research.mkdir()

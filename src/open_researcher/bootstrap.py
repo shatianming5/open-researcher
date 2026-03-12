@@ -264,6 +264,38 @@ def _append_warning(state: dict, detail: str) -> None:
         warnings.append(message)
 
 
+def _set_step_resolution(
+    step: dict,
+    *,
+    command: str,
+    source: str,
+    status: str,
+    detail: str,
+) -> None:
+    step.update(
+        {
+            "command": command,
+            "source": source,
+            "status": status,
+            "started_at": "",
+            "finished_at": "",
+            "detail": detail,
+        }
+    )
+
+
+def _is_explicit_bootstrap_source(source: str) -> bool:
+    return str(source or "").strip().startswith("config.bootstrap.")
+
+
+def _has_explicit_prepare_fallback(state: dict) -> bool:
+    for step_name in ("install", "data"):
+        step = state.get(step_name, {})
+        if str(step.get("command", "")).strip() and _is_explicit_bootstrap_source(str(step.get("source", "")).strip()):
+            return True
+    return False
+
+
 def resolve_bootstrap_plan(repo_path: Path, research_dir: Path, cfg: ResearchConfig) -> dict:
     state = read_bootstrap_state(research_dir / "bootstrap_state.json")
     repo_profile = detect_repo_profile(repo_path)
@@ -314,29 +346,26 @@ def resolve_bootstrap_plan(repo_path: Path, research_dir: Path, cfg: ResearchCon
             "unresolved": unresolved,
         }
     )
-    state["install"].update(
-        {
-            "command": install_command,
-            "source": install_source,
-            "status": install_status,
-            "detail": "Dependency installation step",
-        }
+    _set_step_resolution(
+        state["install"],
+        command=install_command,
+        source=install_source,
+        status=install_status,
+        detail="Dependency installation step",
     )
-    state["data"].update(
-        {
-            "command": data_command,
-            "source": data_source,
-            "status": "pending" if data_command else "skipped",
-            "detail": "Dataset/setup step" if data_command else "No data step detected",
-        }
+    _set_step_resolution(
+        state["data"],
+        command=data_command,
+        source=data_source,
+        status="pending" if data_command else "skipped",
+        detail="Dataset/setup step" if data_command else "No data step detected",
     )
-    state["smoke"].update(
-        {
-            "command": smoke_command,
-            "source": smoke_source,
-            "status": "pending" if smoke_command else "unresolved",
-            "detail": "Readiness smoke step" if smoke_command else "No smoke command resolved",
-        }
+    _set_step_resolution(
+        state["smoke"],
+        command=smoke_command,
+        source=smoke_source,
+        status="pending" if smoke_command else "unresolved",
+        detail="Readiness smoke step" if smoke_command else "No smoke command resolved",
     )
     if not cfg.bootstrap_auto_prepare:
         state["status"] = "disabled"
@@ -379,11 +408,51 @@ def _command_env(python_executable: str) -> dict[str, str]:
     return env
 
 
-def _append_prepare_log(log_path: Path, step: str, command: str, result: subprocess.CompletedProcess[str]) -> None:
+def _ambient_command_env(python_executable: str) -> dict[str, str]:
+    env = dict(os.environ)
+    venv_root = _venv_root_from_python(python_executable)
+    if venv_root is None:
+        return env
+
+    bin_dir = _venv_bin_dir(venv_root).resolve()
+    path_entries = []
+    for entry in env.get("PATH", "").split(os.pathsep):
+        if not entry:
+            continue
+        try:
+            if Path(entry).resolve() == bin_dir:
+                continue
+        except OSError:
+            if entry == str(bin_dir):
+                continue
+        path_entries.append(entry)
+    env["PATH"] = os.pathsep.join(path_entries)
+
+    active_venv = env.get("VIRTUAL_ENV", "").strip()
+    if active_venv:
+        try:
+            if Path(active_venv).resolve() == venv_root.resolve():
+                env.pop("VIRTUAL_ENV", None)
+        except OSError:
+            if active_venv == str(venv_root):
+                env.pop("VIRTUAL_ENV", None)
+    return env
+
+
+def _append_prepare_log(
+    log_path: Path,
+    step: str,
+    command: str,
+    result: subprocess.CompletedProcess[str],
+    *,
+    env_mode: str | None = None,
+) -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as handle:
         handle.write(f"\n== {now_iso()} :: {step} ==\n")
         handle.write(f"$ {command}\n")
+        if env_mode:
+            handle.write(f"[env_mode={env_mode}]\n")
         if result.stdout:
             handle.write(result.stdout)
             if not result.stdout.endswith("\n"):
@@ -402,6 +471,7 @@ def _run_prepare_command(
     working_dir: Path,
     env: dict[str, str],
     log_path: Path,
+    env_mode: str = "project",
 ) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(
         command,
@@ -411,7 +481,7 @@ def _run_prepare_command(
         capture_output=True,
         env=env,
     )
-    _append_prepare_log(log_path, step_name, command, result)
+    _append_prepare_log(log_path, step_name, command, result, env_mode=env_mode)
     return result
 
 
@@ -420,41 +490,81 @@ def _try_smoke_preflight(
     state: dict,
     *,
     working_dir: Path,
-    env: dict[str, str],
+    project_env: dict[str, str],
+    ambient_env: dict[str, str],
     log_path: Path,
     state_path: Path,
     on_prepare_event=None,
-) -> tuple[bool, dict]:
+) -> tuple[bool, bool, dict]:
     step = state.get("smoke", {})
     command = str(step.get("command", "")).strip()
     if not command:
-        return False, state
+        return False, False, state
+
+    explicit_smoke = _is_explicit_bootstrap_source(str(step.get("source", "")).strip())
+    attempts: list[tuple[str, dict[str, str]]] = []
+    if explicit_smoke:
+        attempts = [("project", project_env), ("ambient", ambient_env)]
+    else:
+        attempts = [("project", project_env) for _ in range(SMOKE_PREFLIGHT_ATTEMPTS)]
 
     attempt_count = 0
+    success_env_mode = ""
+    first_started_at = ""
     result: subprocess.CompletedProcess[str] | None = None
-    for attempt in range(1, SMOKE_PREFLIGHT_ATTEMPTS + 1):
-        attempt_count = attempt
+    for attempt, (env_mode, env) in enumerate(attempts, start=1):
         step_name = "smoke_preflight" if attempt == 1 else f"smoke_preflight_retry_{attempt}"
+        if not first_started_at:
+            first_started_at = now_iso()
         result = _run_prepare_command(
             step_name,
             command,
             working_dir=working_dir,
             env=env,
             log_path=log_path,
+            env_mode=env_mode,
         )
+        attempt_count = attempt
         if result.returncode == 0:
+            success_env_mode = env_mode
             break
     if result is None or result.returncode != 0:
-        return False, state
+        if explicit_smoke and not _has_explicit_prepare_fallback(state):
+            failure_detail = (
+                "Explicit smoke command failed in both project and ambient environments; "
+                "install fallback suppressed. See prepare.log for the failing attempts."
+            )
+            step["status"] = "failed"
+            step["detail"] = failure_detail
+            step["started_at"] = first_started_at or now_iso()
+            step["finished_at"] = now_iso()
+            state["status"] = "failed"
+            state["errors"] = [failure_detail]
+            state["unresolved"] = []
+            for step_name in ("install", "data"):
+                current = state.get(step_name, {})
+                current["status"] = "skipped"
+                current["detail"] = "Suppressed because the explicit smoke command failed before fallback steps."
+                current["started_at"] = ""
+                current["finished_at"] = ""
+            return False, True, state
+        return False, False, state
 
     timestamp = now_iso()
     ready_detail = "Smoke passed before install/data; reusing the current workspace as-is."
     if attempt_count > 1:
-        ready_detail += f" The readiness probe passed on retry {attempt_count}/{SMOKE_PREFLIGHT_ATTEMPTS}."
-        _append_warning(
-            state,
-            "Smoke preflight passed on retry after an earlier failure; see prepare.log for the initial failure.",
-        )
+        ready_detail += f" The readiness probe passed on retry {attempt_count}/{len(attempts)}."
+        if success_env_mode == "ambient":
+            ready_detail += " The successful retry ran in the ambient environment without repo .venv injection."
+            _append_warning(
+                state,
+                "Smoke preflight passed on retry in the ambient environment after the project-env attempt failed.",
+            )
+        else:
+            _append_warning(
+                state,
+                "Smoke preflight passed on retry after an earlier failure; see prepare.log for the initial failure.",
+            )
     expected_paths = _expected_paths_status(repo_path, state.get("expected_paths", []))
     state["expected_path_status"] = expected_paths
     missing = [item["path"] for item in expected_paths if not item.get("exists")]
@@ -475,7 +585,7 @@ def _try_smoke_preflight(
 
     step["status"] = "completed"
     step["detail"] = ready_detail
-    step["started_at"] = timestamp
+    step["started_at"] = first_started_at or timestamp
     step["finished_at"] = timestamp
     state["status"] = "completed"
     state["errors"] = []
@@ -500,7 +610,7 @@ def _try_smoke_preflight(
                 detail=ready_detail,
             )
         )
-    return True, state
+    return True, False, state
 
 
 def _ensure_python_environment(repo_path: Path, state: dict, log_path: Path) -> tuple[int, str]:
@@ -602,13 +712,16 @@ def run_bootstrap_prepare(
         return code, state
 
     working_dir = (repo_path / str(state.get("working_dir", ".") or ".")).resolve()
-    env = _command_env(str(state.get("python_env", {}).get("executable", "")))
+    python_executable = str(state.get("python_env", {}).get("executable", ""))
+    project_env = _command_env(python_executable)
+    ambient_env = _ambient_command_env(python_executable)
 
-    ready, state = _try_smoke_preflight(
+    ready, fail_fast, state = _try_smoke_preflight(
         repo_path,
         state,
         working_dir=working_dir,
-        env=env,
+        project_env=project_env,
+        ambient_env=ambient_env,
         log_path=log_path,
         state_path=state_path,
         on_prepare_event=on_prepare_event,
@@ -619,6 +732,13 @@ def run_bootstrap_prepare(
 
             on_prepare_event(PrepareCompleted(status="completed", unresolved=0))
         return 0, state
+    if fail_fast:
+        write_bootstrap_state(state_path, state)
+        if on_prepare_event is not None:
+            from open_researcher.research_events import PrepareFailed
+
+            on_prepare_event(PrepareFailed(step="smoke", detail=str(state.get("smoke", {}).get("detail", "")).strip()))
+        return 1, state
 
     for step_name in _step_names():
         step = state.get(step_name, {})
@@ -651,8 +771,9 @@ def run_bootstrap_prepare(
             step_name,
             command,
             working_dir=working_dir,
-            env=env,
+            env=project_env,
             log_path=log_path,
+            env_mode="project",
         )
         step["finished_at"] = now_iso()
         if result.returncode != 0:
