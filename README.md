@@ -370,7 +370,10 @@ git clone https://github.com/shatianming5/PaperFarm.git
 cd PaperFarm
 make dev    # install with dev dependencies
 make test   # run tests
+make test-cov      # run tests with coverage gate (>=75%)
 make lint   # run linter
+make package-check # build wheel + install + CLI smoke test
+make ci     # full local CI: lint + test + coverage + package smoke
 ```
 
 </details>
