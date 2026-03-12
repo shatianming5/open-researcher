@@ -1,7 +1,7 @@
 import tempfile
 from pathlib import Path
 
-from open_researcher.export_cmd import do_export, generate_report
+from paperfarm.export_cmd import do_export, generate_report
 
 
 def test_generate_report():

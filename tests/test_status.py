@@ -2,7 +2,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from open_researcher.status_cmd import parse_research_state, print_status
+from paperfarm.status_cmd import parse_research_state, print_status
 
 
 def test_parse_state_with_results():
@@ -153,7 +153,7 @@ def test_status_shows_activity(tmp_path):
     # Create the docs files as empty
     for name in ["project-understanding.md", "literature.md", "evaluation.md"]:
         (research / name).write_text("# placeholder\n")
-    from open_researcher.status_cmd import parse_research_state
+    from paperfarm.status_cmd import parse_research_state
 
     state = parse_research_state(tmp_path)
     assert state is not None
@@ -267,7 +267,7 @@ def test_print_status_with_corrupt_metrics(tmp_path):
 
 
 def test_sparkline_generation():
-    from open_researcher.status_cmd import _sparkline
+    from paperfarm.status_cmd import _sparkline
 
     result = _sparkline([1.0, 2.0, 3.0, 4.0])
     assert len(result) == 4
@@ -276,13 +276,13 @@ def test_sparkline_generation():
 
 
 def test_sparkline_empty():
-    from open_researcher.status_cmd import _sparkline
+    from paperfarm.status_cmd import _sparkline
 
     assert _sparkline([]) == ""
 
 
 def test_sparkline_constant():
-    from open_researcher.status_cmd import _sparkline
+    from paperfarm.status_cmd import _sparkline
 
     result = _sparkline([5.0, 5.0, 5.0])
     assert len(result) == 3

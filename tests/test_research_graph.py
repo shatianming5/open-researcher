@@ -2,8 +2,8 @@
 
 import json
 
-from open_researcher.research_graph import ResearchGraphStore
-from open_researcher.research_memory import ResearchMemoryStore
+from paperfarm.research_graph import ResearchGraphStore
+from paperfarm.research_memory import ResearchMemoryStore
 
 
 def test_graph_store_syncs_executable_frontier_to_idea_pool(tmp_path):

@@ -2,7 +2,7 @@
 
 import json
 
-from open_researcher.failure_memory import (
+from paperfarm.failure_memory import (
     MEMORY_POLICY,
     FailureMemoryLedger,
     classify_failure,

@@ -1,4 +1,4 @@
-from open_researcher.agents.base import AgentAdapter
+from paperfarm.agents.base import AgentAdapter
 from pathlib import Path
 
 

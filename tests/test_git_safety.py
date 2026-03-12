@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from open_researcher.git_safety import capture_clean_workspace_snapshot, rollback_workspace
+from paperfarm.git_safety import capture_clean_workspace_snapshot, rollback_workspace
 
 
 def _init_git_repo(path: Path) -> None:

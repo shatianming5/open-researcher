@@ -1,7 +1,7 @@
 """Tests for explicit parallel runtime profiles and plugins."""
 
-from open_researcher.config import ResearchConfig
-from open_researcher.parallel_runtime import (
+from paperfarm.config import ResearchConfig
+from paperfarm.parallel_runtime import (
     build_parallel_worker_plugins,
     resolve_parallel_runtime_profile,
     resolve_parallel_worker_count,

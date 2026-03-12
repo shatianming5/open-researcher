@@ -5,7 +5,7 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from open_researcher.cli import app
+from paperfarm.cli import app
 
 runner = CliRunner()
 

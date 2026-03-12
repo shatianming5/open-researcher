@@ -1,5 +1,5 @@
 import json
-from open_researcher.agents.claude_code import ClaudeCodeAdapter
+from paperfarm.agents.claude_code import ClaudeCodeAdapter
 
 
 def test_claude_code_parse_result_line():

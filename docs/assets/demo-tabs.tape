@@ -1,6 +1,6 @@
 # VHS Tape: TUI 仪表盘 Tab 切换展示
 # 用法: vhs docs/assets/demo-tabs.tape
-# 前提: 有一个正在运行实验的 open-researcher 实例
+# 前提: 有一个正在运行实验的 PaperFarm 实例
 
 Output docs/assets/demo-tabs.gif
 
@@ -12,7 +12,7 @@ Set Theme "Tokyo Night"
 Set Padding 20
 Set Framerate 30
 
-Type "open-researcher run --agent claude-code"
+Type "PaperFarm run --agent claude-code"
 Sleep 500ms
 Enter
 Sleep 5s

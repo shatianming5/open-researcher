@@ -1,4 +1,4 @@
-from open_researcher.graph_context import filter_graph_for_context, enforce_context_token_limit
+from paperfarm.graph_context import filter_graph_for_context, enforce_context_token_limit
 
 
 def _sample_graph():

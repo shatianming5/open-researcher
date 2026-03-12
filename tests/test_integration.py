@@ -5,10 +5,10 @@ from pathlib import Path
 
 import yaml
 
-from open_researcher.export_cmd import generate_report
-from open_researcher.init_cmd import do_init
-from open_researcher.results_cmd import load_results
-from open_researcher.status_cmd import parse_research_state
+from paperfarm.export_cmd import generate_report
+from paperfarm.init_cmd import do_init
+from paperfarm.results_cmd import load_results
+from paperfarm.status_cmd import parse_research_state
 
 
 def test_full_workflow():
@@ -102,7 +102,7 @@ def test_research_v1_init_creates_all_runtime_files(tmp_path):
     """Verify init creates all files needed for the research-v1 runtime."""
     import json as json_mod
 
-    from open_researcher.init_cmd import do_init
+    from paperfarm.init_cmd import do_init
 
     (tmp_path / ".git").mkdir()
     do_init(repo_path=tmp_path, tag="test")
@@ -133,7 +133,7 @@ def test_idea_pool_workflow(tmp_path):
     """Test the full idea lifecycle: add -> pick -> run -> done."""
     import json as json_mod
 
-    from open_researcher.idea_pool import IdeaBacklog
+    from paperfarm.idea_pool import IdeaBacklog
 
     pool_file = tmp_path / "idea_pool.json"
     pool_file.write_text(json_mod.dumps({"ideas": []}))

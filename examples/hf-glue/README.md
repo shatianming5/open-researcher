@@ -1,6 +1,6 @@
 # Example: HuggingFace GLUE Fine-tuning Research
 
-This example shows how to use Open Researcher with HuggingFace Transformers to optimize GLUE benchmark fine-tuning (SST-2 sentiment classification).
+This example shows how to use PaperFarm with HuggingFace Transformers to optimize GLUE benchmark fine-tuning (SST-2 sentiment classification).
 
 ## Setup
 
@@ -10,11 +10,11 @@ cd transformers
 pip install -e ".[torch]"
 pip install datasets evaluate accelerate
 
-# Initialize Open Researcher
-open-researcher init --tag glue
+# Initialize PaperFarm
+PaperFarm init --tag glue
 
 # Launch research
-open-researcher run --agent claude-code
+PaperFarm run --agent claude-code
 ```
 
 ## What the Agent Will Try

@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
 
-from open_researcher.activity import ActivityMonitor
+from paperfarm.activity import ActivityMonitor
 
 
 @pytest.fixture
@@ -54,7 +54,7 @@ def test_get_all(monitor):
 
 
 def test_update_worker(tmp_path):
-    from open_researcher.activity import ActivityMonitor
+    from paperfarm.activity import ActivityMonitor
 
     am = ActivityMonitor(tmp_path)
     am.update_worker("experiment_agent", "w-001", status="coding", idea="idea-001", gpus=[0])
@@ -66,7 +66,7 @@ def test_update_worker(tmp_path):
 
 
 def test_update_worker_multiple(tmp_path):
-    from open_researcher.activity import ActivityMonitor
+    from paperfarm.activity import ActivityMonitor
 
     am = ActivityMonitor(tmp_path)
     am.update_worker("experiment_agent", "w-001", status="coding", idea="idea-001", gpus=[0])
@@ -76,7 +76,7 @@ def test_update_worker_multiple(tmp_path):
 
 
 def test_remove_worker(tmp_path):
-    from open_researcher.activity import ActivityMonitor
+    from paperfarm.activity import ActivityMonitor
 
     am = ActivityMonitor(tmp_path)
     am.update_worker("experiment_agent", "w-001", status="coding", idea="idea-001", gpus=[0])

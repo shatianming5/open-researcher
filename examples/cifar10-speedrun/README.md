@@ -1,6 +1,6 @@
 # Example: CIFAR-10 Speedrun
 
-Maximize [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) test accuracy with Open Researcher — from baseline ~88% to ~95%+ by optimizing a small ResNet.
+Maximize [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) test accuracy with PaperFarm — from baseline ~88% to ~95%+ by optimizing a small ResNet.
 
 ## Prerequisites
 
@@ -19,15 +19,15 @@ mkdir cifar10-speedrun && cd cifar10-speedrun
 #   - Trains a simple ResNet-18 with no augmentation
 #   - Prints test_accuracy at the end
 
-# 2. Initialize Open Researcher
-pip install open-researcher
-open-researcher init --tag cifar10
+# 2. Initialize PaperFarm
+pip install PaperFarm
+PaperFarm init --tag cifar10
 
 # 3. Launch autonomous research
-open-researcher run --agent claude-code
+PaperFarm run --agent claude-code
 
 # Or run headless with a specific goal
-open-researcher start --mode headless \
+PaperFarm run --mode headless \
   --goal "Improve CIFAR-10 test accuracy above 95% by optimizing model architecture, data augmentation, learning rate schedule, and training techniques" \
   --max-experiments 20
 ```

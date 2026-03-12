@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting! Please run `open-researcher doctor` and paste the output below.
+        Thanks for reporting! Please run `PaperFarm doctor` and paste the output below.
 
   - type: textarea
     id: description
@@ -21,8 +21,8 @@ body:
       label: Steps to reproduce
       description: Minimal steps to trigger the bug.
       placeholder: |
-        1. `open-researcher init`
-        2. `open-researcher run --agent claude-code`
+        1. `PaperFarm init`
+        2. `PaperFarm run --agent claude-code`
         3. See error...
     validations:
       required: true
@@ -31,7 +31,7 @@ body:
     id: doctor
     attributes:
       label: Doctor output
-      description: Paste the output of `open-researcher doctor`
+      description: Paste the output of `PaperFarm doctor`
       render: text
     validations:
       required: true

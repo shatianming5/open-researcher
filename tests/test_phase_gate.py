@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from open_researcher.phase_gate import PhaseGate
+from paperfarm.phase_gate import PhaseGate
 
 
 @pytest.fixture

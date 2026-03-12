@@ -3,7 +3,7 @@
 import threading
 import time
 
-from open_researcher.watchdog import TimeoutWatchdog
+from paperfarm.watchdog import TimeoutWatchdog
 
 
 def test_watchdog_fires_on_timeout():

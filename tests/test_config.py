@@ -3,7 +3,7 @@
 import pytest
 import yaml
 
-from open_researcher.config import ResearchConfig, load_config, require_supported_protocol
+from paperfarm.config import ResearchConfig, load_config, require_supported_protocol
 
 
 @pytest.fixture

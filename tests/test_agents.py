@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from open_researcher.agents import detect_agent, get_agent, list_agents
-from open_researcher.agents.base import AgentAdapter
+from paperfarm.agents import detect_agent, get_agent, list_agents
+from paperfarm.agents.base import AgentAdapter
 
 
 class DummyAgent(AgentAdapter):
@@ -59,7 +59,7 @@ def test_detect_agent_returns_none_when_none_installed(monkeypatch):
 
 
 def test_claude_code_build_command():
-    from open_researcher.agents.claude_code import ClaudeCodeAdapter
+    from paperfarm.agents.claude_code import ClaudeCodeAdapter
 
     agent = ClaudeCodeAdapter()
     with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
@@ -71,7 +71,7 @@ def test_claude_code_build_command():
 
 
 def test_codex_build_command():
-    from open_researcher.agents.codex import CodexAdapter
+    from paperfarm.agents.codex import CodexAdapter
 
     agent = CodexAdapter()
     with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
@@ -82,7 +82,7 @@ def test_codex_build_command():
 
 
 def test_codex_build_command_supports_full_auto_alias():
-    from open_researcher.agents.codex import CodexAdapter
+    from paperfarm.agents.codex import CodexAdapter
 
     agent = CodexAdapter(config={"sandbox": "full-auto", "extra_flags": ["--skip-git-repo-check"]})
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
@@ -98,7 +98,7 @@ def test_codex_build_command_supports_full_auto_alias():
 
 
 def test_codex_build_command_adds_external_shared_research_dir(tmp_path):
-    from open_researcher.agents.codex import CodexAdapter
+    from paperfarm.agents.codex import CodexAdapter
 
     shared_research = tmp_path / "shared-research"
     shared_research.mkdir()
@@ -115,7 +115,7 @@ def test_codex_build_command_adds_external_shared_research_dir(tmp_path):
 
 
 def test_aider_build_command():
-    from open_researcher.agents.aider import AiderAdapter
+    from paperfarm.agents.aider import AiderAdapter
 
     agent = AiderAdapter()
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
@@ -123,7 +123,7 @@ def test_aider_build_command():
 
 
 def test_opencode_build_command():
-    from open_researcher.agents.opencode import OpencodeAdapter
+    from paperfarm.agents.opencode import OpencodeAdapter
 
     agent = OpencodeAdapter()
     agent._supports_run_subcommand = True
@@ -132,7 +132,7 @@ def test_opencode_build_command():
 
 
 def test_opencode_build_command_falls_back_to_top_level_prompt():
-    from open_researcher.agents.opencode import OpencodeAdapter
+    from paperfarm.agents.opencode import OpencodeAdapter
 
     agent = OpencodeAdapter()
     agent._supports_run_subcommand = False
@@ -141,7 +141,7 @@ def test_opencode_build_command_falls_back_to_top_level_prompt():
 
 
 def test_opencode_probe_detects_run_subcommand(monkeypatch):
-    from open_researcher.agents.opencode import OpencodeAdapter
+    from paperfarm.agents.opencode import OpencodeAdapter
 
     class Result:
         returncode = 0
@@ -152,7 +152,7 @@ def test_opencode_probe_detects_run_subcommand(monkeypatch):
         calls.append((cmd, cwd))
         return Result()
 
-    monkeypatch.setattr("open_researcher.agents.opencode.subprocess.run", fake_run)
+    monkeypatch.setattr("paperfarm.agents.opencode.subprocess.run", fake_run)
 
     agent = OpencodeAdapter()
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
@@ -162,7 +162,7 @@ def test_opencode_probe_detects_run_subcommand(monkeypatch):
 
 
 def test_opencode_config_includes_model_agent_and_extra_flags():
-    from open_researcher.agents.opencode import OpencodeAdapter
+    from paperfarm.agents.opencode import OpencodeAdapter
 
     agent = OpencodeAdapter(config={"model": "openai/gpt-5", "agent": "builder", "extra_flags": ["--share"]})
     agent._supports_run_subcommand = True
@@ -171,7 +171,7 @@ def test_opencode_config_includes_model_agent_and_extra_flags():
 
 
 def test_opencode_run_prefers_run_subcommand(tmp_path, monkeypatch):
-    from open_researcher.agents.opencode import OpencodeAdapter
+    from paperfarm.agents.opencode import OpencodeAdapter
 
     research = tmp_path / ".research"
     research.mkdir()
@@ -209,7 +209,7 @@ def test_opencode_run_prefers_run_subcommand(tmp_path, monkeypatch):
 
 
 def test_opencode_run_falls_back_to_top_level_prompt(tmp_path, monkeypatch):
-    from open_researcher.agents.opencode import OpencodeAdapter
+    from paperfarm.agents.opencode import OpencodeAdapter
 
     research = tmp_path / ".research"
     research.mkdir()
@@ -232,7 +232,7 @@ def test_opencode_run_falls_back_to_top_level_prompt(tmp_path, monkeypatch):
 
 
 def test_opencode_run_reports_missing_program_file(tmp_path):
-    from open_researcher.agents.opencode import OpencodeAdapter
+    from paperfarm.agents.opencode import OpencodeAdapter
 
     agent = OpencodeAdapter()
     output = []
@@ -244,7 +244,7 @@ def test_opencode_run_reports_missing_program_file(tmp_path):
 
 
 def test_check_installed_uses_shutil_which(monkeypatch):
-    from open_researcher.agents.claude_code import ClaudeCodeAdapter
+    from paperfarm.agents.claude_code import ClaudeCodeAdapter
 
     agent = ClaudeCodeAdapter()
     monkeypatch.setattr(shutil, "which", lambda x: "/usr/bin/claude" if x == "claude" else None)
@@ -257,7 +257,7 @@ def test_check_installed_uses_shutil_which(monkeypatch):
 
 
 def test_claude_code_config_custom_model():
-    from open_researcher.agents.claude_code import ClaudeCodeAdapter
+    from paperfarm.agents.claude_code import ClaudeCodeAdapter
 
     agent = ClaudeCodeAdapter(config={"model": "claude-sonnet-4-5-20250514", "allowed_tools": "Bash,Read"})
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
@@ -267,7 +267,7 @@ def test_claude_code_config_custom_model():
 
 
 def test_claude_code_config_extra_flags():
-    from open_researcher.agents.claude_code import ClaudeCodeAdapter
+    from paperfarm.agents.claude_code import ClaudeCodeAdapter
 
     agent = ClaudeCodeAdapter(config={"extra_flags": ["--max-turns", "50"]})
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
@@ -276,7 +276,7 @@ def test_claude_code_config_extra_flags():
 
 
 def test_codex_config_custom_model():
-    from open_researcher.agents.codex import CodexAdapter
+    from paperfarm.agents.codex import CodexAdapter
 
     agent = CodexAdapter(config={"model": "gpt-5.2", "sandbox": "danger-full-access"})
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
@@ -288,7 +288,7 @@ def test_codex_config_custom_model():
 
 
 def test_codex_default_model():
-    from open_researcher.agents.codex import CodexAdapter
+    from paperfarm.agents.codex import CodexAdapter
 
     agent = CodexAdapter()
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
@@ -298,7 +298,7 @@ def test_codex_default_model():
 
 
 def test_aider_config_model():
-    from open_researcher.agents.aider import AiderAdapter
+    from paperfarm.agents.aider import AiderAdapter
 
     agent = AiderAdapter(config={"model": "gpt-4o"})
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
@@ -322,7 +322,7 @@ def test_detect_agent_with_configs(monkeypatch):
 
 
 def test_gemini_build_command():
-    from open_researcher.agents.gemini import GeminiAdapter
+    from paperfarm.agents.gemini import GeminiAdapter
 
     agent = GeminiAdapter()
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
@@ -330,7 +330,7 @@ def test_gemini_build_command():
 
 
 def test_gemini_build_command_with_config():
-    from open_researcher.agents.gemini import GeminiAdapter
+    from paperfarm.agents.gemini import GeminiAdapter
 
     agent = GeminiAdapter(config={"model": "gemini-2.5-flash", "sandbox": "auto", "extra_flags": ["--debug"]})
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
@@ -347,7 +347,7 @@ def test_gemini_build_command_with_config():
 
 
 def test_gemini_run_success(tmp_path, monkeypatch):
-    from open_researcher.agents.gemini import GeminiAdapter
+    from paperfarm.agents.gemini import GeminiAdapter
 
     research = tmp_path / ".research"
     research.mkdir()
@@ -373,7 +373,7 @@ def test_gemini_run_success(tmp_path, monkeypatch):
 
 
 def test_gemini_run_missing_program_file(tmp_path):
-    from open_researcher.agents.gemini import GeminiAdapter
+    from paperfarm.agents.gemini import GeminiAdapter
 
     agent = GeminiAdapter()
     output = []
@@ -385,7 +385,7 @@ def test_gemini_run_missing_program_file(tmp_path):
 
 
 def test_gemini_default_model():
-    from open_researcher.agents.gemini import GeminiAdapter
+    from paperfarm.agents.gemini import GeminiAdapter
 
     agent = GeminiAdapter()
     cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from open_researcher.cli import app
+from paperfarm.cli import app
 
 runner = CliRunner()
 
@@ -14,6 +14,13 @@ _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 
 def _plain(text: str) -> str:
     return _ANSI_RE.sub("", text)
+
+
+def test_root_help_uses_paperfarm_branding():
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    plain = _plain(result.stdout)
+    assert "PaperFarm" in plain
 
 
 def test_init_via_cli():
@@ -70,7 +77,7 @@ def test_run_dry_run():
         mock_agent.name = "mock-agent"
         mock_agent.build_command.return_value = ["mock-cmd", "--test"]
 
-        with patch("open_researcher.run_cmd.detect_agent", return_value=mock_agent):
+        with patch("paperfarm.run_cmd.detect_agent", return_value=mock_agent):
             result = runner.invoke(app, ["run", "--dry-run"])
             assert result.exit_code == 0
             assert "mock-agent" in result.stdout
@@ -150,7 +157,7 @@ def test_run_without_research_bootstraps_to_start_flow():
         Path(".git").mkdir()
         from unittest.mock import patch
 
-        with patch("open_researcher.run_cmd.do_start", return_value=None) as mock_start:
+        with patch("paperfarm.run_cmd.do_start", return_value=None) as mock_start:
             result = runner.invoke(app, ["run"])
 
         assert result.exit_code == 0
@@ -162,7 +169,7 @@ def test_run_mode_headless_routes_to_headless_bootstrap():
         Path(".git").mkdir()
         from unittest.mock import patch
 
-        with patch("open_researcher.headless.do_start_headless", return_value=None) as mock_headless:
+        with patch("paperfarm.headless.do_start_headless", return_value=None) as mock_headless:
             result = runner.invoke(
                 app,
                 ["run", "--mode", "headless", "--goal", "test goal", "--workers", "2"],
@@ -179,7 +186,7 @@ def test_run_deprecated_headless_flag_routes_to_headless_bootstrap():
         Path(".git").mkdir()
         from unittest.mock import patch
 
-        with patch("open_researcher.headless.do_start_headless", return_value=None) as mock_headless:
+        with patch("paperfarm.headless.do_start_headless", return_value=None) as mock_headless:
             result = runner.invoke(
                 app,
                 ["run", "--headless", "--goal", "test goal", "--workers", "2"],
@@ -199,7 +206,7 @@ def test_run_existing_research_headless_routes_to_continue_flow():
         (Path(".research") / "config.yaml").write_text("research:\n  protocol: research-v1\n")
         from unittest.mock import patch
 
-        with patch("open_researcher.headless.do_run_headless", return_value=0) as mock_headless:
+        with patch("paperfarm.headless.do_run_headless", return_value=0) as mock_headless:
             result = runner.invoke(app, ["run", "--mode", "headless", "--workers", "2"])
 
         assert result.exit_code == 0
@@ -215,7 +222,7 @@ def test_run_existing_research_headless_dry_run_does_not_launch_runtime():
         (Path(".research") / "config.yaml").write_text("research:\n  protocol: research-v1\n")
         from unittest.mock import patch
 
-        with patch("open_researcher.headless.do_run_headless") as mock_headless:
+        with patch("paperfarm.headless.do_run_headless") as mock_headless:
             result = runner.invoke(app, ["run", "--mode", "headless", "--dry-run"])
 
         assert result.exit_code == 0
@@ -254,7 +261,7 @@ def test_run_interactive_propagates_nonzero_exit_code():
         (Path(".research") / "config.yaml").write_text("research:\n  protocol: research-v1\n")
         from unittest.mock import patch
 
-        with patch("open_researcher.run_cmd.do_run", return_value=7):
+        with patch("paperfarm.run_cmd.do_run", return_value=7):
             result = runner.invoke(app, ["run"])
 
         assert result.exit_code == 7
@@ -265,7 +272,7 @@ def test_start_mode_headless_routes_to_headless_entrypoint():
         Path(".git").mkdir()
         from unittest.mock import patch
 
-        with patch("open_researcher.headless.do_start_headless", return_value=None) as mock_headless:
+        with patch("paperfarm.headless.do_start_headless", return_value=None) as mock_headless:
             result = runner.invoke(
                 app,
                 ["start", "--mode", "headless", "--goal", "test goal", "--workers", "2"],
@@ -282,7 +289,7 @@ def test_start_deprecated_headless_flag_routes_to_headless_entrypoint():
         Path(".git").mkdir()
         from unittest.mock import patch
 
-        with patch("open_researcher.headless.do_start_headless", return_value=None) as mock_headless:
+        with patch("paperfarm.headless.do_start_headless", return_value=None) as mock_headless:
             result = runner.invoke(
                 app,
                 ["start", "--headless", "--goal", "test goal", "--workers", "2"],
@@ -303,7 +310,7 @@ def test_run_workers_route_to_research_runtime():
 
         from unittest.mock import patch
 
-        with patch("open_researcher.run_cmd.do_run", return_value=None) as mock_run:
+        with patch("paperfarm.run_cmd.do_run", return_value=None) as mock_run:
             result = runner.invoke(app, ["run", "--workers", "1"])
 
         assert result.exit_code == 0

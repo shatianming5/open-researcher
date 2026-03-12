@@ -237,7 +237,7 @@ class JSONLRenderer:
 ### 理想架构（你描述的简洁模型）
 
 ```
-用户 → open-researcher run [--mode interactive|headless]
+用户 → PaperFarm run [--mode interactive|headless]
                 │
                 ▼
         ┌─── Analysis Agent (Scout) ───┐

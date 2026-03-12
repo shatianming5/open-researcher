@@ -1,6 +1,6 @@
 # Example: Whisper Fine-tuning
 
-Reduce [OpenAI Whisper](https://github.com/openai/whisper) word error rate (WER) with Open Researcher — from baseline ~35% to ~15% by optimizing fine-tuning on speech data.
+Reduce [OpenAI Whisper](https://github.com/openai/whisper) word error rate (WER) with PaperFarm — from baseline ~35% to ~15% by optimizing fine-tuning on speech data.
 
 ## Prerequisites
 
@@ -20,15 +20,15 @@ pip install transformers datasets evaluate jiwer soundfile librosa accelerate
 #   - Fine-tunes on a Common Voice subset
 #   - Prints WER at the end
 
-# 2. Initialize Open Researcher
-pip install open-researcher
-open-researcher init --tag whisper
+# 2. Initialize PaperFarm
+pip install PaperFarm
+PaperFarm init --tag whisper
 
 # 3. Launch autonomous research
-open-researcher run --agent claude-code
+PaperFarm run --agent claude-code
 
 # Or run headless with a specific goal
-open-researcher start --mode headless \
+PaperFarm run --mode headless \
   --goal "Reduce Whisper word error rate (WER) on speech recognition by optimizing fine-tuning hyperparameters, data preprocessing, and training strategies" \
   --max-experiments 20
 ```

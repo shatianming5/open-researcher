@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from open_researcher.gpu_manager import GPUManager
+from paperfarm.gpu_manager import GPUManager
 
 
 @pytest.fixture

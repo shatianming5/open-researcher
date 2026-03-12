@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
 
-from open_researcher.idea_pool import IdeaBacklog, IdeaPool
+from paperfarm.idea_pool import IdeaBacklog, IdeaPool
 
 
 @pytest.fixture

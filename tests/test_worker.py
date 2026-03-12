@@ -9,10 +9,10 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from open_researcher.control_plane import issue_control_command
-from open_researcher.idea_pool import IdeaPool
-from open_researcher.worker import WorkerManager
-from open_researcher.worker_plugins import (
+from paperfarm.control_plane import issue_control_command
+from paperfarm.idea_pool import IdeaPool
+from paperfarm.worker import WorkerManager
+from paperfarm.worker_plugins import (
     FailureMemoryPlugin,
     WorkerRuntimePlugins,
     WorkspaceIsolationError,

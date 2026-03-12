@@ -6,13 +6,13 @@ import shlex
 import sys
 from pathlib import Path
 
-from open_researcher.bootstrap import (
+from paperfarm.bootstrap import (
     format_bootstrap_dry_run,
     read_bootstrap_state,
     resolve_bootstrap_plan,
     run_bootstrap_prepare,
 )
-from open_researcher.config import ResearchConfig
+from paperfarm.config import ResearchConfig
 
 
 def _py_inline(code: str) -> str:
