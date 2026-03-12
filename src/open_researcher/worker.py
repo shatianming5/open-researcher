@@ -465,7 +465,9 @@ class WorkerManager:
                                             idea,
                                             allocation,
                                             duration_seconds=(
-                                                time.monotonic() - run_started_at if run_started_at is not None else None
+                                                time.monotonic() - run_started_at
+                                                if run_started_at is not None
+                                                else None
                                             ),
                                         ),
                                     )
@@ -535,9 +537,8 @@ class WorkerManager:
                                     f"[{wid}] Claim race detected for {idea['id']}; "
                                     "skip write suppressed, cleanup applied"
                                 )
-                    if (
-                        workspace_snapshot is not None
-                        and (run_code != 0 or self._status_requires_rollback(result_status))
+                    if workspace_snapshot is not None and (
+                        run_code != 0 or self._status_requires_rollback(result_status)
                     ):
                         rollback_workspace(workdir, workspace_snapshot)
                     if workspace_snapshot is not None and should_requeue:
@@ -569,7 +570,9 @@ class WorkerManager:
                         resource_observation=self._resource_observation(
                             idea,
                             allocation,
-                            duration_seconds=(time.monotonic() - run_started_at if run_started_at is not None else None),
+                            duration_seconds=(
+                                time.monotonic() - run_started_at if run_started_at is not None else None
+                            ),
                         ),
                     )
                     if not applied:

@@ -255,10 +255,7 @@ def test_doctor_gpu_with_nvidia_smi(valid_repo, monkeypatch):
             if "--query-gpu=index,name,memory.total,memory.free,utilization.gpu" in cmd[1]:
                 return Result(
                     0,
-                    stdout=(
-                        "0, NVIDIA A100-SXM4-80GB, 81920, 79000, 12\n"
-                        "1, NVIDIA A100-SXM4-80GB, 81920, 75000, 35\n"
-                    ),
+                    stdout=("0, NVIDIA A100-SXM4-80GB, 81920, 79000, 12\n1, NVIDIA A100-SXM4-80GB, 81920, 75000, 35\n"),
                 )
         return original_run(cmd, **kwargs)
 

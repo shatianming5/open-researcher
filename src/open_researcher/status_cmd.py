@@ -11,7 +11,7 @@ from rich.panel import Panel
 
 from open_researcher.config import RESEARCH_PROTOCOL, ResearchConfig, load_config
 from open_researcher.research_graph import ResearchGraphStore
-from open_researcher.token_tracking import load_ledger, estimate_cost, TokenMetrics
+from open_researcher.token_tracking import estimate_cost, load_ledger
 
 
 def _safe_float(value: str) -> float | None:

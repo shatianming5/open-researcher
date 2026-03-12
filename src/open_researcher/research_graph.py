@@ -519,12 +519,8 @@ class ResearchGraphStore:
                     "resource_profile": str(
                         row.get("resource_profile", "") or spec_row.get("resource_profile", "")
                     ).strip(),
-                    "workload_label": str(
-                        row.get("workload_label", "") or spec_row.get("workload_label", "")
-                    ).strip(),
-                    "anchor_role": self._normalize_anchor_role(
-                        row.get("anchor_role", spec_row.get("anchor_role"))
-                    ),
+                    "workload_label": str(row.get("workload_label", "") or spec_row.get("workload_label", "")).strip(),
+                    "anchor_role": self._normalize_anchor_role(row.get("anchor_role", spec_row.get("anchor_role"))),
                     "utility_density": utility_density(
                         scores,
                         resource_request=resource_request,

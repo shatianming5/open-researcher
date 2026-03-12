@@ -1,14 +1,17 @@
 import json
+
 from open_researcher.agents.claude_code import ClaudeCodeAdapter
 
 
 def test_claude_code_parse_result_line():
     adapter = ClaudeCodeAdapter()
-    line = json.dumps({
-        "type": "result",
-        "result": "experiment complete",
-        "usage": {"input_tokens": 5000, "output_tokens": 2000},
-    })
+    line = json.dumps(
+        {
+            "type": "result",
+            "result": "experiment complete",
+            "usage": {"input_tokens": 5000, "output_tokens": 2000},
+        }
+    )
     metrics = adapter._try_parse_token_line(line)
     assert metrics is not None
     assert metrics.tokens_input == 5000

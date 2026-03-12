@@ -10,7 +10,6 @@ from filelock import FileLock
 
 from open_researcher.storage import atomic_write_json
 
-
 # ---------------------------------------------------------------------------
 # Task 1: TokenMetrics and TokenLedger
 # ---------------------------------------------------------------------------
@@ -112,8 +111,8 @@ MODEL_RATES: dict[str, dict[str, float]] = {
 class BudgetCheckResult:
     """Result of a budget threshold check."""
 
-    action: str   # "warn" | "pause" | "stop"
-    reason: str   # "threshold" | "exceeded"
+    action: str  # "warn" | "pause" | "stop"
+    reason: str  # "threshold" | "exceeded"
     ratio: float  # current_cost / budget_limit
 
 

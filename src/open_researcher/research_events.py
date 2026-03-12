@@ -385,7 +385,15 @@ def event_level(event: ResearchEvent) -> LogLevel:
         return "warning"
     if isinstance(
         event,
-        (ScoutFailed, PrepareFailed, RoleFailed, CrashLimitReached, ExperimentPreflightFailed, SessionFailed, TokenBudgetExceeded),
+        (
+            ScoutFailed,
+            PrepareFailed,
+            RoleFailed,
+            CrashLimitReached,
+            ExperimentPreflightFailed,
+            SessionFailed,
+            TokenBudgetExceeded,
+        ),
     ):
         return "error"
     return "info"

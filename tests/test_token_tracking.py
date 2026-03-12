@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from open_researcher.token_tracking import (
     BudgetCheckResult,
     TokenLedger,
@@ -16,7 +14,6 @@ from open_researcher.token_tracking import (
     load_ledger,
     save_ledger,
 )
-
 
 # ---------------------------------------------------------------------------
 # TokenMetrics

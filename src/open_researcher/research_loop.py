@@ -14,15 +14,16 @@ from filelock import FileLock
 from open_researcher.activity import ActivityMonitor
 from open_researcher.config import ResearchConfig
 from open_researcher.crash_counter import CrashCounter
+from open_researcher.git_identity import ensure_local_git_identity
 from open_researcher.git_safety import (
     GitWorkspaceError,
     capture_clean_workspace_snapshot,
     ensure_clean_workspace,
     rollback_workspace,
 )
-from open_researcher.git_identity import ensure_local_git_identity
-from open_researcher.phase_gate import PhaseGate
+from open_researcher.graph_context import enforce_context_token_limit, filter_graph_for_context
 from open_researcher.parallel_runtime import estimate_parallel_frontier_target
+from open_researcher.phase_gate import PhaseGate
 from open_researcher.research_events import (
     AgentOutput,
     AllIdeasProcessed,
@@ -51,19 +52,16 @@ from open_researcher.research_events import (
     TokenBudgetWarning,
     TokenMetricsUpdated,
 )
-from open_researcher.token_tracking import (
-    BudgetCheckResult,
-    TokenLedger,
-    TokenMetrics,
-    estimate_cost,
-    estimate_tokens,
-    save_ledger,
-)
-from open_researcher.graph_context import enforce_context_token_limit, filter_graph_for_context
 from open_researcher.research_graph import ResearchGraphStore
 from open_researcher.research_memory import ResearchMemoryStore
 from open_researcher.results_cmd import load_results, write_final_results_tsv
 from open_researcher.storage import atomic_write_json, locked_read_json
+from open_researcher.token_tracking import (
+    BudgetCheckResult,
+    TokenLedger,
+    TokenMetrics,
+    save_ledger,
+)
 from open_researcher.watchdog import TimeoutWatchdog
 
 
@@ -168,14 +166,16 @@ class ResearchLoop:
         budget_remaining = None
         if self.cfg.token_budget > 0:
             budget_remaining = max(0, self.cfg.token_budget - self.token_ledger.cumulative.tokens_total)
-        self.emit(TokenMetricsUpdated(
-            phase=phase,
-            experiment_num=experiment_num,
-            tokens_input=metrics.tokens_input,
-            tokens_output=metrics.tokens_output,
-            tokens_total=metrics.tokens_total,
-            budget_remaining=budget_remaining,
-        ))
+        self.emit(
+            TokenMetricsUpdated(
+                phase=phase,
+                experiment_num=experiment_num,
+                tokens_input=metrics.tokens_input,
+                tokens_output=metrics.tokens_output,
+                tokens_total=metrics.tokens_total,
+                budget_remaining=budget_remaining,
+            )
+        )
         save_ledger(self.token_ledger, self.research_dir / "token_ledger.json")
 
     def _apply_budget_check(self) -> str | None:
@@ -184,22 +184,27 @@ class ResearchLoop:
         if result is None:
             return None
         if result.reason == "threshold":
-            self.emit(TokenBudgetWarning(
-                tokens_used=self.token_ledger.cumulative.tokens_total,
-                token_budget=self.cfg.token_budget,
-                ratio=result.ratio,
-            ))
+            self.emit(
+                TokenBudgetWarning(
+                    tokens_used=self.token_ledger.cumulative.tokens_total,
+                    token_budget=self.cfg.token_budget,
+                    ratio=result.ratio,
+                )
+            )
             return None
         # reason == "exceeded"
-        self.emit(TokenBudgetExceeded(
-            tokens_used=self.token_ledger.cumulative.tokens_total,
-            token_budget=self.cfg.token_budget,
-            policy=result.action,
-        ))
+        self.emit(
+            TokenBudgetExceeded(
+                tokens_used=self.token_ledger.cumulative.tokens_total,
+                token_budget=self.cfg.token_budget,
+                policy=result.action,
+            )
+        )
         if result.action == "stop":
             return "stop"
         if result.action == "pause":
-            self._pause(self.research_dir, f"Token budget exceeded ({self.token_ledger.cumulative.tokens_total:,} tokens)")
+            msg = f"Token budget exceeded ({self.token_ledger.cumulative.tokens_total:,} tokens)"
+            self._pause(self.research_dir, msg)
         return None
 
     @contextmanager
@@ -215,12 +220,14 @@ class ResearchLoop:
             filtered = filter_graph_for_context(full_graph)
             filtered = enforce_context_token_limit(filtered, self.cfg.context_token_limit)
             import shutil
+
             shutil.copy2(graph_path, backup_path)
             atomic_write_json(graph_path, filtered)
             yield
         finally:
             if backup_path.exists():
                 import shutil
+
                 shutil.move(str(backup_path), str(graph_path))
 
     def _run_agent(
@@ -736,14 +743,16 @@ class ResearchLoop:
                 budget_remaining = None
                 if self.cfg.token_budget > 0:
                     budget_remaining = max(0, self.cfg.token_budget - self.token_ledger.cumulative.tokens_total)
-                self.emit(TokenMetricsUpdated(
-                    phase="experimenting",
-                    experiment_num=run_num,
-                    tokens_input=metrics.tokens_input,
-                    tokens_output=metrics.tokens_output,
-                    tokens_total=metrics.tokens_total,
-                    budget_remaining=budget_remaining,
-                ))
+                self.emit(
+                    TokenMetricsUpdated(
+                        phase="experimenting",
+                        experiment_num=run_num,
+                        tokens_input=metrics.tokens_input,
+                        tokens_output=metrics.tokens_output,
+                        tokens_total=metrics.tokens_total,
+                        budget_remaining=budget_remaining,
+                    )
+                )
 
             item_status = str(item.get("status", "")).strip()
             result = item.get("result") if isinstance(item.get("result"), dict) else {}

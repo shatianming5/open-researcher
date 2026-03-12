@@ -95,7 +95,9 @@ class GPUStatusModal(ModalScreen):
                 reservations = g.get("reservations", []) if isinstance(g.get("reservations"), list) else []
                 reserved_mb = sum(int(item.get("memory_mb", 0) or 0) for item in reservations if isinstance(item, dict))
                 effective_free = max(int(free or 0) - reserved_mb, 0)
-                alloc = ", ".join(str(item.get("tag", "")).strip() for item in reservations if str(item.get("tag", "")).strip())
+                alloc = ", ".join(
+                    str(item.get("tag", "")).strip() for item in reservations if str(item.get("tag", "")).strip()
+                )
                 status = f"\\[{alloc}]" if alloc else "[#73daca]\\[free][/#73daca]"
                 lines.append(
                     f"[#7aa2f7]{host}[/#7aa2f7]:{dev}  "

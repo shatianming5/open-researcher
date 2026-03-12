@@ -519,7 +519,8 @@ def build_dashboard_state(
     }
 
     from open_researcher.config import load_config
-    from open_researcher.token_tracking import load_ledger, estimate_cost as _estimate_cost
+    from open_researcher.token_tracking import estimate_cost as _estimate_cost
+    from open_researcher.token_tracking import load_ledger
 
     _cfg = load_config(research_dir)
     _ledger = load_ledger(research_dir / "token_ledger.json")

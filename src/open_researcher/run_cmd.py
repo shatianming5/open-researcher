@@ -347,7 +347,12 @@ def do_start(
                     except RuntimeError:
                         pass
                     return
-                refreshed_cfg = _load_runtime_config(research, workers=workers, max_experiments=max_experiments, token_budget=token_budget)
+                refreshed_cfg = _load_runtime_config(
+                    research,
+                    workers=workers,
+                    max_experiments=max_experiments,
+                    token_budget=token_budget,
+                )
                 initialize_graph_runtime_state(research, refreshed_cfg)
                 ensure_bootstrap_state(research / "bootstrap_state.json")
                 cfg_ref["cfg"] = refreshed_cfg

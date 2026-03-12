@@ -28,27 +28,25 @@ def filter_graph_for_context(graph: dict) -> dict:
 
     # Keep hypotheses referenced by active frontier OR not linked to any frontier
     filtered["hypotheses"] = [
-        h for h in graph.get("hypotheses", [])
+        h
+        for h in graph.get("hypotheses", [])
         if h.get("id") in active_hyp_ids or h.get("id") not in all_frontier_hyp_ids
     ]
     referenced_hyp_ids = {h["id"] for h in filtered["hypotheses"]}
 
     # Keep evidence linked to referenced hypotheses
-    filtered["evidence"] = [
-        e for e in graph.get("evidence", [])
-        if e.get("hypothesis_id") in referenced_hyp_ids
-    ]
+    filtered["evidence"] = [e for e in graph.get("evidence", []) if e.get("hypothesis_id") in referenced_hyp_ids]
 
     # Keep specs referenced by active frontier or referenced hypotheses
     filtered["experiment_specs"] = [
-        s for s in graph.get("experiment_specs", [])
+        s
+        for s in graph.get("experiment_specs", [])
         if s.get("id") in active_spec_ids or s.get("hypothesis_id") in referenced_hyp_ids
     ]
 
     # Keep claim_updates linked to referenced hypotheses
     filtered["claim_updates"] = [
-        c for c in graph.get("claim_updates", [])
-        if c.get("hypothesis_id") in referenced_hyp_ids
+        c for c in graph.get("claim_updates", []) if c.get("hypothesis_id") in referenced_hyp_ids
     ]
 
     return filtered
@@ -101,9 +99,6 @@ def enforce_context_token_limit(graph: dict, limit: int) -> dict:
 
     # Step 4: Keep only frontier-referenced specs
     frontier_spec_ids = {f.get("spec_id") for f in trimmed.get("frontier", [])}
-    trimmed["experiment_specs"] = [
-        s for s in trimmed.get("experiment_specs", [])
-        if s.get("id") in frontier_spec_ids
-    ]
+    trimmed["experiment_specs"] = [s for s in trimmed.get("experiment_specs", []) if s.get("id") in frontier_spec_ids]
 
     return trimmed
