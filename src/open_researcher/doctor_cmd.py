@@ -404,7 +404,7 @@ def run_doctor(repo_path: Path) -> list[dict]:
         results.append({"check": "events.jsonl", "status": "WARN", "detail": "File not found"})
 
     # 14. Agent binaries on PATH
-    agents = ["claude", "codex", "aider", "opencode"]
+    agents = ["claude", "codex", "aider", "opencode", "kimi", "gemini"]
     found = [a for a in agents if shutil.which(a)]
     missing = [a for a in agents if not shutil.which(a)]
     if found:

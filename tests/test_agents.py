@@ -39,6 +39,7 @@ def test_list_agents():
     assert "codex" in agents
     assert "aider" in agents
     assert "opencode" in agents
+    assert "kimi-cli" in agents
     assert "gemini-cli" in agents
 
 
@@ -393,3 +394,91 @@ def test_gemini_default_model():
     assert "gemini-3.1-pro" in cmd
     # no --sandbox when not configured
     assert "--sandbox" not in cmd
+
+
+# ---- Kimi adapter tests ----
+
+
+def test_kimi_build_command():
+    from open_researcher.agents.kimi import KimiAdapter
+
+    agent = KimiAdapter()
+    cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
+    assert cmd == ["kimi", "--print", "--output-format", "text", "-p", "/tmp/program.md"]
+
+
+def test_kimi_build_command_with_config():
+    from open_researcher.agents.kimi import KimiAdapter
+
+    agent = KimiAdapter(
+        config={
+            "model": "kimi-k2-turbo-preview",
+            "agent": "okabe",
+            "extra_flags": ["--thinking"],
+        }
+    )
+    cmd = agent.build_command(Path("/tmp/program.md"), Path("/tmp/work"))
+    assert cmd == [
+        "kimi",
+        "--print",
+        "--output-format",
+        "text",
+        "-p",
+        "/tmp/program.md",
+        "--model",
+        "kimi-k2-turbo-preview",
+        "--agent",
+        "okabe",
+        "--thinking",
+    ]
+
+
+def test_kimi_run_success(tmp_path, monkeypatch):
+    from open_researcher.agents.kimi import KimiAdapter
+
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "program.md").write_text("test prompt", encoding="utf-8")
+
+    agent = KimiAdapter(config={"model": "kimi-k2-turbo-preview", "agent": "default"})
+    calls = {}
+
+    def fake_run_process(cmd, workdir, on_output=None, stdin_text=None, env=None):
+        calls["cmd"] = cmd
+        calls["workdir"] = workdir
+        calls["env"] = env
+        calls["stdin_text"] = stdin_text
+        return 0
+
+    monkeypatch.setattr(agent, "_run_process", fake_run_process)
+
+    result = agent.run(tmp_path, env={"KIMI_API_KEY": "test-key"})
+
+    assert result == 0
+    assert calls["workdir"] == tmp_path
+    assert calls["stdin_text"] is None
+    assert calls["env"] == {"KIMI_API_KEY": "test-key"}
+    assert calls["cmd"] == [
+        "kimi",
+        "--print",
+        "--output-format",
+        "text",
+        "-p",
+        "test prompt",
+        "--model",
+        "kimi-k2-turbo-preview",
+        "--agent",
+        "default",
+    ]
+
+
+def test_kimi_run_missing_program_file(tmp_path):
+    from open_researcher.agents.kimi import KimiAdapter
+
+    agent = KimiAdapter()
+    output = []
+
+    result = agent.run(tmp_path, on_output=output.append)
+
+    assert result == 1
+    assert output == [f"[kimi-cli] program file not found: {tmp_path / '.research' / 'program.md'}"]

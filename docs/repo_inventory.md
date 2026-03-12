@@ -61,7 +61,7 @@
   - `.research/gpu_status.json`
 - 外部前提：
   - 必须在 git repo 中运行
-  - 至少安装一个支持的 agent CLI：`claude-code` / `codex` / `aider` / `opencode`
+  - 至少安装一个支持的 agent CLI：`claude-code` / `codex` / `aider` / `opencode` / `kimi-cli` / `gemini-cli`
   - 并行 worker 场景默认假设本机或远端 GPU 可分配，但不是强制
 
 ## How To Run

@@ -29,7 +29,7 @@ def detect_agent(configs: dict | None = None) -> AgentAdapter | None:
     """Auto-detect the first installed agent. Returns None if none found."""
     _ensure_loaded()
     configs = configs or {}
-    preference = ["claude-code", "codex", "aider", "opencode", "gemini-cli"]
+    preference = ["claude-code", "codex", "aider", "opencode", "kimi-cli", "gemini-cli"]
     for agent_name in preference:
         if agent_name in _REGISTRY:
             adapter = _REGISTRY[agent_name](config=configs.get(agent_name))
@@ -52,5 +52,6 @@ def _ensure_loaded():
         claude_code,  # noqa: F401
         codex,  # noqa: F401
         gemini,  # noqa: F401
+        kimi,  # noqa: F401
         opencode,  # noqa: F401
     )

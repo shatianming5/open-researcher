@@ -30,7 +30,7 @@ def resolve_agent(
     if agent is None:
         console_ref.print(
             "[red]Error:[/red] No supported AI agent found.\n"
-            "Install one of: claude (Claude Code), codex, aider, opencode\n"
+            "Install one of: claude (Claude Code), codex, aider, opencode, kimi, gemini\n"
             "Or specify with: --agent <name>"
         )
         raise SystemExit(1)

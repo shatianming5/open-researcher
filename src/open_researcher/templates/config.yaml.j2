@@ -122,6 +122,15 @@ resources:
 #     model: ""                          # provider/model, e.g. openai/gpt-5
 #     agent: ""                          # optional opencode agent profile
 #     extra_flags: []
+#   kimi-cli:
+#     model: ""                          # optional model override
+#     agent: ""                          # built-in agent name (e.g. default, okabe)
+#     agent_file: ""                     # custom agent file path (mutually exclusive with agent)
+#     extra_flags: []                    # e.g., ["--thinking"]
+#   gemini-cli:
+#     model: "gemini-3.1-pro"            # override default model
+#     sandbox: ""                        # optional sandbox mode
+#     extra_flags: []
 
 # Optional role-to-agent overrides.
 # Empty values mean "use the primary --agent selection".

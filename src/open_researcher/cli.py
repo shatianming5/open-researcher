@@ -275,7 +275,7 @@ def doctor():
 
 @app.command()
 def run(
-    agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode)."),
+    agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode, kimi-cli, gemini-cli)."),
     tag: str = typer.Option(None, help="Experiment tag when bootstrapping a new workflow."),
     mode: str = typer.Option("interactive", "--mode", help="Run mode: `interactive` or `headless`."),
     headless: bool = typer.Option(False, "--headless", hidden=True, help="Deprecated; use `--mode headless`."),
@@ -306,7 +306,7 @@ def run(
 
 @app.command(hidden=True)
 def start(
-    agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode)."),
+    agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode, kimi-cli, gemini-cli)."),
     tag: str = typer.Option(None, help="Experiment tag (e.g. mar10). Defaults to today's date."),
     mode: str = typer.Option("interactive", "--mode", help="Run mode: `interactive` or `headless`."),
     headless: bool = typer.Option(False, "--headless", hidden=True, help="Deprecated; use `--mode headless`."),
