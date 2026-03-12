@@ -119,9 +119,11 @@ def estimate_parallel_frontier_target(research_dir: Path, cfg: ResearchConfig) -
         default_memory_per_worker_mb=cfg.gpu_default_memory_per_worker_mb,
         backfill_threshold_minutes=cfg.scheduler_backfill_threshold_minutes,
     )
-    slot_budget = requested if requested_raw > 0 else max(manager.estimate_packable_slots(
-        default_memory_mb=cfg.gpu_default_memory_per_worker_mb
-    ), 1)
+    slot_budget = (
+        requested
+        if requested_raw > 0
+        else max(manager.estimate_packable_slots(default_memory_mb=cfg.gpu_default_memory_per_worker_mb), 1)
+    )
     slots = allocator.worker_slots(slot_budget)
     return max(len(slots), 1)
 
@@ -148,9 +150,13 @@ def run_parallel_experiment_batch(
     requested_raw = int(cfg.max_workers or 0)
     effective_workers, clamp_reason = resolve_parallel_worker_count(cfg)
     if plugins.gpu_allocator is not None:
-        slot_budget = effective_workers if requested_raw > 0 else max(
-            estimate_parallel_frontier_target(research_dir, cfg),
-            1,
+        slot_budget = (
+            effective_workers
+            if requested_raw > 0
+            else max(
+                estimate_parallel_frontier_target(research_dir, cfg),
+                1,
+            )
         )
         effective_workers = max(len(plugins.gpu_allocator.worker_slots(slot_budget)), 1)
     batch_started = 0

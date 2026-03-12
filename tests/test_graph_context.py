@@ -82,8 +82,7 @@ def test_enforce_context_token_limit_noop_when_under():
 def test_enforce_context_token_limit_trims_evidence():
     graph = _sample_graph()
     graph["evidence"] = [
-        {"id": f"e{i}", "hypothesis_id": "h1", "metric_value": 0.5, "detail": "x" * 500}
-        for i in range(100)
+        {"id": f"e{i}", "hypothesis_id": "h1", "metric_value": 0.5, "detail": "x" * 500} for i in range(100)
     ]
     result = enforce_context_token_limit(graph, limit=500)
     assert len(result["evidence"]) < 100

@@ -170,9 +170,7 @@ class GPUManager:
         with self._lock:
             old = self._read()
             old_reservations = {
-                (g["host"], g["device"]): g.get("reservations", [])
-                for g in old.get("gpus", [])
-                if isinstance(g, dict)
+                (g["host"], g["device"]): g.get("reservations", []) for g in old.get("gpus", []) if isinstance(g, dict)
             }
             merged = []
             for gpu in all_gpus:
@@ -234,8 +232,7 @@ class GPUManager:
         for gpu in gpus:
             reservations = gpu.get("reservations", [])
             if any(
-                bool(item.get("exclusive", False)) or not bool(item.get("shareable", True))
-                for item in reservations
+                bool(item.get("exclusive", False)) or not bool(item.get("shareable", True)) for item in reservations
             ):
                 continue
             if self.allow_same_gpu_packing:
@@ -264,9 +261,7 @@ class GPUManager:
     ) -> bool:
         gpus = self.refresh()
         candidates = [
-            gpu
-            for gpu in gpus
-            if self._packable(gpu, memory_mb=memory_mb, shareable=shareable, exclusive=exclusive)
+            gpu for gpu in gpus if self._packable(gpu, memory_mb=memory_mb, shareable=shareable, exclusive=exclusive)
         ]
         return len(candidates) >= max(int(count or 0), 1)
 

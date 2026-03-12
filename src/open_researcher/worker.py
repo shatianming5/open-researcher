@@ -335,7 +335,8 @@ class WorkerManager:
                             idea="",
                         )
                         self._record_resource_deadlock()
-                        self.on_output(f"[{wid}] Pending ideas are unschedulable with current resources, stopping batch")
+                        msg = f"[{wid}] Pending ideas are unschedulable with current resources, stopping batch"
+                        self.on_output(msg)
                         self.stop()
                         break
                     self.on_output(f"[{wid}] No more pending ideas, stopping")
@@ -564,9 +565,8 @@ class WorkerManager:
                                     f"[{wid}] Claim race detected for {idea['id']}; "
                                     "skip write suppressed, cleanup applied"
                                 )
-                    if (
-                        workspace_snapshot is not None
-                        and (run_code != 0 or self._status_requires_rollback(result_status))
+                    if workspace_snapshot is not None and (
+                        run_code != 0 or self._status_requires_rollback(result_status)
                     ):
                         rollback_workspace(workdir, workspace_snapshot)
                     if workspace_snapshot is not None and should_requeue:

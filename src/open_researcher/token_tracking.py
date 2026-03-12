@@ -111,8 +111,8 @@ MODEL_RATES: dict[str, dict[str, float]] = {
 class BudgetCheckResult:
     """Result of a budget threshold check."""
 
-    action: str   # "warn" | "pause" | "stop"
-    reason: str   # "threshold" | "exceeded"
+    action: str  # "warn" | "pause" | "stop"
+    reason: str  # "threshold" | "exceeded"
     ratio: float  # current_cost / budget_limit
 
 

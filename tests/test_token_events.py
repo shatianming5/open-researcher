@@ -11,8 +11,11 @@ from open_researcher.research_events import (
 
 def test_token_metrics_updated_event():
     e = TokenMetricsUpdated(
-        phase="experimenting", experiment_num=1,
-        tokens_input=100, tokens_output=50, tokens_total=150,
+        phase="experimenting",
+        experiment_num=1,
+        tokens_input=100,
+        tokens_output=50,
+        tokens_total=150,
         budget_remaining=9850,
     )
     assert event_name(e) == "token_metrics_updated"
@@ -25,8 +28,11 @@ def test_token_metrics_updated_event():
 
 def test_token_metrics_updated_no_experiment():
     e = TokenMetricsUpdated(
-        phase="scouting", experiment_num=None,
-        tokens_input=100, tokens_output=50, tokens_total=150,
+        phase="scouting",
+        experiment_num=None,
+        tokens_input=100,
+        tokens_output=50,
+        tokens_total=150,
         budget_remaining=None,
     )
     assert event_phase(e) == "scouting"

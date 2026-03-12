@@ -167,9 +167,7 @@ def retrieve_history(
 
 def apply_history_policy(frontier_rows: list[dict], graph: dict, memory: dict) -> list[dict]:
     """Annotate frontier rows with family keys and runtime policy signals."""
-    hypotheses = {
-        str(row.get("id", "")).strip(): row for row in graph.get("hypotheses", []) if isinstance(row, dict)
-    }
+    hypotheses = {str(row.get("id", "")).strip(): row for row in graph.get("hypotheses", []) if isinstance(row, dict)}
     specs = {str(row.get("id", "")).strip(): row for row in graph.get("experiment_specs", []) if isinstance(row, dict)}
     updated = [dict(row) for row in frontier_rows if isinstance(row, dict)]
 

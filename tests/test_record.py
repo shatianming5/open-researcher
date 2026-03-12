@@ -126,11 +126,7 @@ def test_record_auto_harvests_eval_output_metrics():
         research_dir = Path(tmpdir, ".research")
         research_dir.mkdir()
         (research_dir / "eval_output.log").write_text(
-            "max_abs_diff=0.000000\n"
-            "torch_ms=4.5055\n"
-            "cpp_ms=4.2402\n"
-            "speedup_ratio=1.0626\n"
-            "invalid_reason=\n"
+            "max_abs_diff=0.000000\ntorch_ms=4.5055\ncpp_ms=4.2402\nspeedup_ratio=1.0626\ninvalid_reason=\n"
         )
         results_file = research_dir / "results.tsv"
         results_file.write_text(

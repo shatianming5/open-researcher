@@ -110,7 +110,7 @@ def test_derive_final_results_overlays_critic_verdicts(tmp_path):
     (research / "results.tsv").write_text(
         "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
         "2026-03-08T10:00:00\ta1b2c3d\tspeedup_ratio\t1.062600\t"
-        "\"{\"\"_open_researcher_trace\"\":{\"\"frontier_id\"\":\"\"frontier-002\"\",\"\"execution_id\"\":\"\"exec-002\"\"}}\"\tkeep\tidea-002\n"
+        '"{""_open_researcher_trace"":{""frontier_id"":""frontier-002"",""execution_id"":""exec-002""}}"\tkeep\tidea-002\n'
     )
     (research / "research_graph.json").write_text(
         json.dumps(

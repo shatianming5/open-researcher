@@ -1,4 +1,3 @@
-
 from open_researcher.agents.base import AgentAdapter
 
 

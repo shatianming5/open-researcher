@@ -11,7 +11,7 @@ runner = CliRunner()
 
 
 def _combined_output(result) -> str:
-    return (result.stdout or "") + getattr(result, "stderr", "")
+    return result.output or ""
 
 
 @pytest.fixture

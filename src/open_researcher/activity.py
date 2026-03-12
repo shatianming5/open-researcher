@@ -56,11 +56,7 @@ class ActivityMonitor:
             if not found:
                 worker = {"id": worker_id, **kwargs, "updated_at": datetime.now(timezone.utc).isoformat()}
                 workers.append(worker)
-            active_workers = [
-                worker
-                for worker in workers
-                if str(worker.get("status", "")).strip() not in {"", "idle"}
-            ]
+            active_workers = [worker for worker in workers if str(worker.get("status", "")).strip() not in {"", "idle"}]
             if active_workers:
                 entry["status"] = "running"
                 entry["detail"] = f"{len(active_workers)} active worker(s)"
@@ -83,9 +79,7 @@ class ActivityMonitor:
             workers = entry.get("workers", [])
             entry["workers"] = [w for w in workers if w.get("id") != worker_id]
             active_workers = [
-                worker
-                for worker in entry["workers"]
-                if str(worker.get("status", "")).strip() not in {"", "idle"}
+                worker for worker in entry["workers"] if str(worker.get("status", "")).strip() not in {"", "idle"}
             ]
             entry["active_workers"] = len(active_workers)
             if not active_workers and str(entry.get("status", "")).strip() == "running":
