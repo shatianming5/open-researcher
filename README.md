@@ -7,7 +7,7 @@
   <a href="https://pepy.tech/projects/open-researcher"><img alt="Downloads" src="https://img.shields.io/pepy/dt/open-researcher?style=flat-square&logo=python&logoColor=white" /></a>
   <a href="https://www.python.org/downloads/"><img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" /></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green?style=flat-square" /></a>
-  <a href="https://github.com/open-researcher/open-researcher"><img alt="GitHub stars" src="https://img.shields.io/github/stars/open-researcher/open-researcher?style=flat-square&logo=github" /></a>
+  <a href="https://github.com/shatianming5/open-researcher"><img alt="GitHub stars" src="https://img.shields.io/github/stars/shatianming5/open-researcher?style=flat-square&logo=github" /></a>
 </p>
 
 <h3>🔬 Point it at any repo — sow ideas, run experiments, and harvest better code autonomously</h3>
@@ -346,7 +346,7 @@ open-researcher run
 <br/>
 
 ```bash
-git clone https://github.com/open-researcher/open-researcher.git
+git clone https://github.com/shatianming5/open-researcher.git
 cd open-researcher
 make dev    # install with dev dependencies
 make test   # run tests
@@ -569,7 +569,7 @@ See [`examples/`](examples/) for complete setups:
 
 Contributions are welcome! Please follow these steps:
 
-1. Open an [issue](https://github.com/open-researcher/open-researcher/issues) to discuss the proposed change
+1. Open an [issue](https://github.com/shatianming5/open-researcher/issues) to discuss the proposed change
 2. Fork the repository and create your feature branch
 3. Submit a pull request with a clear description
 
@@ -582,7 +582,7 @@ This project is licensed under the [MIT License](LICENSE).
 ---
 
 <p align="center">
-  <a href="https://star-history.com/#open-researcher/open-researcher&Date">
-    <img src="https://api.star-history.com/svg?repos=open-researcher/open-researcher&type=Date" width="600" alt="Star History" />
+  <a href="https://star-history.com/#shatianming5/open-researcher&Date">
+    <img src="https://api.star-history.com/svg?repos=shatianming5/open-researcher&type=Date" width="600" alt="Star History" />
   </a>
 </p>
