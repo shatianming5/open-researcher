@@ -258,11 +258,13 @@ def results(
 
 
 @app.command()
-def export():
+def export(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Write report to file instead of stdout."),
+):
     """Export experiment report as Markdown."""
     from open_researcher.export_cmd import do_export
 
-    do_export(Path.cwd())
+    do_export(Path.cwd(), output=Path(output) if output else None)
 
 
 @app.command()
@@ -275,7 +277,7 @@ def doctor():
 
 @app.command()
 def run(
-    agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode)."),
+    agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode, gemini-cli)."),
     tag: str = typer.Option(None, help="Experiment tag when bootstrapping a new workflow."),
     mode: str = typer.Option("interactive", "--mode", help="Run mode: `interactive` or `headless`."),
     headless: bool = typer.Option(False, "--headless", hidden=True, help="Deprecated; use `--mode headless`."),
@@ -306,7 +308,7 @@ def run(
 
 @app.command(hidden=True)
 def start(
-    agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode)."),
+    agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode, gemini-cli)."),
     tag: str = typer.Option(None, help="Experiment tag (e.g. mar10). Defaults to today's date."),
     mode: str = typer.Option("interactive", "--mode", help="Run mode: `interactive` or `headless`."),
     headless: bool = typer.Option(False, "--headless", hidden=True, help="Deprecated; use `--mode headless`."),
