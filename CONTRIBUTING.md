@@ -16,6 +16,8 @@ make dev
 
 ```bash
 make test
+make test-cov
+make package-check
 ```
 
 ## Code Style
@@ -39,4 +41,4 @@ make format  # auto-fix
 
 - One feature per PR
 - Include tests
-- Run `make lint && make test` before submitting
+- Run `make ci` before submitting
