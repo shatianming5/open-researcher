@@ -605,8 +605,6 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-<p align="center">
-  <a href="https://star-history.com/#shatianming5/PaperFarm&Date">
-    <img src="https://api.star-history.com/svg?repos=shatianming5/PaperFarm&type=Date" width="600" alt="Star History" />
-  </a>
-</p>
+## Star History
+
+[![Star History Chart](https://api.star-history.com/image?repos=shatianming5/PaperFarm&type=date&legend=top-left)](https://www.star-history.com/?repos=shatianming5%2FPaperFarm&type=date&legend=top-left)
