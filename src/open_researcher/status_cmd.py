@@ -4,6 +4,7 @@ import csv
 import json
 import math
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 from rich.console import Console
@@ -178,17 +179,27 @@ def _load_bootstrap_state(research: Path) -> dict | None:
 
 def _load_runtime_state(research: Path, cfg: ResearchConfig) -> dict:
     """Resolve runtime profile, worker count, and plugin boundaries."""
-    requested_raw = int(cfg.max_workers or 0)
-    effective_workers, clamp_reason = resolve_parallel_worker_count(cfg)
-    profile = resolve_parallel_runtime_profile(cfg)
+    worker_parse_warning = ""
+    try:
+        requested_raw = int(cfg.max_workers or 0)
+    except (TypeError, ValueError):
+        requested_raw = 0
+        worker_parse_warning = (
+            f"Invalid experiment.max_parallel_workers={cfg.max_workers!r}; "
+            "falling back to auto worker resolution."
+        )
+    runtime_cfg = replace(cfg, max_workers=requested_raw)
+    effective_workers, clamp_reason = resolve_parallel_worker_count(runtime_cfg)
+    profile = resolve_parallel_runtime_profile(runtime_cfg)
     frontier_target = None
     frontier_target_error = ""
     gpu_status_path = research / "gpu_status.json"
-    if not cfg.enable_gpu_allocation or gpu_status_path.exists():
+    if not runtime_cfg.enable_gpu_allocation or gpu_status_path.exists():
         try:
-            frontier_target = estimate_parallel_frontier_target(research, cfg)
+            frontier_target = estimate_parallel_frontier_target(research, runtime_cfg)
         except Exception as exc:  # pragma: no cover - defensive, should be rare.
             frontier_target_error = str(exc)
+    reasons = [reason for reason in (worker_parse_warning, clamp_reason) if reason]
 
     return {
         "requested_workers": "auto" if requested_raw <= 0 else requested_raw,
@@ -200,7 +211,7 @@ def _load_runtime_state(research: Path, cfg: ResearchConfig) -> dict:
             "failure_memory": profile.failure_memory,
             "worktree_isolation": profile.worktree_isolation,
         },
-        "clamp_reason": clamp_reason or "",
+        "clamp_reason": " ".join(reasons),
         "frontier_projection_target": frontier_target,
         "frontier_projection_error": frontier_target_error,
     }
@@ -215,7 +226,7 @@ def _load_observability_state(research: Path) -> dict:
     if events_path.exists():
         try:
             lines = events_path.read_text(encoding="utf-8").splitlines()
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             lines = []
             parse_errors += 1
         for line in lines:

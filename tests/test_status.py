@@ -324,6 +324,30 @@ def test_parse_state_includes_runtime_profile_summary(tmp_path, monkeypatch):
     assert runtime["frontier_projection_target"] == 4
 
 
+def test_parse_state_handles_non_integer_worker_config_without_crash(tmp_path):
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "config.yaml").write_text(
+        "mode: autonomous\n"
+        "research:\n"
+        "  protocol: research-v1\n"
+        "experiment:\n"
+        '  max_parallel_workers: "auto"\n'
+    )
+    (research / "results.tsv").write_text(
+        "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
+    )
+    for name in ["project-understanding.md", "literature.md", "evaluation.md"]:
+        (research / name).write_text("# placeholder\nReal content.\n")
+
+    state = parse_research_state(tmp_path)
+
+    runtime = state["runtime"]
+    assert runtime["requested_workers"] == "auto"
+    assert runtime["effective_workers"] == 1
+    assert "Invalid experiment.max_parallel_workers" in runtime["clamp_reason"]
+
+
 def test_parse_state_includes_observability_summary(tmp_path):
     research = tmp_path / ".research"
     research.mkdir()
@@ -353,6 +377,23 @@ def test_parse_state_includes_observability_summary(tmp_path):
     assert observability["runtime_registrations"] == 2
     snapshot_exists = {item["name"]: item["exists"] for item in observability["snapshots"]}
     assert snapshot_exists == {"control": True, "activity": True, "gpu_status": False}
+
+
+def test_parse_state_observability_handles_invalid_utf8_events_file(tmp_path):
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "config.yaml").write_text("research:\n  protocol: research-v1\n")
+    (research / "results.tsv").write_text(
+        "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
+    )
+    (research / "events.jsonl").write_bytes(b"\xff\xfe\xfd")
+
+    state = parse_research_state(tmp_path)
+
+    observability = state["observability"]
+    assert observability["events_exists"] is True
+    assert observability["event_count"] == 0
+    assert observability["parse_errors"] >= 1
 
 
 def test_print_status_shows_runtime_profile_and_observability(tmp_path, capsys):
