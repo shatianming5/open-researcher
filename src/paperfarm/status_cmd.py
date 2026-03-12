@@ -4,12 +4,18 @@ import csv
 import json
 import math
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
 
 from paperfarm.config import RESEARCH_PROTOCOL, ResearchConfig, load_config
+from paperfarm.parallel_runtime import (
+    estimate_parallel_frontier_target,
+    resolve_parallel_runtime_profile,
+    resolve_parallel_worker_count,
+)
 from paperfarm.research_graph import ResearchGraphStore
 from paperfarm.token_tracking import estimate_cost, load_ledger
 
@@ -171,6 +177,92 @@ def _load_bootstrap_state(research: Path) -> dict | None:
     }
 
 
+def _load_runtime_state(research: Path, cfg: ResearchConfig) -> dict:
+    """Resolve runtime profile, worker count, and plugin boundaries."""
+    worker_parse_warning = ""
+    try:
+        requested_raw = int(cfg.max_workers or 0)
+    except (TypeError, ValueError):
+        requested_raw = 0
+        worker_parse_warning = (
+            f"Invalid experiment.max_parallel_workers={cfg.max_workers!r}; "
+            "falling back to auto worker resolution."
+        )
+    runtime_cfg = replace(cfg, max_workers=requested_raw)
+    effective_workers, clamp_reason = resolve_parallel_worker_count(runtime_cfg)
+    profile = resolve_parallel_runtime_profile(runtime_cfg)
+    frontier_target = None
+    frontier_target_error = ""
+    gpu_status_path = research / "gpu_status.json"
+    if not runtime_cfg.enable_gpu_allocation or gpu_status_path.exists():
+        try:
+            frontier_target = estimate_parallel_frontier_target(research, runtime_cfg)
+        except Exception as exc:  # pragma: no cover - defensive, should be rare.
+            frontier_target_error = str(exc)
+    reasons = [reason for reason in (worker_parse_warning, clamp_reason) if reason]
+
+    return {
+        "requested_workers": "auto" if requested_raw <= 0 else requested_raw,
+        "effective_workers": effective_workers,
+        "mode": "parallel" if effective_workers > 1 else "serial",
+        "profile_name": profile.name,
+        "plugins": {
+            "gpu_allocation": profile.gpu_allocation,
+            "failure_memory": profile.failure_memory,
+            "worktree_isolation": profile.worktree_isolation,
+        },
+        "clamp_reason": " ".join(reasons),
+        "frontier_projection_target": frontier_target,
+        "frontier_projection_error": frontier_target_error,
+    }
+
+
+def _load_observability_state(research: Path) -> dict:
+    """Summarize canonical event stream and compatibility snapshots."""
+    events_path = research / "events.jsonl"
+    event_count = 0
+    last_seq = None
+    parse_errors = 0
+    if events_path.exists():
+        try:
+            with events_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    try:
+                        payload = json.loads(line)
+                    except (json.JSONDecodeError, TypeError):
+                        parse_errors += 1
+                        continue
+                    if not isinstance(payload, dict):
+                        parse_errors += 1
+                        continue
+                    event_count += 1
+                    try:
+                        seq = int(payload.get("seq"))
+                    except (TypeError, ValueError):
+                        seq = None
+                    if seq is not None and seq > 0:
+                        last_seq = seq
+        except (OSError, UnicodeDecodeError):
+            parse_errors += 1
+
+    runtime_dir = research / "runtime"
+    runtime_registrations = len(list(runtime_dir.glob("*.json"))) if runtime_dir.exists() else 0
+    return {
+        "events_exists": events_path.exists(),
+        "event_count": event_count,
+        "last_seq": last_seq,
+        "parse_errors": parse_errors,
+        "runtime_registrations": runtime_registrations,
+        "snapshots": [
+            {"name": "control", "exists": (research / "control.json").exists()},
+            {"name": "activity", "exists": (research / "activity.json").exists()},
+            {"name": "gpu_status", "exists": (research / "gpu_status.json").exists()},
+        ],
+    }
+
+
 def _research_phase_label(state: dict) -> str:
     bootstrap = state.get("bootstrap")
     if isinstance(bootstrap, dict) and bootstrap:
@@ -220,6 +312,8 @@ def parse_research_state(repo_path: Path) -> dict:
     state["config_error"] = config_error
     state["graph"] = _load_graph_state(research)
     state["bootstrap"] = _load_bootstrap_state(research)
+    state["runtime"] = _load_runtime_state(research, cfg)
+    state["observability"] = _load_observability_state(research)
 
     # Parse results
     results_path = research / "results.tsv"
@@ -333,6 +427,59 @@ def print_status(repo_path: Path, sparkline: bool = False) -> None:
     if state.get("config_error"):
         lines.append(f"  Config Error: {state['config_error']}")
     lines.append("")
+
+    runtime = state.get("runtime", {})
+    if runtime:
+        plugins = runtime.get("plugins", {})
+        lines.append("  Runtime Profile:")
+        lines.append(
+            "    "
+            f"Mode: {runtime.get('mode', 'serial')}  "
+            f"Profile: {runtime.get('profile_name', 'unknown')}  "
+            f"Workers: requested={runtime.get('requested_workers', 'auto')} "
+            f"effective={runtime.get('effective_workers', 1)}"
+        )
+        lines.append(
+            "    "
+            f"Plugins: gpu_allocation={'on' if plugins.get('gpu_allocation') else 'off'}  "
+            f"failure_memory={'on' if plugins.get('failure_memory') else 'off'}  "
+            f"worktree_isolation={'on' if plugins.get('worktree_isolation') else 'off'}"
+        )
+        if runtime.get("frontier_projection_target") is not None:
+            lines.append(f"    Frontier projection target: {runtime['frontier_projection_target']}")
+        if runtime.get("clamp_reason"):
+            lines.append(f"    Worker clamp: {runtime['clamp_reason']}")
+        if runtime.get("frontier_projection_error"):
+            lines.append(f"    Runtime profile error: {runtime['frontier_projection_error']}")
+        lines.append("")
+
+    observability = state.get("observability", {})
+    if observability:
+        lines.append("  Observability:")
+        if observability.get("events_exists"):
+            last_seq = observability.get("last_seq")
+            lines.append(
+                "    "
+                f"Canonical stream: .research/events.jsonl  "
+                f"events={observability.get('event_count', 0)}  "
+                f"last_seq={last_seq if last_seq is not None else 'unknown'}"
+            )
+        else:
+            lines.append("    Canonical stream: .research/events.jsonl (missing)")
+        if observability.get("parse_errors"):
+            lines.append(f"    Event parse errors: {observability.get('parse_errors', 0)}")
+        snapshots = observability.get("snapshots", [])
+        if snapshots:
+            lines.append(
+                "    Snapshots: " + "  ".join(
+                    f"{item.get('name', 'unknown')}={'yes' if item.get('exists') else 'no'}" for item in snapshots
+                )
+            )
+        lines.append(
+            f"    Detached runtime registrations: {observability.get('runtime_registrations', 0)}"
+        )
+        lines.append("    Boundary: events.jsonl is canonical; snapshots are compatibility/derived state.")
+        lines.append("")
 
     graph = state.get("graph")
     if graph:

@@ -288,3 +288,158 @@ def test_sparkline_constant():
     assert len(result) == 3
     # All same value -> all same char
     assert result[0] == result[1] == result[2]
+
+
+def test_parse_state_includes_runtime_profile_summary(tmp_path, monkeypatch):
+    research = tmp_path / ".research"
+    research.mkdir()
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
+    (research / "config.yaml").write_text(
+        "mode: autonomous\n"
+        "research:\n"
+        "  protocol: research-v1\n"
+        "experiment:\n"
+        "  max_parallel_workers: 4\n"
+        "runtime:\n"
+        "  gpu_allocation: false\n"
+        "  failure_memory: false\n"
+        "  worktree_isolation: true\n"
+    )
+    (research / "results.tsv").write_text(
+        "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
+    )
+    for name in ["project-understanding.md", "literature.md", "evaluation.md"]:
+        (research / name).write_text("# placeholder\nReal content.\n")
+
+    state = parse_research_state(tmp_path)
+
+    runtime = state["runtime"]
+    assert runtime["mode"] == "parallel"
+    assert runtime["requested_workers"] == 4
+    assert runtime["effective_workers"] == 4
+    assert runtime["profile_name"] == "custom"
+    assert runtime["plugins"]["gpu_allocation"] is False
+    assert runtime["plugins"]["failure_memory"] is False
+    assert runtime["plugins"]["worktree_isolation"] is True
+    assert runtime["frontier_projection_target"] == 4
+
+
+def test_parse_state_handles_non_integer_worker_config_without_crash(tmp_path):
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "config.yaml").write_text(
+        "mode: autonomous\n"
+        "research:\n"
+        "  protocol: research-v1\n"
+        "experiment:\n"
+        '  max_parallel_workers: "auto"\n'
+    )
+    (research / "results.tsv").write_text(
+        "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
+    )
+    for name in ["project-understanding.md", "literature.md", "evaluation.md"]:
+        (research / name).write_text("# placeholder\nReal content.\n")
+
+    state = parse_research_state(tmp_path)
+
+    runtime = state["runtime"]
+    assert runtime["requested_workers"] == "auto"
+    assert runtime["effective_workers"] == 1
+    assert "Invalid experiment.max_parallel_workers" in runtime["clamp_reason"]
+
+
+def test_parse_state_includes_observability_summary(tmp_path):
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "config.yaml").write_text("research:\n  protocol: research-v1\n")
+    (research / "results.tsv").write_text(
+        "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
+    )
+    (research / "events.jsonl").write_text(
+        '{"seq":1,"event":"session_started"}\n'
+        "not-json\n"
+        '{"seq":3,"event":"session_finished"}\n'
+    )
+    (research / "control.json").write_text("{}")
+    (research / "activity.json").write_text("{}")
+    runtime_dir = research / "runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "idea-001__exec-001.json").write_text("{}")
+    (runtime_dir / "idea-002__exec-002.json").write_text("{}")
+
+    state = parse_research_state(tmp_path)
+
+    observability = state["observability"]
+    assert observability["events_exists"] is True
+    assert observability["event_count"] == 2
+    assert observability["last_seq"] == 3
+    assert observability["parse_errors"] == 1
+    assert observability["runtime_registrations"] == 2
+    snapshot_exists = {item["name"]: item["exists"] for item in observability["snapshots"]}
+    assert snapshot_exists == {"control": True, "activity": True, "gpu_status": False}
+
+
+def test_parse_state_observability_handles_invalid_utf8_events_file(tmp_path):
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "config.yaml").write_text("research:\n  protocol: research-v1\n")
+    (research / "results.tsv").write_text(
+        "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
+    )
+    (research / "events.jsonl").write_bytes(b"\xff\xfe\xfd")
+
+    state = parse_research_state(tmp_path)
+
+    observability = state["observability"]
+    assert observability["events_exists"] is True
+    assert observability["event_count"] == 0
+    assert observability["parse_errors"] >= 1
+
+
+def test_observability_loader_streams_without_read_text(tmp_path, monkeypatch):
+    from paperfarm.status_cmd import _load_observability_state
+
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "events.jsonl").write_text(
+        '{"seq":1,"event":"session_started"}\n'
+        '{"seq":2,"event":"step"}\n'
+    )
+
+    def _fail_read_text(*_args, **_kwargs):
+        raise AssertionError("read_text should not be used by observability loader")
+
+    monkeypatch.setattr(Path, "read_text", _fail_read_text)
+
+    observability = _load_observability_state(research)
+    assert observability["event_count"] == 2
+    assert observability["last_seq"] == 2
+    assert observability["parse_errors"] == 0
+
+
+def test_print_status_shows_runtime_profile_and_observability(tmp_path, capsys):
+    research = tmp_path / ".research"
+    research.mkdir()
+    (research / "config.yaml").write_text(
+        "mode: autonomous\n"
+        "research:\n"
+        "  protocol: research-v1\n"
+        "experiment:\n"
+        "  max_parallel_workers: 2\n"
+    )
+    (research / "results.tsv").write_text(
+        "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
+    )
+    (research / "events.jsonl").write_text('{"seq":1,"event":"session_started"}\n')
+    (research / "control.json").write_text("{}")
+    (research / "activity.json").write_text("{}")
+    for name in ["project-understanding.md", "literature.md", "evaluation.md"]:
+        (research / name).write_text("# placeholder\nReal content.\n")
+
+    print_status(tmp_path)
+    captured = capsys.readouterr()
+
+    assert "Runtime Profile" in captured.out
+    assert "Observability" in captured.out
+    assert "events.jsonl" in captured.out
+    assert "events.jsonl is canonical" in captured.out
