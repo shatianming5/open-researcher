@@ -52,6 +52,10 @@ def _ensure_loaded():
         claude_code,  # noqa: F401
         codex,  # noqa: F401
         gemini,  # noqa: F401
-        kimi,  # noqa: F401
         opencode,  # noqa: F401
     )
+    try:
+        from paperfarm.agents import kimi  # noqa: F401
+    except ImportError:
+        # kimi adapter is optional in branches where the module is absent.
+        pass
