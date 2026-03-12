@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
+
+from filelock import FileLock
+
+from open_researcher.storage import atomic_write_json
 
 
 # ---------------------------------------------------------------------------
@@ -134,3 +140,31 @@ def estimate_tokens(text: str) -> int:
         return len(enc.encode(text))
     except ImportError:
         return max(1, len(text) // 4)
+
+
+# ---------------------------------------------------------------------------
+# Task 3: TokenLedger persistence
+# ---------------------------------------------------------------------------
+
+
+def save_ledger(ledger: TokenLedger, path: Path) -> None:
+    """Persist *ledger* to *path* atomically under a file lock."""
+    lock = FileLock(str(path) + ".lock")
+    with lock:
+        atomic_write_json(path, ledger.to_dict())
+
+
+def load_ledger(path: Path) -> TokenLedger:
+    """Load a TokenLedger from *path* under a file lock.
+
+    Returns an empty TokenLedger if the file does not exist or is corrupt.
+    """
+    lock = FileLock(str(path) + ".lock")
+    with lock:
+        if not path.exists():
+            return TokenLedger()
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return TokenLedger.from_dict(data)
+        except (json.JSONDecodeError, OSError, KeyError):
+            return TokenLedger()
