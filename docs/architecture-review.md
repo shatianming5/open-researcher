@@ -33,8 +33,8 @@
 **当前剩余的主要问题不再是 P0/P1/P2 本身，而是：**
 
 - `run_cmd.py` 虽已明显瘦身，但仍保留 TUI 入口适配和并行路径接线。
-- `idea_program.md` / `experiment_program.md` 仍然存在；它们已经退化成内部实现文件，但概念还没有完全消失。
 - 并行 worker 路径仍是一套“高级运行平台”，只是现在已经被清晰地隔离到了 advanced mode。
+- 历史设计文档中仍有旧 JSON 示例与旧心智模型表述，容易让新贡献者误判当前实现边界。
 
 ---
 
@@ -161,10 +161,10 @@ ResearchLoop / run adapter
 - `--multi` / `--idea-agent` / `--exp-agent` 仍存在，但已经转为隐藏兼容入口，而不是主推荐接口。
 - `goal`、`interactive/headless`、`workers` 已经成为更接近用户心智模型的接口。
 
-仍未完全收口的部分：
+仍需持续观察的部分：
 
-- `idea_program.md` / `experiment_program.md` 还在内部实现里存在。
 - `.research/events.jsonl` / `.research/control.json` 作为运行时文件仍然可见，只是前者已经明确为 canonical stream，后者仅为兼容快照。
+- 文档层面需要持续标注“当前契约 vs 历史归档”，避免旧计划文档反向污染当前接口心智。
 
 ---
 
@@ -330,7 +330,7 @@ P0/P1/P2 已经完成后，新的合理优先级应变成：
 
 | 新优先级 | 改动 | 影响 |
 |:---|:---|:---|
-| **R1** | 继续压薄 `run_cmd.py` 的入口适配代码 | 进一步收口 orchestration 边界 |
-| **R1** | 把 `idea_program.md` / `experiment_program.md` 更彻底地下沉为内部实现细节 | 继续减少对外暴露的内部概念 |
-| **R2** | 为 advanced runtime 建立更明确的 profile 文档和可观测性边界 | 防止默认路径再次被高级模式污染 |
-| **R2** | 清理历史设计文档与旧 JSON 示例 | 降低后续回退到旧心智模型的概率 |
+| **R1** | 继续压薄 `run_cmd.py` 的入口适配代码 | 进一步收口 orchestration 边界（进行中，PR #15） |
+| **R1** | 把 role program 概念更彻底地下沉为内部实现细节 | 继续减少对外暴露的内部概念（已完成，PR #16 已合并） |
+| **R2** | 为 advanced runtime 建立更明确的 profile 文档和可观测性边界 | 防止默认路径再次被高级模式污染（进行中，PR #19） |
+| **R2** | 清理历史设计文档与旧 JSON 示例 | 降低后续回退到旧心智模型的概率（进行中，PR #22） |
