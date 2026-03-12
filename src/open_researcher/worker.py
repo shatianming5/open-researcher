@@ -375,6 +375,7 @@ class WorkerManager:
                     if gpu_env:
                         self.on_output(f"[{wid}] Using GPU env: {gpu_env}")
 
+                    _token_metrics = None
                     workspace = (
                         self._plugins.workspace_isolation.acquire(wid, str(idea["id"]))
                         if self._plugins.workspace_isolation is not None
@@ -438,6 +439,7 @@ class WorkerManager:
                     finally:
                         watchdog.stop()
                     run_code = int(code)
+                    _token_metrics = getattr(agent, "last_token_metrics", None)
                     strict_result_tracking = str(idea.get("protocol", "")).strip() == "research-v1"
                     current_state = self._current_idea_state(str(idea.get("id", "")))
                     matched_row = None
@@ -598,6 +600,11 @@ class WorkerManager:
                     latest_idea["worker_id"] = wid
                     if stop_after_finalize:
                         latest_idea["retry_requested"] = True
+                    if _token_metrics is not None:
+                        latest_idea["_token_metrics"] = {
+                            "tokens_input": _token_metrics.tokens_input,
+                            "tokens_output": _token_metrics.tokens_output,
+                        }
                     if notify_finished and self._on_experiment_finished is not None:
                         try:
                             should_stop = bool(self._on_experiment_finished(latest_idea))

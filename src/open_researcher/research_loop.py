@@ -162,7 +162,7 @@ class ResearchLoop:
     ) -> None:
         """Read agent's last_token_metrics and accumulate into ledger."""
         metrics = getattr(agent, "last_token_metrics", None)
-        if metrics is None:
+        if not isinstance(metrics, TokenMetrics):
             return
         self.token_ledger.record(metrics, phase=phase, experiment_num=experiment_num)
         budget_remaining = None
@@ -723,6 +723,28 @@ class ResearchLoop:
                 )
             )
 
+            # Accumulate token metrics from parallel worker
+            token_data = item.get("_token_metrics")
+            if token_data:
+                metrics = TokenMetrics(
+                    tokens_input=token_data["tokens_input"],
+                    tokens_output=token_data["tokens_output"],
+                )
+                with lock:
+                    self.token_ledger.record(metrics, phase="experimenting", experiment_num=run_num)
+                    save_ledger(self.token_ledger, self.research_dir / "token_ledger.json")
+                budget_remaining = None
+                if self.cfg.token_budget > 0:
+                    budget_remaining = max(0, self.cfg.token_budget - self.token_ledger.cumulative.tokens_total)
+                self.emit(TokenMetricsUpdated(
+                    phase="experimenting",
+                    experiment_num=run_num,
+                    tokens_input=metrics.tokens_input,
+                    tokens_output=metrics.tokens_output,
+                    tokens_total=metrics.tokens_total,
+                    budget_remaining=budget_remaining,
+                ))
+
             item_status = str(item.get("status", "")).strip()
             result = item.get("result") if isinstance(item.get("result"), dict) else {}
             verdict = str(result.get("verdict", "")).strip()
@@ -818,13 +840,12 @@ class ResearchLoop:
             cycle += 1
             before_manager = graph_store.read()
             self.emit(ManagerCycleStarted(cycle=cycle))
-            with self._pruned_graph_context(graph_store):
-                manager_code = self._run_agent(
-                    manager_agent,
-                    phase="experimenting",
-                    program_file="manager_program.md",
-                    error_tag="manager",
-                )
+            manager_code = self._run_agent(
+                manager_agent,
+                phase="experimenting",
+                program_file="manager_program.md",
+                error_tag="manager",
+            )
             self._accumulate_token_metrics(manager_agent, phase="experimenting")
             if self._apply_budget_check() == "stop":
                 self.last_stop_reason = "token_budget"
@@ -877,13 +898,12 @@ class ResearchLoop:
                     break
                 self.emit(CriticReviewStarted(stage="preflight"))
                 before_preflight = graph_store.read()
-                with self._pruned_graph_context(graph_store):
-                    critic_code = self._run_agent(
-                        critic_agent,
-                        phase="experimenting",
-                        program_file="critic_program.md",
-                        error_tag="critic",
-                    )
+                critic_code = self._run_agent(
+                    critic_agent,
+                    phase="experimenting",
+                    program_file="critic_program.md",
+                    error_tag="critic",
+                )
                 exit_codes["critic"] = critic_code
                 self._accumulate_token_metrics(critic_agent, phase="experimenting")
                 if critic_code != 0:
@@ -996,6 +1016,9 @@ class ResearchLoop:
                     self.had_experiment_failure = True
                     self.last_experiment_failure_code = exit_codes["exp"] or 1
                 stop_reason = stop_reason_ref["value"]
+                if self._apply_budget_check() == "stop":
+                    self.last_stop_reason = "token_budget"
+                    break
             else:
                 experiments_completed, last_code, stop_reason = self._run_serial_experiment_batch(
                     exp_agent,
@@ -1035,13 +1058,12 @@ class ResearchLoop:
                     break
                 self.emit(CriticReviewStarted(stage="post_run"))
                 before_post = graph_store.read()
-                with self._pruned_graph_context(graph_store):
-                    critic_code = self._run_agent(
-                        critic_agent,
-                        phase="experimenting",
-                        program_file="critic_program.md",
-                        error_tag="critic",
-                    )
+                critic_code = self._run_agent(
+                    critic_agent,
+                    phase="experimenting",
+                    program_file="critic_program.md",
+                    error_tag="critic",
+                )
                 exit_codes["critic"] = critic_code
                 self._accumulate_token_metrics(critic_agent, phase="experimenting")
                 if critic_code != 0:
