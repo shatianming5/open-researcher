@@ -160,6 +160,34 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  # ── Security: pip-audit ───────────────────────────────────────────
+  security-audit:
+    needs: changes
+    if: needs.changes.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Audit dependencies for known vulnerabilities
+        run: |
+          uv pip install --system pip-audit
+          pip-audit
+
   # ── Package smoke test ────────────────────────────────────────────
   package-smoke:
     needs: [lint, changes]
