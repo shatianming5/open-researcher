@@ -335,7 +335,9 @@ class WorkerManager:
                             idea="",
                         )
                         self._record_resource_deadlock()
-                        self.on_output(f"[{wid}] Pending ideas are unschedulable with current resources, stopping batch")
+                        self.on_output(
+                            f"[{wid}] Pending ideas are unschedulable with current resources, stopping batch"
+                        )
                         self.stop()
                         break
                     self.on_output(f"[{wid}] No more pending ideas, stopping")

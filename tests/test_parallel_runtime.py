@@ -3,11 +3,11 @@
 from open_researcher.config import ResearchConfig
 from open_researcher.parallel_runtime import (
     build_parallel_worker_plugins,
-    run_parallel_experiment_batch,
     resolve_parallel_runtime_profile,
     resolve_parallel_worker_count,
+    run_parallel_experiment_batch,
 )
-from open_researcher.worker_plugins import GPUAllocation, WorkerRuntimePlugins
+from open_researcher.worker_plugins import WorkerRuntimePlugins
 
 
 def test_parallel_runtime_returns_stop_reason_for_resource_deadlock(tmp_path, monkeypatch):

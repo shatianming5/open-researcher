@@ -17,7 +17,7 @@ from open_researcher.resource_scheduler import (
     normalize_resource_request,
     utility_density,
 )
-from open_researcher.storage import atomic_write_json, locked_read_json, locked_update_json
+from open_researcher.storage import locked_read_json, locked_update_json
 
 FRONTIER_STATUSES = {
     "draft",
