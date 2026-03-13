@@ -42,7 +42,7 @@ def test_parallel_runtime_returns_stop_reason_for_resource_deadlock(tmp_path, mo
         ),
     )
     monkeypatch.setattr(
-        "open_researcher.parallel_runtime.get_agent",
+        "open_researcher.plugins.execution.legacy_parallel.get_agent",
         lambda name, config=None: None,
     )
 
