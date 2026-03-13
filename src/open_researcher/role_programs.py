@@ -65,7 +65,11 @@ def ensure_internal_role_programs(
     for spec in _ROLE_PROGRAM_SPECS.values():
         internal_path = research_dir / spec["internal"]
         internal_path.parent.mkdir(parents=True, exist_ok=True)
-        content = template_env.get_template(spec["template"]).render(render_context)
+        legacy_path = research_dir / spec["legacy"]
+        if legacy_path.exists() and not internal_path.exists():
+            content = legacy_path.read_text(encoding="utf-8")
+        else:
+            content = template_env.get_template(spec["template"]).render(render_context)
         internal_path.write_text(content, encoding="utf-8")
 
 
