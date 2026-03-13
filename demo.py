@@ -40,6 +40,14 @@ print(f"{'=' * 60}\n")
 
 print(">>> Step 1: 初始化 .research/ 目录\n")
 
+# git init is required before do_init
+subprocess.run(["git", "init", "--quiet"], cwd=DEMO_DIR, capture_output=True, check=True)
+subprocess.run(["git", "config", "user.email", "demo@open-researcher.dev"], cwd=DEMO_DIR, capture_output=True)
+subprocess.run(["git", "config", "user.name", "Demo"], cwd=DEMO_DIR, capture_output=True)
+(DEMO_DIR / "README.md").write_text("# Demo\n")
+subprocess.run(["git", "add", "."], cwd=DEMO_DIR, capture_output=True)
+subprocess.run(["git", "commit", "-m", "init", "--quiet"], cwd=DEMO_DIR, capture_output=True)
+
 do_init(repo_path=DEMO_DIR, tag="demo")
 
 research = DEMO_DIR / ".research"
@@ -213,9 +221,7 @@ print(">>> Step 7: 解析研究状态\n")
 (research / "literature.md").write_text("# Literature\nPaper A is relevant.\nMethod B works well.\n")
 (research / "evaluation.md").write_text("# Evaluation\nUse accuracy as primary metric.\nRun test suite.\n")
 
-# 需要 git 初始化才能获取 branch
-
-subprocess.run(["git", "init"], cwd=DEMO_DIR, capture_output=True)
+# 切换到 research 分支 (git 已在 Step 1 初始化)
 subprocess.run(["git", "checkout", "-b", "research/demo"], cwd=DEMO_DIR, capture_output=True)
 
 state = parse_research_state(DEMO_DIR)
