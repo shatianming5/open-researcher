@@ -35,7 +35,7 @@ def test_parallel_runtime_returns_stop_reason_for_resource_deadlock(tmp_path, mo
             return None
 
     monkeypatch.setattr(
-        "open_researcher.parallel_runtime.build_parallel_worker_plugins",
+        "open_researcher.plugins.execution.legacy_parallel.build_parallel_worker_plugins",
         lambda repo_path, research_dir, cfg: (
             resolve_parallel_runtime_profile(cfg),
             WorkerRuntimePlugins(gpu_allocator=NeverFitAllocator()),

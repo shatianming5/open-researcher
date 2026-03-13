@@ -9,7 +9,7 @@ from typing import Literal
 from filelock import FileLock
 
 from open_researcher.event_journal import next_seq_unlocked, now_iso
-from open_researcher.storage import atomic_write_json
+from open_researcher.plugins.storage.file_ops import atomic_write_json
 
 ControlCommand = Literal["pause", "resume", "skip_current", "clear_skip"]
 

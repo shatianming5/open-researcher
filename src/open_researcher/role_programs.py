@@ -67,6 +67,7 @@ def ensure_internal_role_programs(
         internal_path.parent.mkdir(parents=True, exist_ok=True)
         legacy_path = research_dir / spec["legacy"]
         if legacy_path.exists() and not internal_path.exists():
+            # Migrate legacy user-customised content instead of overwriting.
             content = legacy_path.read_text(encoding="utf-8")
         else:
             content = template_env.get_template(spec["template"]).render(render_context)

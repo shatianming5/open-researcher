@@ -26,9 +26,9 @@ from open_researcher.plugins.orchestrator.safety import (
     rollback_workspace,
 )
 from open_researcher.graph_context import enforce_context_token_limit, filter_graph_for_context
-from open_researcher.parallel_runtime import estimate_parallel_frontier_target
+from open_researcher.plugins.execution.legacy_parallel import estimate_parallel_frontier_target
 from open_researcher.phase_gate import PhaseGate
-from open_researcher.research_events import (
+from open_researcher.kernel.events import (
     AgentOutput,
     AllIdeasProcessed,
     ClaimUpdated,
@@ -56,11 +56,11 @@ from open_researcher.research_events import (
     TokenBudgetWarning,
     TokenMetricsUpdated,
 )
-from open_researcher.research_graph import ResearchGraphStore
+from open_researcher.plugins.graph.legacy_store import ResearchGraphStore
 from open_researcher.research_memory import ResearchMemoryStore
 from open_researcher.results_cmd import load_results, write_final_results_tsv
 from open_researcher.role_programs import resolve_role_program_file
-from open_researcher.storage import atomic_write_json, locked_read_json
+from open_researcher.plugins.storage.file_ops import atomic_write_json, locked_read_json
 from open_researcher.token_tracking import (
     BudgetCheckResult,
     TokenLedger,

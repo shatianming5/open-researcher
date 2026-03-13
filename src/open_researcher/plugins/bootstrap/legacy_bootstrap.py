@@ -669,7 +669,7 @@ def _try_smoke_preflight(
     write_bootstrap_state(state_path, state)
 
     if on_prepare_event is not None:
-        from open_researcher.research_events import PrepareStepCompleted, PrepareStepStarted
+        from open_researcher.kernel.events import PrepareStepCompleted, PrepareStepStarted
 
         on_prepare_event(
             PrepareStepStarted(
@@ -733,20 +733,20 @@ def run_bootstrap_prepare(
         state["errors"] = []
         write_bootstrap_state(state_path, state)
         if on_prepare_event is not None:
-            from open_researcher.research_events import PrepareCompleted
+            from open_researcher.kernel.events import PrepareCompleted
 
             on_prepare_event(PrepareCompleted(status="disabled", unresolved=0))
         return 0, state
 
     if is_prepare_ready(state, repo_path):
         if on_prepare_event is not None:
-            from open_researcher.research_events import PrepareCompleted
+            from open_researcher.kernel.events import PrepareCompleted
 
             on_prepare_event(PrepareCompleted(status="cached", unresolved=0))
         return 0, state
 
     if on_prepare_event is not None:
-        from open_researcher.research_events import PrepareStarted
+        from open_researcher.kernel.events import PrepareStarted
 
         on_prepare_event(
             PrepareStarted(
@@ -760,7 +760,7 @@ def run_bootstrap_prepare(
         state["status"] = "failed"
         write_bootstrap_state(state_path, state)
         if on_prepare_event is not None:
-            from open_researcher.research_events import PrepareFailed
+            from open_researcher.kernel.events import PrepareFailed
 
             on_prepare_event(PrepareFailed(step="resolve", detail=" ; ".join(str(item) for item in state["errors"])))
         return 1, state
@@ -769,7 +769,7 @@ def run_bootstrap_prepare(
         state["errors"] = list(state.get("unresolved", []))
         write_bootstrap_state(state_path, state)
         if on_prepare_event is not None:
-            from open_researcher.research_events import PrepareFailed
+            from open_researcher.kernel.events import PrepareFailed
 
             on_prepare_event(
                 PrepareFailed(step="resolve", detail=" ; ".join(str(item) for item in state["unresolved"]))
@@ -782,7 +782,7 @@ def run_bootstrap_prepare(
         state["errors"] = [detail]
         write_bootstrap_state(state_path, state)
         if on_prepare_event is not None:
-            from open_researcher.research_events import PrepareFailed
+            from open_researcher.kernel.events import PrepareFailed
 
             on_prepare_event(PrepareFailed(step="python_env", detail=detail))
         return code, state
@@ -804,14 +804,14 @@ def run_bootstrap_prepare(
     )
     if ready:
         if on_prepare_event is not None:
-            from open_researcher.research_events import PrepareCompleted
+            from open_researcher.kernel.events import PrepareCompleted
 
             on_prepare_event(PrepareCompleted(status="completed", unresolved=0))
         return 0, state
     if fail_fast:
         write_bootstrap_state(state_path, state)
         if on_prepare_event is not None:
-            from open_researcher.research_events import PrepareFailed
+            from open_researcher.kernel.events import PrepareFailed
 
             on_prepare_event(PrepareFailed(step="smoke", detail=str(state.get("smoke", {}).get("detail", "")).strip()))
         return 1, state
@@ -831,7 +831,7 @@ def run_bootstrap_prepare(
                 write_bootstrap_state(state_path, state)
                 continue
         if on_prepare_event is not None:
-            from open_researcher.research_events import PrepareStepStarted
+            from open_researcher.kernel.events import PrepareStepStarted
 
             on_prepare_event(
                 PrepareStepStarted(
@@ -859,7 +859,7 @@ def run_bootstrap_prepare(
             state["errors"] = [step["detail"]]
             write_bootstrap_state(state_path, state)
             if on_prepare_event is not None:
-                from open_researcher.research_events import PrepareFailed
+                from open_researcher.kernel.events import PrepareFailed
 
                 on_prepare_event(PrepareFailed(step=step_name, detail=step["detail"]))
             return result.returncode or 1, state
@@ -874,7 +874,7 @@ def run_bootstrap_prepare(
                 state["errors"] = [step["detail"]]
                 write_bootstrap_state(state_path, state)
                 if on_prepare_event is not None:
-                    from open_researcher.research_events import PrepareFailed
+                    from open_researcher.kernel.events import PrepareFailed
 
                     on_prepare_event(PrepareFailed(step=step_name, detail=step["detail"]))
                 return 1, state
@@ -882,7 +882,7 @@ def run_bootstrap_prepare(
         step["detail"] = "Completed successfully"
         write_bootstrap_state(state_path, state)
         if on_prepare_event is not None:
-            from open_researcher.research_events import PrepareStepCompleted
+            from open_researcher.kernel.events import PrepareStepCompleted
 
             on_prepare_event(
                 PrepareStepCompleted(
@@ -907,7 +907,7 @@ def run_bootstrap_prepare(
             state["errors"] = [f"Expected paths missing after prepare: {', '.join(missing)}"]
             write_bootstrap_state(state_path, state)
             if on_prepare_event is not None:
-                from open_researcher.research_events import PrepareFailed
+                from open_researcher.kernel.events import PrepareFailed
 
                 on_prepare_event(PrepareFailed(step="expected_paths", detail=state["errors"][0]))
             return 1, state
@@ -916,7 +916,7 @@ def run_bootstrap_prepare(
     state["errors"] = []
     write_bootstrap_state(state_path, state)
     if on_prepare_event is not None:
-        from open_researcher.research_events import PrepareCompleted
+        from open_researcher.kernel.events import PrepareCompleted
 
         on_prepare_event(PrepareCompleted(status="completed", unresolved=0))
     return 0, state

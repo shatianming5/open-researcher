@@ -9,7 +9,7 @@ from pathlib import Path
 
 from filelock import FileLock
 
-from open_researcher.research_events import (
+from open_researcher.kernel.events import (
     ResearchEvent,
     event_level,
     event_name,
@@ -77,10 +77,9 @@ class EventJournal:
             line = json.dumps(record, ensure_ascii=False)
             with self.path.open("a", encoding="utf-8") as handle:
                 handle.write(line + "\n")
-
-        if self._stream is not None:
-            self._stream.write(line + "\n")
-            self._stream.flush()
+            if self._stream is not None:
+                self._stream.write(line + "\n")
+                self._stream.flush()
         return record
 
     def _next_seq_unlocked(self) -> int:
