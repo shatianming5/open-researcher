@@ -1,86 +1,98 @@
 ## Tree
-- `src/open_researcher/`: 主代码
-- `src/open_researcher/agents/`: agent adapter 实现
-- `src/open_researcher/tui/`: Textual TUI
-- `src/open_researcher/scripts/`: 运行期辅助脚本
-- `tests/`: pytest 测试
-- `docs/`: 文档与计划
-- `examples/`: 示例目标仓库
-- `analysis/`: 分析记录
-- `.research/`: 运行期状态目录
+- `src/open_researcher/`: main package
+- `src/open_researcher/agents/`: Claude Code, Codex, Aider, OpenCode adapters
+- `src/open_researcher/tui/`: Textual app, widgets, view-model, review UI
+- `src/open_researcher/templates/`: bootstrap/research-v1 prompt and config templates
+- `src/open_researcher/scripts/`: runtime helper scripts copied into `.research/scripts/`
+- `tests/`: pytest suite across CLI, runtime, TUI, bootstrap, graph, workers
+- `docs/`: architecture notes, screenshots, design/plan history, repo inventory
+- `examples/`: example target repos and usage patterns
+- `imgs/`: README screenshots
 
 ## Entry Points
-- `pyproject.toml`: 暴露 `open-researcher = open_researcher.cli:app`
-- `src/open_researcher/cli.py`: 主 CLI，包含 `run/init/status/results/export/doctor/demo`
-- `src/open_researcher/run_cmd.py`: interactive bootstrap/TUI 主路径
-- `src/open_researcher/headless.py`: headless bootstrap/JSONL 主路径
-- `src/open_researcher/init_cmd.py`: 初始化 `.research/` 模板与状态文件
-- `src/open_researcher/config_cmd.py`: `open-researcher config show|validate`
-- `src/open_researcher/ideas_cmd.py`: `open-researcher ideas list|add|delete|prioritize`
-- `src/open_researcher/logs_cmd.py`: `open-researcher logs`
+- `pyproject.toml`: publishes `open-researcher = open_researcher.cli:app`
+- `src/open_researcher/cli.py`: user-facing CLI for `run/init/status/results/export/doctor/demo`
+- `src/open_researcher/run_cmd.py`: interactive runtime bootstrap + TUI path
+- `src/open_researcher/headless.py`: headless JSONL runtime path
+- `src/open_researcher/init_cmd.py`: creates `.research/` state, templates, scripts
+- `src/open_researcher/graph_protocol.py`: ensures research-v1 graph/memory artifacts exist
+- `src/open_researcher/status_cmd.py`: reads `.research/` and prints runtime status
+- `src/open_researcher/results_cmd.py`: reads raw/derived results and charts
+- `src/open_researcher/doctor_cmd.py`: health checks for repo + `.research/` state
+- `demo.py` / `src/open_researcher/demo_cmd.py`: TUI demo data population
 
 ## Core Modules
-- `src/open_researcher/workflow_options.py`: 统一 CLI 参数，归一化成 interactive/headless 与 worker 数。
-- `src/open_researcher/agent_runtime.py`: agent 自动探测与显式解析。
-- `src/open_researcher/research_loop.py`: 核心编排，统一执行 `Scout -> Manager -> Critic -> Experiment`。
-- `src/open_researcher/research_events.py`: typed event 协议，映射到 `events.jsonl`。
-- `src/open_researcher/event_journal.py`: JSONL 事件日志写入与读取。
-- `src/open_researcher/graph_protocol.py`: `research-v1` 初始化与 role agent 解析。
-- `src/open_researcher/research_graph.py`: canonical hypothesis/evidence/frontier graph 状态。
-- `src/open_researcher/research_memory.py`: repo prior / ideation / experiment memory。
-- `src/open_researcher/parallel_runtime.py`: 并行 experiment worker runtime。
-- `src/open_researcher/tui/app.py`: 交互式监控 UI。
-- `src/open_researcher/tui/events.py`: typed event -> TUI 日志渲染。
-- `src/open_researcher/status_cmd.py`: 汇总 `.research/` 状态并显示进度。
-- `src/open_researcher/results_cmd.py`: 读取/打印/图表化 `results.tsv`。
+- `src/open_researcher/research_loop.py`: central Scout -> Manager -> Critic -> Experiment orchestration
+- `src/open_researcher/research_graph.py`: canonical research-v1 graph for hypotheses, specs, frontier, evidence, claims
+- `src/open_researcher/research_memory.py`: compact long-horizon memory derived from graph outcomes
+- `src/open_researcher/memory_policy.py`: history-aware family retrieval, frontier re-ranking, and policy annotations
+- `src/open_researcher/research_events.py`: typed runtime event schema
+- `src/open_researcher/event_journal.py`: JSONL event append/read utilities
+- `src/open_researcher/bootstrap.py`: repo profile detection, prepare-plan resolution, install/data/smoke execution
+- `src/open_researcher/parallel_runtime.py`: worker-batch runner over idea-pool compatibility layer
+- `src/open_researcher/worker.py`: worker manager, timeout handling, result reconciliation
+- `src/open_researcher/worker_plugins.py`: optional GPU, failure-memory, and worktree isolation plugins
+- `src/open_researcher/worktree.py`: external git worktree creation and cleanup
+- `src/open_researcher/control_plane.py`: pause/resume/skip command log and snapshot state
+- `src/open_researcher/tui/view_model.py`: projects `.research/` files into TUI state
+- `src/open_researcher/tui/widgets.py`: renderers for dashboard panels and docs viewer
 
 ## Config & Data
-- 配置文件：`.research/config.yaml`
-- 关键配置：
+- Main config: `.research/config.yaml`
+- Important config keys:
+  - `experiment.timeout`
   - `experiment.max_experiments`
   - `experiment.max_parallel_workers`
   - `metrics.primary.name`
   - `metrics.primary.direction`
-  - `research.protocol = research-v1`
+  - `research.protocol`
   - `research.manager_batch_size`
   - `research.critic_repro_policy`
+  - `runtime.gpu_allocation`
+  - `runtime.failure_memory`
+  - `runtime.worktree_isolation`
+  - `memory.ideation`
+  - `memory.experiment`
+  - `memory.repo_type_prior`
   - `roles.scout_agent|manager_agent|critic_agent|experiment_agent`
-  - `memory.ideation|experiment|repo_type_prior`
-- 运行期状态：
-  - `.research/scout_program.md`
-  - `.research/.internal/role_programs/manager.md`
-  - `.research/.internal/role_programs/critic.md`
-  - `.research/.internal/role_programs/experiment.md`
-  - `.research/idea_pool.json`
-  - `.research/results.tsv`
-  - `.research/events.jsonl`
-  - `.research/research_graph.json`
-  - `.research/research_memory.json`
-  - `.research/activity.json`
-  - `.research/control.json`
-  - `.research/gpu_status.json`
-- 外部前提：
-  - 必须在 git repo 中运行
-  - 至少安装一个支持的 agent CLI：`claude-code` / `codex` / `aider` / `opencode` / `kimi-cli` / `gemini-cli`
-  - 并行 worker 场景默认假设本机或远端 GPU 可分配，但不是强制
+- Runtime state under `.research/`:
+  - `config.yaml`
+  - `bootstrap_state.json`
+  - `prepare.log`
+  - `results.tsv`
+  - `final_results.tsv`
+  - `events.jsonl`
+  - `control.json`
+  - `activity.json`
+  - `idea_pool.json`
+  - `experiment_progress.json`
+  - `research_graph.json`
+  - `research_memory.json`
+  - `gpu_status.json`
+- External assumptions:
+  - must run inside a git repo
+  - needs at least one supported agent CLI on `PATH`
+  - parallel mode assumes git worktree support; GPU allocation is optional
+  - helper scripts assume POSIX shell for `.research/scripts/rollback.sh`
 
 ## How To Run
 ```bash
+pip install -e .[dev]
+
 open-researcher init
-open-researcher run --agent codex
+open-researcher run
 open-researcher run --mode headless --goal "improve latency"
-open-researcher run --agent codex --workers 1
-open-researcher run --agent codex --workers 4
-open-researcher status
-open-researcher results
+open-researcher run --workers 1
+open-researcher run --workers 4
+open-researcher status --sparkline
 open-researcher results --chart primary
-open-researcher export
-open-researcher config show
-open-researcher ideas list
+open-researcher doctor
 pytest -q
+ruff check .
 ```
 
 ## Risks / Unknowns
-- 当前“接口”主要是 CLI、配置文件、状态文件、typed events，不是 HTTP service。
-- `research-v1` 已经是唯一执行协议，但并行 experiment worker 仍主要复用 `idea_pool.json` 兼容层。
-- TUI 和 headless 都消费同一套 typed events，graph tracing 在 `research-v1` 下完整可见。
+- The canonical runtime is `research-v1`, but experiment execution still projects through `idea_pool.json` for compatibility with worker code.
+- Safety guarantees around git commit/rollback are partly prompt-driven, not obviously enforced by a dedicated runtime guardrail.
+- Parallel worker behavior depends on local git worktree semantics and can differ across environments.
+- Example READMEs are runnable usage guides, not tested fixtures; drift is possible if CLI flags change again.
