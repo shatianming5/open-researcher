@@ -164,6 +164,7 @@ def _git_info_exclude_paths(repo_path: Path) -> list[Path]:
             cwd=str(repo_path),
             capture_output=True,
             text=True,
+            timeout=30,
         )
         if result.returncode != 0:
             continue
@@ -181,24 +182,24 @@ def _sync_source_overlays(repo_path: Path, worktree_path: Path) -> list[Path]:
         ["git", "diff", "--binary", "HEAD", "--"],
         cwd=str(repo_path),
         capture_output=True,
-        text=True,
+        text=False,
         timeout=120,
     )
     if patch.returncode != 0:
-        detail = patch.stderr.strip() or patch.stdout.strip() or "unknown git diff error"
-        raise WorktreeError(f"git diff --binary HEAD failed: {detail}")
+        detail = patch.stderr.decode("utf-8", errors="replace").strip()
+        raise WorktreeError(f"git diff --binary HEAD failed: {detail or 'unknown git diff error'}")
     if patch.stdout:
         applied = subprocess.run(
             ["git", "apply", "--binary", "-"],
             cwd=str(worktree_path),
             input=patch.stdout,
             capture_output=True,
-            text=True,
+            text=False,
             timeout=120,
         )
         if applied.returncode != 0:
-            detail = applied.stderr.strip() or applied.stdout.strip() or "unknown git apply error"
-            raise WorktreeError(f"Failed to apply working tree patch: {detail}")
+            detail = applied.stderr.decode("utf-8", errors="replace").strip()
+            raise WorktreeError(f"Failed to apply working tree patch: {detail or 'unknown git apply error'}")
 
     overlay_paths = _iter_untracked_overlay_paths(repo_path)
     for relative_path in overlay_paths:
@@ -214,6 +215,7 @@ def _iter_untracked_overlay_paths(repo_path: Path) -> list[Path]:
         cwd=str(repo_path),
         capture_output=True,
         text=True,
+        timeout=60,
     )
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip() or "unknown git status error"
@@ -274,6 +276,7 @@ def _sanitize_runtime_artifacts(worktree_path: Path) -> None:
         cwd=str(worktree_path),
         capture_output=True,
         text=True,
+        timeout=60,
     )
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip() or "unknown git status error"
@@ -311,6 +314,7 @@ def _mark_runtime_artifacts_skip_worktree(worktree_path: Path) -> None:
         cwd=str(worktree_path),
         capture_output=True,
         text=False,
+        timeout=120,
     )
     if result.returncode != 0:
         detail = result.stderr.decode("utf-8", errors="replace").strip()
@@ -364,6 +368,7 @@ def remove_worktree(repo_path: Path, worktree_path: Path) -> None:
             cwd=str(repo_path),
             capture_output=True,
             text=True,
+            timeout=60,
         )
         if result.returncode != 0 and worktree_path.exists():
             shutil.rmtree(worktree_path, ignore_errors=True)
@@ -391,6 +396,7 @@ def _branch_exists(repo_path: Path, branch_name: str) -> bool:
         cwd=str(repo_path),
         capture_output=True,
         text=True,
+        timeout=30,
     )
     return result.returncode == 0
 

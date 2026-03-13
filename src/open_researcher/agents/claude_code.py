@@ -55,9 +55,14 @@ class ClaudeCodeAdapter(AgentAdapter):
     ) -> int:
         program_md = workdir / ".research" / program_file
         try:
-            prompt = program_md.read_text()
+            prompt = program_md.read_text(encoding="utf-8")
         except FileNotFoundError:
             msg = f"[claude-code] program file not found: {program_md}"
+            if on_output:
+                on_output(msg)
+            return 1
+        except (UnicodeDecodeError, OSError) as exc:
+            msg = f"[claude-code] failed to read program file {program_md}: {exc}"
             if on_output:
                 on_output(msg)
             return 1

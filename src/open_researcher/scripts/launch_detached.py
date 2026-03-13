@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -147,22 +148,32 @@ def _launch_detached(state_path: Path, cwd: Path, argv: list[str]) -> int:
     while time.monotonic() < deadline:
         if proc.poll() is not None:
             state = _read_json(state_path)
-            state_exit = int(state.get("exit_code", proc.returncode or 1) or 1)
+            try:
+                state_exit = int(state.get("exit_code", proc.returncode or 1) or 1)
+            except (TypeError, ValueError):
+                state_exit = 1
             print(
                 f"[ERROR] Detached runner exited before registration (code={state_exit})",
                 file=sys.stderr,
             )
             return state_exit
         state = _read_json(state_path)
-        if bool(state.get("active")) and int(state.get("pid", 0) or 0) == int(proc.pid):
+        try:
+            state_pid = int(state.get("pid", 0) or 0)
+        except (TypeError, ValueError):
+            state_pid = 0
+        if bool(state.get("active")) and state_pid == proc.pid:
             print(f"[OK] Detached run registered: pid={proc.pid} state={state_path}")
             return 0
         time.sleep(0.1)
 
     try:
-        os.killpg(int(proc.pid), 15)
-    except OSError:
-        pass
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+    except (OSError, ProcessLookupError):
+        try:
+            proc.kill()
+        except OSError:
+            pass
     print(f"[ERROR] Timed out waiting for detached registration: {state_path}", file=sys.stderr)
     return 1
 

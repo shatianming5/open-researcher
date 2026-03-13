@@ -11,7 +11,8 @@ _MIGRATIONS: list[tuple[int, str]] = [(1, SCHEMA_V1)]
 
 def apply_migrations(conn: sqlite3.Connection) -> None:
     """Apply all pending migrations up to CURRENT_VERSION."""
-    current = conn.execute("PRAGMA user_version").fetchone()[0]
+    row = conn.execute("PRAGMA user_version").fetchone()
+    current = row[0] if row else 0
     for target, sql in _MIGRATIONS:
         if current < target:
             conn.executescript(sql)

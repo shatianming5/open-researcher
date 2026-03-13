@@ -40,8 +40,9 @@ def _check_opencode_cli() -> dict:
             ["opencode", "--version"],
             capture_output=True,
             text=True,
+            timeout=10,
         )
-    except OSError as exc:
+    except (OSError, subprocess.TimeoutExpired) as exc:
         return {"check": "OpenCode CLI", "status": "FAIL", "detail": f"Version probe failed: {exc}"}
     if version.returncode != 0:
         detail = version.stderr.strip() or version.stdout.strip() or "unknown error"
@@ -51,6 +52,7 @@ def _check_opencode_cli() -> dict:
         ["opencode", "run", "--help"],
         capture_output=True,
         text=True,
+        timeout=10,
     )
     if run_help.returncode != 0:
         detail = run_help.stderr.strip() or run_help.stdout.strip() or "unknown error"
@@ -92,7 +94,8 @@ def _check_gpu_info() -> list[dict]:
         results.append({"check": "GPU devices", "status": "WARN", "detail": "Cannot detect GPUs"})
         return results
 
-    driver_version = driver_result.stdout.strip().splitlines()[0].strip() if driver_result.stdout.strip() else "unknown"
+    driver_lines = driver_result.stdout.strip().splitlines()
+    driver_version = driver_lines[0].strip() if driver_lines else "unknown"
     results.append({"check": "GPU driver", "status": "OK", "detail": f"NVIDIA driver {driver_version}"})
 
     # Query per-GPU info
@@ -160,9 +163,9 @@ def run_doctor(repo_path: Path) -> list[dict]:
         try:
             import yaml
 
-            yaml.safe_load(config_path.read_text())
+            yaml.safe_load(config_path.read_text(encoding="utf-8"))
             results.append({"check": "config.yaml", "status": "OK", "detail": "Parseable"})
-        except Exception as exc:
+        except (yaml.YAMLError, OSError) as exc:
             results.append({"check": "config.yaml", "status": "FAIL", "detail": f"Parse error: {exc}"})
     else:
         results.append({"check": "config.yaml", "status": "WARN", "detail": "File not found"})

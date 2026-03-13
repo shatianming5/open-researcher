@@ -72,9 +72,13 @@ class AgentAdapter(ABC):
         if stdin_text:
             try:
                 proc.stdin.write(stdin_text)
-                proc.stdin.close()
             except BrokenPipeError:
                 pass
+            finally:
+                try:
+                    proc.stdin.close()
+                except OSError:
+                    pass
         with self._lock:
             self._proc = proc
         try:

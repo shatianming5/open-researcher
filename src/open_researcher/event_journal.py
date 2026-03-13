@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -77,6 +78,8 @@ class EventJournal:
             line = json.dumps(record, ensure_ascii=False)
             with self.path.open("a", encoding="utf-8") as handle:
                 handle.write(line + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
             if self._stream is not None:
                 self._stream.write(line + "\n")
                 self._stream.flush()

@@ -57,6 +57,14 @@ class EventBus:
                             "Handler %r failed for event %s", handler, event.type
                         )
 
+    async def shutdown(self) -> None:
+        """Cancel and await all pending handler tasks."""
+        for task in list(self._pending_tasks):
+            task.cancel()
+        if self._pending_tasks:
+            await asyncio.gather(*self._pending_tasks, return_exceptions=True)
+        self._pending_tasks.clear()
+
     @staticmethod
     async def _safe_async_call(handler: Callable, event: Event) -> None:
         try:

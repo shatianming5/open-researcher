@@ -234,10 +234,18 @@ def do_run_headless(
             parallel_batch_runner=parallel_runner,
         )
         return _finalize_headless_session(logger, loop)
+    except Exception:
+        try:
+            logger.on_event(SessionFailed(failed_role="unknown", exit_code=1))
+        except Exception:
+            pass
+        raise
     finally:
-        manager_agent.terminate()
-        critic_agent.terminate()
-        exp_agent.terminate()
+        for agent in (manager_agent, critic_agent, exp_agent):
+            try:
+                agent.terminate()
+            except Exception:
+                pass
         logger.close()
 
 
@@ -351,9 +359,16 @@ def do_start_headless(
         )
 
         return _finalize_headless_session(logger, loop)
+    except Exception:
+        try:
+            logger.on_event(SessionFailed(failed_role="unknown", exit_code=1))
+        except Exception:
+            pass
+        raise
     finally:
-        scout_agent.terminate()
-        manager_agent.terminate()
-        critic_agent.terminate()
-        exp_agent.terminate()
+        for agent in (scout_agent, manager_agent, critic_agent, exp_agent):
+            try:
+                agent.terminate()
+            except Exception:
+                pass
         logger.close()

@@ -1,6 +1,7 @@
 """Demo command — launch TUI with pre-populated sample data, no agent needed."""
 
 import json
+import shlex
 import subprocess
 import tempfile
 import threading
@@ -358,7 +359,7 @@ def do_demo(serve: bool = False, port: int = 8000) -> None:
 
         console.print(f"Launching TUI in browser at [bold]http://localhost:{port}[/bold]\n")
         console.print("[dim]Press Ctrl+C to stop the server.[/dim]\n")
-        server = Server(f"{python_exe} {launcher}", port=port)
+        server = Server(f"{shlex.quote(python_exe)} {shlex.quote(str(launcher))}", port=port)
         server.serve()
         return
 

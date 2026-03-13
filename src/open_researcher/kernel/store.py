@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import threading
 from pathlib import Path
 from open_researcher.kernel.event import Event
+
+logger = logging.getLogger(__name__)
 
 _SCHEMA = """\
 CREATE TABLE IF NOT EXISTS events (
@@ -29,6 +32,11 @@ class EventStore:
         self._conn: sqlite3.Connection | None = None
         self._lock = threading.Lock()
 
+    def _require_conn(self) -> sqlite3.Connection:
+        if self._conn is None:
+            raise RuntimeError("Store not opened")
+        return self._conn
+
     async def open(self) -> None:
         self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
@@ -40,9 +48,9 @@ class EventStore:
             self._conn = None
 
     async def append(self, event: Event) -> None:
-        assert self._conn is not None, "Store not opened"
+        conn = self._require_conn()
         with self._lock:
-            self._conn.execute(
+            conn.execute(
                 "INSERT INTO events (type, payload, ts, source, corr_id) "
                 "VALUES (?, ?, ?, ?, ?)",
                 (
@@ -53,7 +61,7 @@ class EventStore:
                     event.correlation_id,
                 ),
             )
-            self._conn.commit()
+            conn.commit()
 
     async def replay(
         self,
@@ -61,7 +69,7 @@ class EventStore:
         type_prefix: str = "",
         since: float = 0.0,
     ) -> list[Event]:
-        assert self._conn is not None, "Store not opened"
+        conn = self._require_conn()
         clauses: list[str] = []
         params: list[object] = []
         if type_prefix:
@@ -73,23 +81,28 @@ class EventStore:
             params.append(since)
         where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
         with self._lock:
-            rows = self._conn.execute(
+            rows = conn.execute(
                 f"SELECT type, payload, ts, source, corr_id FROM events{where} ORDER BY id",
                 params,
             ).fetchall()
-        return [
-            Event(
+        events: list[Event] = []
+        for r in rows:
+            try:
+                payload = json.loads(r[1])
+            except (json.JSONDecodeError, TypeError):
+                logger.warning("Skipping event with invalid JSON payload: id type=%s", r[0])
+                continue
+            events.append(Event(
                 type=r[0],
-                payload=json.loads(r[1]),
+                payload=payload,
                 ts=r[2],
                 source=r[3],
                 correlation_id=r[4],
-            )
-            for r in rows
-        ]
+            ))
+        return events
 
     async def count(self) -> int:
-        assert self._conn is not None, "Store not opened"
+        conn = self._require_conn()
         with self._lock:
-            row = self._conn.execute("SELECT COUNT(*) FROM events").fetchone()
+            row = conn.execute("SELECT COUNT(*) FROM events").fetchone()
         return row[0] if row else 0

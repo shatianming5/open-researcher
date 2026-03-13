@@ -17,12 +17,16 @@ class Database:
         self.lock = threading.Lock()
 
     async def open(self) -> None:
-        self.conn = sqlite3.connect(self._db_path, check_same_thread=False)
-        self.conn.execute("PRAGMA journal_mode=WAL")
-        self.conn.execute("PRAGMA foreign_keys=ON")
-        apply_migrations(self.conn)
+        with self.lock:
+            if self.conn is not None:
+                return
+            self.conn = sqlite3.connect(self._db_path, check_same_thread=False)
+            self.conn.execute("PRAGMA journal_mode=WAL")
+            self.conn.execute("PRAGMA foreign_keys=ON")
+            apply_migrations(self.conn)
 
     async def close(self) -> None:
-        if self.conn:
-            self.conn.close()
-            self.conn = None
+        with self.lock:
+            if self.conn:
+                self.conn.close()
+                self.conn = None
