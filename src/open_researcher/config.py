@@ -55,6 +55,8 @@ class ResearchConfig:
     bootstrap_smoke_command: str = ""
     bootstrap_expected_paths: list[str] = field(default_factory=list)
     bootstrap_requires_gpu: bool = False
+    hub_arxiv_id: str = ""
+    hub_manifest_source: str = ""
     gpu_default_memory_per_worker_mb: int = 4096
     gpu_allow_same_gpu_packing: bool = True
     gpu_packing_signal: str = "memory_only"
@@ -145,6 +147,8 @@ def load_config(research_dir: Path, *, strict: bool = False) -> ResearchConfig:
         if isinstance(bootstrap.get("expected_paths", []), list)
         else [],
         bootstrap_requires_gpu=bool(bootstrap.get("requires_gpu", False)),
+        hub_arxiv_id=str(bootstrap.get("hub_arxiv_id", "") or ""),
+        hub_manifest_source=str(bootstrap.get("hub_manifest_source", "") or ""),
         gpu_default_memory_per_worker_mb=max(int(gpu.get("default_memory_per_worker_mb", 4096) or 4096), 0),
         gpu_allow_same_gpu_packing=bool(gpu.get("allow_same_gpu_packing", True)),
         gpu_packing_signal=str(gpu.get("packing_signal", "memory_only") or "memory_only"),

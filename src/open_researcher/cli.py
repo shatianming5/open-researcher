@@ -9,6 +9,7 @@ from rich.console import Console
 from open_researcher.bootstrap import format_bootstrap_dry_run
 from open_researcher.config import ResearchConfig, load_config
 from open_researcher.config_cmd import config_app
+from open_researcher.hub_cmd import hub_app
 from open_researcher.ideas_cmd import ideas_app
 from open_researcher.logs_cmd import logs_app
 from open_researcher.workflow_options import build_workflow_selection
@@ -23,6 +24,7 @@ app = typer.Typer(
 app.add_typer(ideas_app, name="ideas")
 app.add_typer(config_app, name="config")
 app.add_typer(logs_app, name="logs")
+app.add_typer(hub_app, name="hub")
 
 
 def _print_notices(notices: list[str]) -> None:
