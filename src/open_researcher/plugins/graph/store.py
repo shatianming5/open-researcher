@@ -13,6 +13,14 @@ class GraphStore:
     def __init__(self, db: Database) -> None:
         self._db = db
 
+    @property
+    def _conn(self):
+        """Return the underlying connection, raising if not open."""
+        conn = self._db.conn
+        if conn is None:
+            raise RuntimeError("Database is not open")
+        return conn
+
     # ------------------------------------------------------------------
     # Hypotheses
     # ------------------------------------------------------------------
@@ -28,12 +36,12 @@ class GraphStore:
     ) -> dict[str, Any]:
         """Insert a new hypothesis and return it as a dict."""
         now = time.time()
-        self._db.conn.execute(
+        self._conn.execute(
             "INSERT INTO hypotheses (id, claim, status, parent_id, created_at, metadata) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             (id, claim, status, parent_id, now, metadata),
         )
-        self._db.conn.commit()
+        self._conn.commit()
         return {
             "id": id,
             "claim": claim,
@@ -45,7 +53,7 @@ class GraphStore:
 
     async def get_hypothesis(self, hypothesis_id: str) -> dict[str, Any] | None:
         """Return a single hypothesis by id, or ``None`` if not found."""
-        row = self._db.conn.execute(
+        row = self._conn.execute(
             "SELECT id, claim, status, parent_id, created_at, metadata "
             "FROM hypotheses WHERE id = ?",
             (hypothesis_id,),
@@ -82,11 +90,11 @@ class GraphStore:
         if not updates:
             return
         params.append(hypothesis_id)
-        self._db.conn.execute(
+        self._conn.execute(
             f"UPDATE hypotheses SET {', '.join(updates)} WHERE id = ?",
             params,
         )
-        self._db.conn.commit()
+        self._conn.commit()
 
     async def list_hypotheses(
         self,
@@ -95,13 +103,13 @@ class GraphStore:
     ) -> list[dict[str, Any]]:
         """Return all hypotheses, optionally filtered by *status*."""
         if status is not None:
-            rows = self._db.conn.execute(
+            rows = self._conn.execute(
                 "SELECT id, claim, status, parent_id, created_at, metadata "
                 "FROM hypotheses WHERE status = ?",
                 (status,),
             ).fetchall()
         else:
-            rows = self._db.conn.execute(
+            rows = self._conn.execute(
                 "SELECT id, claim, status, parent_id, created_at, metadata "
                 "FROM hypotheses",
             ).fetchall()
@@ -123,12 +131,12 @@ class GraphStore:
     ) -> dict[str, Any]:
         """Insert a new piece of evidence linked to a hypothesis."""
         now = time.time()
-        self._db.conn.execute(
+        self._conn.execute(
             "INSERT INTO evidence (id, hypothesis_id, experiment_id, direction, summary, created_at) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             (id, hypothesis_id, experiment_id, direction, summary, now),
         )
-        self._db.conn.commit()
+        self._conn.commit()
         return {
             "id": id,
             "hypothesis_id": hypothesis_id,
@@ -146,13 +154,13 @@ class GraphStore:
         """Return evidence rows, optionally filtered by *hypothesis_id*."""
         cols = ("id", "hypothesis_id", "experiment_id", "direction", "summary", "created_at")
         if hypothesis_id is not None:
-            rows = self._db.conn.execute(
+            rows = self._conn.execute(
                 "SELECT id, hypothesis_id, experiment_id, direction, summary, created_at "
                 "FROM evidence WHERE hypothesis_id = ?",
                 (hypothesis_id,),
             ).fetchall()
         else:
-            rows = self._db.conn.execute(
+            rows = self._conn.execute(
                 "SELECT id, hypothesis_id, experiment_id, direction, summary, created_at "
                 "FROM evidence",
             ).fetchall()

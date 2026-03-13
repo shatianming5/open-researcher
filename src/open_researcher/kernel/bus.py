@@ -2,20 +2,25 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 from collections import defaultdict
-from typing import Callable
+from typing import Callable, Union
 
 from open_researcher.kernel.event import Event, event_matches
 from open_researcher.kernel.store import EventStore
 
 logger = logging.getLogger(__name__)
 
-Handler = Callable[[Event], None]
+Handler = Union[Callable[[Event], None], Callable[[Event], "asyncio.Future[None]"]]
 
 
 class EventBus:
-    """Async event bus: persist then dispatch."""
+    """Async event bus: persist then dispatch.
+
+    Handlers may be sync or async callables.  Sync handlers are invoked via
+    ``call_soon``; async handlers are scheduled as tasks.
+    """
 
     def __init__(self, store: EventStore) -> None:
         self._store = store
@@ -32,15 +37,28 @@ class EventBus:
 
     async def emit(self, event: Event) -> None:
         await self._store.append(event)
-        asyncio.get_running_loop().call_soon(self._dispatch_sync, event)
+        loop = asyncio.get_running_loop()
+        loop.call_soon(self._dispatch, event, loop)
 
-    def _dispatch_sync(self, event: Event) -> None:
+    def _dispatch(self, event: Event, loop: asyncio.AbstractEventLoop) -> None:
         for pattern, handlers in self._handlers.items():
             if event_matches(event, pattern):
                 for handler in handlers:
                     try:
-                        handler(event)
+                        if inspect.iscoroutinefunction(handler):
+                            loop.create_task(self._safe_async_call(handler, event))
+                        else:
+                            handler(event)
                     except Exception:
                         logger.exception(
                             "Handler %r failed for event %s", handler, event.type
                         )
+
+    @staticmethod
+    async def _safe_async_call(handler: Callable, event: Event) -> None:
+        try:
+            await handler(event)
+        except Exception:
+            logger.exception(
+                "Async handler %r failed for event %s", handler, event.type
+            )

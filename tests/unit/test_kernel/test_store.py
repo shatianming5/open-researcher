@@ -60,6 +60,29 @@ async def test_replay_since_timestamp():
     await store.close()
 
 
+async def test_replay_type_prefix_escapes_wildcards():
+    """Ensure % and _ in type_prefix don't act as SQL LIKE wildcards."""
+    from open_researcher.kernel.event import Event
+    from open_researcher.kernel.store import EventStore
+
+    store = EventStore(":memory:")
+    await store.open()
+
+    await store.append(Event(type="test%wild", payload={}))
+    await store.append(Event(type="test_wild", payload={}))
+    await store.append(Event(type="testXwild", payload={}))
+
+    # Only exact prefix should match
+    events = await store.replay(type_prefix="test%")
+    assert len(events) == 1
+    assert events[0].type == "test%wild"
+
+    events = await store.replay(type_prefix="test_")
+    assert len(events) == 1
+    assert events[0].type == "test_wild"
+    await store.close()
+
+
 async def test_event_count():
     from open_researcher.kernel.event import Event
     from open_researcher.kernel.store import EventStore

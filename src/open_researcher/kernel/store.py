@@ -62,8 +62,9 @@ class EventStore:
         clauses: list[str] = []
         params: list[object] = []
         if type_prefix:
-            clauses.append("type LIKE ? || '%'")
-            params.append(type_prefix)
+            clauses.append("type LIKE ? || '%' ESCAPE '\\'")
+            escaped = type_prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            params.append(escaped)
         if since:
             clauses.append("ts > ?")
             params.append(since)

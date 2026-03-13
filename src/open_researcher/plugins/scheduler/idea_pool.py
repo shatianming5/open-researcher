@@ -18,6 +18,14 @@ class IdeaPoolStore:
         self._db = db
         self._counter = 0
 
+    @property
+    def _conn(self):
+        """Return the underlying connection, raising if not open."""
+        conn = self._db.conn
+        if conn is None:
+            raise RuntimeError("Database is not open")
+        return conn
+
     def _next_id(self) -> str:
         self._counter += 1
         return f"idea-{self._counter:03d}"
@@ -31,12 +39,12 @@ class IdeaPoolStore:
         """Insert a new idea with *pending* status and return it as a dict."""
         idea_id = self._next_id()
         now = time.time()
-        self._db.conn.execute(
+        self._conn.execute(
             "INSERT INTO ideas (id, title, status, priority, created_at, metadata) "
             "VALUES (?, ?, 'pending', ?, ?, ?)",
             (idea_id, title, priority, now, metadata),
         )
-        self._db.conn.commit()
+        self._conn.commit()
         return {
             "id": idea_id,
             "title": title,
@@ -49,7 +57,7 @@ class IdeaPoolStore:
 
     async def get(self, idea_id: str) -> dict[str, Any] | None:
         """Return a single idea by *id*, or ``None``."""
-        cur = self._db.conn.execute("SELECT * FROM ideas WHERE id = ?", (idea_id,))
+        cur = self._conn.execute("SELECT * FROM ideas WHERE id = ?", (idea_id,))
         row = cur.fetchone()
         if row is None:
             return None
@@ -57,7 +65,7 @@ class IdeaPoolStore:
 
     async def list_by_status(self, status: str) -> list[dict[str, Any]]:
         """Return all ideas matching *status*, ordered by priority descending."""
-        cur = self._db.conn.execute(
+        cur = self._conn.execute(
             "SELECT * FROM ideas WHERE status = ? ORDER BY priority DESC",
             (status,),
         )
@@ -68,7 +76,7 @@ class IdeaPoolStore:
 
         Returns the claimed idea dict, or ``None`` if no pending ideas exist.
         """
-        cur = self._db.conn.execute(
+        cur = self._conn.execute(
             "UPDATE ideas SET status = 'claimed', claimed_by = ? "
             "WHERE id = ("
             "  SELECT id FROM ideas WHERE status = 'pending' "
@@ -79,31 +87,31 @@ class IdeaPoolStore:
         row = cur.fetchone()
         if row is None:
             return None
-        self._db.conn.commit()
+        self._conn.commit()
         return self._row_to_dict(cur, row)
 
     async def complete(self, idea_id: str) -> dict[str, Any] | None:
         """Mark an idea as *done*."""
-        cur = self._db.conn.execute(
+        cur = self._conn.execute(
             "UPDATE ideas SET status = 'done' WHERE id = ? RETURNING *",
             (idea_id,),
         )
         row = cur.fetchone()
         if row is None:
             return None
-        self._db.conn.commit()
+        self._conn.commit()
         return self._row_to_dict(cur, row)
 
     async def skip(self, idea_id: str) -> dict[str, Any] | None:
         """Mark an idea as *skipped*."""
-        cur = self._db.conn.execute(
+        cur = self._conn.execute(
             "UPDATE ideas SET status = 'skipped' WHERE id = ? RETURNING *",
             (idea_id,),
         )
         row = cur.fetchone()
         if row is None:
             return None
-        self._db.conn.commit()
+        self._conn.commit()
         return self._row_to_dict(cur, row)
 
     @staticmethod
