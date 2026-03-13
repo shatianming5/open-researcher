@@ -182,6 +182,7 @@ def _sync_source_overlays(repo_path: Path, worktree_path: Path) -> list[Path]:
         cwd=str(repo_path),
         capture_output=True,
         text=True,
+        timeout=120,
     )
     if patch.returncode != 0:
         detail = patch.stderr.strip() or patch.stdout.strip() or "unknown git diff error"
@@ -193,6 +194,7 @@ def _sync_source_overlays(repo_path: Path, worktree_path: Path) -> list[Path]:
             input=patch.stdout,
             capture_output=True,
             text=True,
+            timeout=120,
         )
         if applied.returncode != 0:
             detail = applied.stderr.strip() or applied.stdout.strip() or "unknown git apply error"
@@ -393,13 +395,17 @@ def _branch_exists(repo_path: Path, branch_name: str) -> bool:
     return result.returncode == 0
 
 
-def _run_git(repo_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
-        ["git", *args],
-        cwd=str(repo_path),
-        capture_output=True,
-        text=True,
-    )
+def _run_git(repo_path: Path, *args: str, timeout: int = 60) -> subprocess.CompletedProcess[str]:
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise WorktreeError(f"git {' '.join(args)} timed out after {timeout}s") from exc
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip() or "unknown git error"
         raise WorktreeError(f"git {' '.join(args)} failed: {detail}")

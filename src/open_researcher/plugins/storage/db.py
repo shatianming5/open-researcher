@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 from pathlib import Path
 
 from open_researcher.plugins.storage.migrations import apply_migrations
@@ -13,6 +14,7 @@ class Database:
     def __init__(self, db_path: str | Path) -> None:
         self._db_path = str(db_path)
         self.conn: sqlite3.Connection | None = None
+        self.lock = threading.Lock()
 
     async def open(self) -> None:
         self.conn = sqlite3.connect(self._db_path, check_same_thread=False)

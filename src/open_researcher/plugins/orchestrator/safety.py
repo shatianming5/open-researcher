@@ -102,13 +102,17 @@ def rollback_workspace(repo_path: Path, snapshot: GitWorkspaceSnapshot) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _run_git(repo_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
-        ["git", *args],
-        cwd=str(repo_path),
-        capture_output=True,
-        text=True,
-    )
+def _run_git(repo_path: Path, *args: str, timeout: int = 60) -> subprocess.CompletedProcess[str]:
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise GitWorkspaceError(f"git {' '.join(args)} timed out after {timeout}s") from exc
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip() or "unknown git error"
         raise GitWorkspaceError(f"git {' '.join(args)} failed: {detail}")
@@ -154,6 +158,7 @@ def _overlay_manifest_path(repo_path: Path) -> Path | None:
         cwd=str(repo_path),
         capture_output=True,
         text=True,
+        timeout=30,
     )
     if result.returncode != 0:
         return None

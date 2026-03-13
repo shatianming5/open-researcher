@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from pathlib import Path
 from open_researcher.kernel.event import Event
 
@@ -26,6 +27,7 @@ class EventStore:
     def __init__(self, db_path: str | Path) -> None:
         self._db_path = str(db_path)
         self._conn: sqlite3.Connection | None = None
+        self._lock = threading.Lock()
 
     async def open(self) -> None:
         self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
@@ -39,18 +41,19 @@ class EventStore:
 
     async def append(self, event: Event) -> None:
         assert self._conn is not None, "Store not opened"
-        self._conn.execute(
-            "INSERT INTO events (type, payload, ts, source, corr_id) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (
-                event.type,
-                json.dumps(event.payload),
-                event.ts,
-                event.source,
-                event.correlation_id,
-            ),
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO events (type, payload, ts, source, corr_id) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (
+                    event.type,
+                    json.dumps(event.payload),
+                    event.ts,
+                    event.source,
+                    event.correlation_id,
+                ),
+            )
+            self._conn.commit()
 
     async def replay(
         self,
@@ -69,10 +72,11 @@ class EventStore:
             clauses.append("ts > ?")
             params.append(since)
         where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
-        rows = self._conn.execute(
-            f"SELECT type, payload, ts, source, corr_id FROM events{where} ORDER BY id",
-            params,
-        ).fetchall()
+        with self._lock:
+            rows = self._conn.execute(
+                f"SELECT type, payload, ts, source, corr_id FROM events{where} ORDER BY id",
+                params,
+            ).fetchall()
         return [
             Event(
                 type=r[0],
@@ -86,5 +90,6 @@ class EventStore:
 
     async def count(self) -> int:
         assert self._conn is not None, "Store not opened"
-        row = self._conn.execute("SELECT COUNT(*) FROM events").fetchone()
+        with self._lock:
+            row = self._conn.execute("SELECT COUNT(*) FROM events").fetchone()
         return row[0] if row else 0

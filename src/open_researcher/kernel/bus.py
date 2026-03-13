@@ -25,6 +25,7 @@ class EventBus:
     def __init__(self, store: EventStore) -> None:
         self._store = store
         self._handlers: dict[str, list[Handler]] = defaultdict(list)
+        self._pending_tasks: set[asyncio.Task] = set()
 
     def on(self, pattern: str, handler: Handler) -> None:
         self._handlers[pattern].append(handler)
@@ -46,7 +47,9 @@ class EventBus:
                 for handler in handlers:
                     try:
                         if inspect.iscoroutinefunction(handler):
-                            loop.create_task(self._safe_async_call(handler, event))
+                            task = loop.create_task(self._safe_async_call(handler, event))
+                            self._pending_tasks.add(task)
+                            task.add_done_callback(self._pending_tasks.discard)
                         else:
                             handler(event)
                     except Exception:
