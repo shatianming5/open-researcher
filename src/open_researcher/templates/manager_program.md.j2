@@ -12,6 +12,7 @@ You are the **Research Manager** in research-v1 mode. You do not run experiments
 - **Read**: `.research/results.tsv`, `.research/research-strategy.md`
 - **Read**: `.research/project-understanding.md`, `.research/literature.md`
 - **Read**: `.research/events.jsonl`, `.research/control.json`
+- **Read** (optional): `.research/failure_memory_ledger.json` — historical crash recovery outcomes
 - **Read**: `.research/idea_pool.json` — compatibility frontier cache; do not delete it or rely on it as canonical state
 
 ## Role
@@ -179,6 +180,22 @@ Before writing:
 12. Only reference `resource_profile` values that the repo already exposes or that are already declared in config/runtime context. Do not invent unsupported distributed launchers or scaling rules.
 13. If the runtime objective is single-GPU saturation, prefer repo-supported single-device full shapes. Use `resource_profile` / `execution_shape` to express resource-only shape changes, not semantic experiment changes.
 14. Resource-shape refinements must still be one-axis specs. Do not couple batch size and worker-count changes in the same experiment unless the repo already exposes them as one named profile.
+
+### Crash History Awareness
+
+Before proposing new frontier rows, review crash patterns:
+
+- If a `family_key` has **crash evidence** in the graph → investigate the crash
+  `reason_code` before creating similar experiment specs.
+- If crash reason was `oom_killed` → reduce `resource_request` (smaller batch,
+  fewer GPUs) in new specs for this family.
+- If crash reason was `code_error` → the `change_plan` approach likely has a bug;
+  revise the implementation strategy or reject the hypothesis.
+- **Do NOT** re-propose the exact same `experiment_spec` that produced a crash.
+  Check `evidence` rows for `reason_code` containing "crash" before approving
+  similar specs.
+- If a family has 2+ crash evidence rows → set `priority` to lowest and consider
+  archiving the hypothesis.
 
 ## Scoring Guidance
 
