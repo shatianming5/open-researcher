@@ -1298,9 +1298,10 @@ class WorkerManager:
                                 )
                     else:
                         if not self._terminal_result_present(current_state):
-                            applied = self.idea_pool.update_status(
+                            applied = self.idea_pool.mark_done_with_context(
                                 idea["id"],
-                                "skipped",
+                                metric_value=None,
+                                verdict="crash",
                                 claim_token=claim_token or None,
                                 resource_observation=self._resource_observation(
                                     idea,
@@ -1315,7 +1316,7 @@ class WorkerManager:
                             if not applied:
                                 self.on_output(
                                     f"[{wid}] Claim race detected for {idea['id']}; "
-                                    "skip write suppressed, cleanup applied"
+                                    "crash write suppressed, cleanup applied"
                                 )
                     if (
                         workspace_snapshot is not None

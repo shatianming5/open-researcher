@@ -236,7 +236,7 @@ def test_worker_manager_stops_on_unschedulable_pending_idea():
 
 
 def test_worker_manager_handles_agent_failure():
-    """Failed agent runs should mark ideas as skipped, not done."""
+    """Failed agent runs should mark ideas as done with verdict=crash."""
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         research = _make_research_dir(tmp_path)
@@ -283,8 +283,8 @@ def test_worker_manager_handles_agent_failure():
 
         summary = idea_pool.summary()
         assert summary["pending"] == 0
-        assert summary["skipped"] == 1
-        assert summary["done"] == 0
+        assert summary["skipped"] == 0
+        assert summary["done"] == 1
 
 
 def test_worker_manager_handles_agent_exception():
@@ -949,7 +949,7 @@ def test_worker_manager_rolls_back_failed_run_in_main_repo():
         wm.join(timeout=5)
 
         summary = idea_pool.summary()
-        assert summary["skipped"] == 1
+        assert summary["done"] == 1
         assert (tmp_path / "hello.py").read_text(encoding="utf-8") == "print('hello')\n"
         status = subprocess.run(
             ["git", "status", "--short", "--untracked-files=all"],
@@ -1123,7 +1123,7 @@ def test_worker_manager_marks_claimed_item_skipped_when_setup_raises():
 
         summary = idea_pool.summary()
         assert summary["running"] == 0
-        assert summary["skipped"] == 1
+        assert summary["done"] == 1
 
         # Not all 19 ideas should have been processed
         summary = idea_pool.summary()
@@ -1208,7 +1208,7 @@ def test_worker_manager_releases_gpu_when_setup_raises_before_agent_run():
         wm.join(timeout=5)
 
         summary = idea_pool.summary()
-        assert summary["skipped"] == 1
+        assert summary["done"] == 1
         assert wm.fatal_errors == 0
         assert len(allocator.released) == 1
         assert not any("Fatal worker error" in line for line in output_lines)
@@ -1673,7 +1673,7 @@ def test_worker_manager_times_out_parallel_run_and_marks_item_skipped():
         wm.join(timeout=5)
 
         summary = idea_pool.summary()
-        assert summary["skipped"] == 1
+        assert summary["done"] == 1
         assert any("Experiment timeout" in line for line in output_lines)
 
 
