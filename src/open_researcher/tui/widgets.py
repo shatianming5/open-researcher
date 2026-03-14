@@ -229,6 +229,45 @@ class StatsBar(Static):
         self.stats_text = line1 + ("\n" + "  ".join(line2_parts) if line2_parts else "")
 
 
+# -- Phase step indicator names and order --
+_PHASE_STEPS = ["scouting", "preparing", "reviewing", "experimenting"]
+_PHASE_LABELS = {"scouting": "Scout", "preparing": "Prepare", "reviewing": "Review", "experimenting": "Experiment"}
+
+
+class PhaseStripBar(Static):
+    """One-line horizontal phase step indicator: ✓ Scout ─── ● Prepare ─── ○ Review ─── ○ Experiment."""
+
+    phase_text = reactive("", layout=True)
+
+    def render(self) -> str:
+        return self.phase_text or ""
+
+    def update_phase(self, phase: str, *, paused: bool = False) -> None:
+        try:
+            active_idx = _PHASE_STEPS.index(phase)
+        except ValueError:
+            active_idx = -1
+
+        parts: list[str] = []
+        for i, step in enumerate(_PHASE_STEPS):
+            label = _PHASE_LABELS[step]
+            if i < active_idx:
+                # Completed
+                parts.append(f"[{C_SUCCESS}]✓ {label}[/]")
+            elif i == active_idx:
+                # Current
+                if paused:
+                    parts.append(f"[bold {C_CORAL}]⏸ {label}[/]")
+                else:
+                    parts.append(f"[bold {C_PRIMARY}]● {label}[/]")
+            else:
+                # Future
+                parts.append(f"[{C_DIM}]○ {label}[/]")
+
+        sep = f"  [{C_DIM}]───[/]  "
+        self.phase_text = "  " + sep.join(parts)
+
+
 class SessionChromeBar(Static):
     """Activity bar: phase-aware display of current agent status, progress, and metrics."""
 
@@ -397,49 +436,52 @@ class BootstrapStatusPanel(Static):
 
 
 class RoleActivityPanel(Static):
-    """Render manager / critic / experiment live role states."""
+    """Vertical pipeline flow: Manager ↓ Experiment ↓ Critic."""
 
     roles_text = reactive("", layout=True)
 
+    # Fixed pipeline order: Manager → Experiment → Critic
+    _PIPELINE_ORDER = ["manager_agent", "experiment_agent", "critic_agent"]
+
     def render(self) -> str:
-        return self.roles_text or _empty_state("role activity")
+        return self.roles_text or _empty_state("agent pipeline")
 
     def update_roles(self, roles: list[RoleStatus], *, paused: bool = False, skip_current: bool = False) -> None:
         if not roles:
-            self.roles_text = _empty_state("role activity")
+            self.roles_text = _empty_state("agent pipeline")
             return
 
-        header_bits = [f"[bold {C_TEXT}]Role Activity[/]"]
+        header_bits = [f"[bold {C_TEXT}]Agent Pipeline[/]"]
         if paused:
             header_bits.append(_chip("Paused", fg="#08111a", bg=C_CORAL))
         if skip_current:
             header_bits.append(_chip("Skip", fg="#08111a", bg=C_WARNING))
         lines = ["  ".join(header_bits)]
 
-        for role in roles:
+        # Index roles by key for ordered lookup
+        by_key = {r.key: r for r in roles}
+        ordered = [by_key[k] for k in self._PIPELINE_ORDER if k in by_key]
+        # Append any roles not in the fixed order
+        seen = set(self._PIPELINE_ORDER)
+        for r in roles:
+            if r.key not in seen:
+                ordered.append(r)
+
+        arrow = f"  [{C_DIM}]     ↓[/]"
+        for i, role in enumerate(ordered):
+            if i > 0:
+                lines.append(arrow)
+
             if role.status == "idle":
-                # Compress idle roles to a single dim line
-                lines.append(f"[{C_DIM}]· {escape(role.label)}  \\[idle][/]")
-                continue
+                lines.append(f"  [{C_DIM}]{escape(role.label)}  \\[idle][/]")
+            else:
+                color = _status_color(role.status)
+                chip = _chip(_role_label(role.status), fg="#08111a", bg=color)
+                lines.append(f"  [bold {C_TEXT}]{escape(role.label)}[/]  {chip}")
+                if role.frontier_id:
+                    lines.append(f"  [{C_DIM}]          [/][{C_PRIMARY}]{escape(role.frontier_id)}[/]")
 
-            color = _status_color(role.status)
-            status_chip = _chip(_role_label(role.status), fg="#08111a", bg=color)
-            meta = []
-            if role.frontier_id:
-                meta.append(f"[{C_PRIMARY}]{escape(role.frontier_id)}[/]")
-            if role.execution_id:
-                meta.append(f"[{C_DIM}]{escape(role.execution_id)}[/]")
-            if role.worker_count:
-                meta.append(f"[{C_INFO}]{role.worker_count} worker(s)[/]")
-            detail = escape(role.detail or "")
-            lines.append(f"[bold {C_TEXT}]{escape(role.label)}[/]  {status_chip}")
-            if meta:
-                lines.append(f"[{C_DIM}]{'  '.join(meta)}[/]")
-            if detail:
-                lines.append(f"[{C_DIM}]{detail}[/]")
-            lines.append("")
-
-        self.roles_text = "\n".join(lines).rstrip()
+        self.roles_text = "\n".join(lines)
 
 
 class ResearchGraphSummaryPanel(Static):
@@ -1311,43 +1353,18 @@ class ExperimentStatusPanel(Static):
         phase: str = "",
         role_label: str = "Experiment Agent",
     ) -> None:
-        if phase == "scouting":
-            detail = escape((activity or {}).get("detail", "Analyzing repository, docs, and evaluation path."))
-            self.status_text = (
-                f"[bold {C_PRIMARY}]Scout Agent[/]\n"
-                f"[{C_DIM}]Repository reconnaissance is running.[/]\n"
-                f"[{C_TEXT}]{detail}[/]"
-            )
-            return
-
-        if phase == "reviewing":
-            self.status_text = (
-                f"[bold {C_WARNING}]Review Gate[/]\n"
-                f"[{C_DIM}]Waiting for operator confirmation before the research loop proceeds.[/]"
-            )
-            return
-
-        if phase == "preparing":
-            default_detail = "Installing dependencies, preparing data, and running smoke."
-            detail = escape((activity or {}).get("detail", default_detail))
-            self.status_text = (
-                f"[bold {C_WARNING}]Repo Prepare[/]\n"
-                f"[{C_DIM}]Resolving environment, data, and smoke readiness before research starts.[/]\n"
-                f"[{C_TEXT}]{detail}[/]"
-            )
-            return
-
+        # Phase-specific display handled by PhaseStripBar + ActivityBar.
+        # This panel focuses on experiment execution details only.
         if not activity:
             self.status_text = (
                 f"[bold {C_TEXT}]Execution Focus[/]  {_chip('IDLE', fg='#08111a', bg=C_DIM)}\n"
-                f"[{C_DIM}]No active role. Waiting for the next manager or experiment cycle.[/]"
+                f"[{C_DIM}]Waiting for next cycle.[/]"
             )
             return
 
         status = str(activity.get("status", "idle") or "idle").strip() or "idle"
         color = _status_color(status)
         label_chip = _chip(_role_label(status), fg="#08111a", bg=color)
-        detail = escape(str(activity.get("detail", "")).strip() or "Waiting for input")
         frontier = escape(str(activity.get("frontier_id", "") or activity.get("idea", "")).strip())
         execution = escape(str(activity.get("execution_id", "")).strip())
         progress = ""
@@ -1359,7 +1376,6 @@ class ExperimentStatusPanel(Static):
         lines = [f"[bold {C_TEXT}]Execution Focus[/]  {label_chip}", f"[bold {C_PRIMARY}]{escape(role_label)}[/]"]
         if frontier or execution:
             lines.append(f"[{C_DIM}]{frontier}[/]  [{C_DIM}]{execution}[/]".strip())
-        lines.append(f"[{C_TEXT}]{detail}[/]")
         if progress:
             lines.append(progress)
         self.status_text = "\n".join(lines)

@@ -30,6 +30,7 @@ from open_researcher.tui.widgets import (
     HotkeyBar,
     LineageTimelinePanel,
     MetricChart,
+    PhaseStripBar,
     RecentExperiments,
     ResearchGraphSummaryPanel,
     RoleActivityPanel,
@@ -81,6 +82,7 @@ class ResearchApp(App):
 
     def compose(self) -> ComposeResult:
         yield StatsBar(id="stats-bar")
+        yield PhaseStripBar(id="phase-strip")
         with TabbedContent(id="tabs"):
             with TabPane("Command", id="tab-command"):
                 yield SessionChromeBar(id="session-chrome", classes="hero-card")
@@ -360,6 +362,13 @@ class ResearchApp(App):
             )
         except NoMatches:
             logger.debug("Error refreshing stats bar", exc_info=True)
+
+        try:
+            self.query_one("#phase-strip", PhaseStripBar).update_phase(
+                self.app_phase, paused=dashboard.session.paused
+            )
+        except NoMatches:
+            logger.debug("Error refreshing phase strip", exc_info=True)
 
         # --- Detect active role & progress (shared by ActivityBar + ExperimentStatus) ---
         _active_role: RoleStatus | None = None

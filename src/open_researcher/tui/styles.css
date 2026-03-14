@@ -13,6 +13,16 @@ Screen {
     border-bottom: solid #16324a;
 }
 
+#phase-strip {
+    dock: top;
+    height: auto;
+    min-height: 1;
+    max-height: 1;
+    background: #0a1520;
+    padding: 0 2;
+    border-bottom: solid #16324a;
+}
+
 #tabs {
     height: 1fr;
     background: #060d15;
