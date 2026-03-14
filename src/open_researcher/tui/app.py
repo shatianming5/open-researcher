@@ -391,9 +391,15 @@ class ResearchApp(App):
             logger.debug("Error updating docs sidebar", exc_info=True)
 
         try:
+            active_tab = ""
+            try:
+                active_tab = self.query_one("#tabs", TabbedContent).active
+            except NoMatches:
+                pass
             self.query_one("#hotkey-bar", HotkeyBar).update_state(
                 paused=dashboard.session.paused,
                 phase=self.app_phase,
+                active_tab=active_tab,
             )
         except NoMatches:
             logger.debug("Error updating hotkey bar", exc_info=True)

@@ -109,7 +109,11 @@ def test_idea_list_panel_empty():
 def test_hotkey_bar_shows_tabs():
     bar = HotkeyBar()
     rendered = bar.render()
-    assert "tabs" in str(rendered)
+    text = str(rendered)
+    assert "Cmd" in text
+    assert "Exec" in text
+    assert "Logs" in text
+    assert "Docs" in text
 
 
 def test_hotkey_bar_includes_quit():

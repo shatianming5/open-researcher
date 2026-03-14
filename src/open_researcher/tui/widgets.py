@@ -39,7 +39,7 @@ C_SECONDARY = "#a6da95"
 C_ACCENT = "#c6a0f6"
 C_TEXT = "#d7e1f3"
 C_BEST = "#2ac3de"
-C_DIM = "#6b7c93"
+C_DIM = "#8899ab"
 C_PANEL = "#101a26"
 C_PANEL_ALT = "#0b141f"
 C_SKY = "#5ac8fa"
@@ -72,6 +72,10 @@ def _status_color(status: str) -> str:
     value = str(status or "").strip()
     return {
         "running": C_INFO,
+        "analyzing": C_ACCENT,
+        "selecting": C_SKY,
+        "writing": C_CORAL,
+        "evaluating": C_WARNING,
         "approved": C_SUCCESS,
         "completed": C_SUCCESS,
         "resolved": C_SUCCESS,
@@ -80,11 +84,11 @@ def _status_color(status: str) -> str:
         "disabled": C_DIM,
         "skipped": C_DIM,
         "draft": C_WARNING,
-        "needs_post_review": C_WARNING,
-        "needs_repro": C_WARNING,
+        "needs_post_review": C_CORAL,
+        "needs_repro": C_CORAL,
         "unresolved": C_WARNING,
         "promoted": C_SUCCESS,
-        "under_review": C_INFO,
+        "under_review": C_SKY,
         "discard": C_WARNING,
         "discarded": C_WARNING,
         "crash": C_ERROR,
@@ -167,22 +171,28 @@ class StatsBar(Static):
             "experimenting": _chip("Research", fg="#08111a", bg=C_SUCCESS),
         }
 
-        parts: list[str] = []
+        sep = f" [{C_DIM}]│[/] "
+        left: list[str] = []
         if phase in phase_badges:
-            parts.append(phase_badges[phase])
-        parts.append(f"[bold {C_TEXT}]OPEN RESEARCHER[/]")
-        parts.append(f"[{C_INFO}]{escape(protocol)}[/]")
-        parts.append(f"[{C_DIM}]branch {escape(branch)}[/]")
+            left.append(phase_badges[phase])
+        left.append(f"[bold {C_TEXT}]OPEN RESEARCHER[/]")
+        left.append(f"[{C_INFO}]{escape(protocol)}[/]")
+        left.append(f"[{C_DIM}]branch {escape(branch)}[/]")
         if paused:
-            parts.append(_chip("PAUSED", fg="#08111a", bg=C_CORAL))
-        parts.append(f"[{C_SUCCESS}]{keep}K[/] [{C_WARNING}]{discard}D[/] [{C_ERROR}]{crash}C[/]")
+            left.append(_chip("PAUSED", fg="#08111a", bg=C_CORAL))
+
+        right: list[str] = []
+        right.append(f"[{C_SUCCESS}]{keep}K[/] [{C_WARNING}]{discard}D[/] [{C_ERROR}]{crash}C[/]")
         if runnable:
-            parts.append(f"[{C_PRIMARY}]frontier {runnable}[/]")
+            right.append(f"[{C_PRIMARY}]frontier {runnable}[/]")
         if total == 0:
-            parts.append(f"[{C_DIM}]waiting for first experiment[/]")
+            right.append(f"[{C_DIM}]waiting for first experiment[/]")
         elif best is not None:
-            parts.append(f"[bold {C_BEST}]best={_format_metric(best)}[/]")
-        self.stats_text = "  ".join(parts)
+            right.append(f"[bold {C_BEST}]best={_format_metric(best)}[/]")
+        import time as _time
+        now_str = _time.strftime("%H:%M:%S")
+        right.append(f"[{C_DIM}]{now_str}[/]")
+        self.stats_text = "  ".join(left) + sep + "  ".join(right)
 
 
 class SessionChromeBar(Static):
@@ -265,19 +275,23 @@ class BootstrapStatusPanel(Static):
         step_line = f"[{C_DIM}]install[/] {install_chip}  [{C_DIM}]data[/] {data_chip}  [{C_DIM}]smoke[/] {smoke_chip}"
         lines = [
             f"[bold {C_TEXT}]Repository Prepare[/]  {status_chip}",
-            f"[{C_DIM}]working dir[/] [{C_TEXT}]{escape(summary.working_dir)}[/]  "
-            f"[{C_DIM}]python[/] [{C_INFO}]{escape(summary.python_executable or 'unresolved')}[/]",
             step_line,
         ]
+        # Only show technical paths when bootstrap is not yet completed
+        if summary.status not in ("completed", "resolved", "cached"):
+            lines.append(
+                f"[{C_DIM}]dir[/] [{C_TEXT}]{escape(summary.working_dir)}[/]  "
+                f"[{C_DIM}]python[/] [{C_INFO}]{escape(summary.python_executable or 'unresolved')}[/]"
+            )
         if summary.missing_paths:
-            lines.append(f"[{C_WARNING}]missing paths:[/] {escape(', '.join(summary.missing_paths))}")
+            lines.append(f"[{C_WARNING}]missing:[/] {escape(', '.join(summary.missing_paths))}")
         if summary.unresolved:
             for item in summary.unresolved:
                 lines.append(f"[{C_WARNING}]unresolved:[/] {escape(item)}")
         if summary.errors:
             for item in summary.errors:
                 lines.append(f"[{C_CORAL}]error:[/] {escape(item)}")
-        if summary.log_path:
+        if summary.log_path and summary.status not in ("completed", "resolved", "cached"):
             lines.append(f"[{C_DIM}]log[/] {escape(summary.log_path)}")
         self.summary_text = "\n".join(lines)
 
@@ -582,9 +596,9 @@ class FrontierDetailPanel(Static):
             yield Static("", id="frontier-detail-hypothesis", classes="detail-block")
         with Collapsible(title="Experiment Spec", collapsed=False, id="frontier-detail-spec-box"):
             yield Static("", id="frontier-detail-spec", classes="detail-block")
-        with Collapsible(title="Metric & Evidence", collapsed=False, id="frontier-detail-evidence-box"):
+        with Collapsible(title="Metric & Evidence", collapsed=True, id="frontier-detail-evidence-box"):
             yield Static("", id="frontier-detail-evidence", classes="detail-block")
-        with Collapsible(title="Claims", collapsed=False, id="frontier-detail-claims-box"):
+        with Collapsible(title="Claims", collapsed=True, id="frontier-detail-claims-box"):
             yield Static("", id="frontier-detail-claims", classes="detail-block")
 
     def render(self) -> str:
@@ -1218,13 +1232,20 @@ class HotkeyBar(Static):
     def render(self) -> str:
         return self.bar_text or self._build_keys()
 
-    def update_state(self, paused: bool = False, phase: str = "") -> None:
-        self.bar_text = self._build_keys(paused=paused, phase=phase)
+    def update_state(self, paused: bool = False, phase: str = "", active_tab: str = "") -> None:
+        self.bar_text = self._build_keys(paused=paused, phase=phase, active_tab=active_tab)
 
     @staticmethod
-    def _build_keys(paused: bool = False, phase: str = "") -> str:
+    def _build_keys(paused: bool = False, phase: str = "", active_tab: str = "") -> str:
+        tab_names = {"tab-command": "Cmd", "tab-execution": "Exec", "tab-logs": "Logs", "tab-docs": "Docs"}
+        tab_keys: list[str] = []
+        for idx, (tid, label) in enumerate(tab_names.items(), 1):
+            if tid == active_tab:
+                tab_keys.append(f"[bold {C_PRIMARY}]{idx}·{label}[/]")
+            else:
+                tab_keys.append(f"[bold {C_INFO}]{idx}[/][{C_DIM}]{label}[/]")
         keys = [
-            f"[bold {C_INFO}]1-4[/] [{C_DIM}]tabs[/]",
+            " ".join(tab_keys),
             f"[bold {C_INFO}]g[/] [{C_DIM}]gpu[/]",
             f"[bold {C_INFO}]l[/] [{C_DIM}]log[/]",
             f"[bold {C_INFO}]q[/] [{C_DIM}]quit[/]",
@@ -1242,6 +1263,10 @@ class HotkeyBar(Static):
 class MetricChart(Static):
     """Experiment metric trend chart using plotext."""
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._data_hash: int = 0
+
     def compose(self) -> ComposeResult:
         from textual_plotext import PlotextPlot
 
@@ -1258,6 +1283,11 @@ class MetricChart(Static):
             logger.debug("Error initializing metric chart", exc_info=True)
 
     def update_data(self, rows: list[dict], metric_name: str = "metric") -> None:
+        data_hash = hash((len(rows), tuple((r.get("metric_value"), r.get("status")) for r in rows[-20:])))
+        if data_hash == self._data_hash:
+            return
+        self._data_hash = data_hash
+
         try:
             from textual_plotext import PlotextPlot
 
@@ -1322,7 +1352,7 @@ class RecentExperiments(Static):
         title = metric_name or rows[-1].get("primary_metric", "metric")
         lines = [f"[bold {C_TEXT}]Recent Results[/]  [{C_DIM}]{escape(str(title))}[/]"]
         status_style = {"keep": C_SUCCESS, "discard": C_WARNING, "crash": C_ERROR}
-        status_icon = {"keep": "↑", "discard": "•", "crash": "×"}
+        status_icon = {"keep": "✓", "discard": "▸", "crash": "✗"}
 
         for row in rows[-6:][::-1]:
             status = str(row.get("status", "?")).strip()

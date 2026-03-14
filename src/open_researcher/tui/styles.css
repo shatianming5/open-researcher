@@ -32,6 +32,7 @@ TabPane {
 .panel-card {
     background: #0d1823;
     border: tall #1a3e59;
+    border-top: heavy #235174;
     padding: 1 1;
 }
 
@@ -298,31 +299,64 @@ TabPane {
 
 AddIdeaModal {
     align: center middle;
+    background: rgba(6, 13, 21, 0.85);
 }
 
 AddIdeaModal > #dialog {
     width: 60;
     height: auto;
-    border: tall #235174;
+    border: heavy #235174;
+    border-top: heavy #8bd5ff;
     background: #08111a;
     padding: 1 2;
 }
 
+AddIdeaModal Label {
+    text-style: bold;
+    color: #8bd5ff;
+    margin-bottom: 1;
+}
+
+AddIdeaModal Button {
+    margin-top: 1;
+    margin-right: 1;
+}
+
 GPUStatusModal {
     align: center middle;
+    background: rgba(6, 13, 21, 0.85);
 }
 
 GPUStatusModal > #gpu-dialog {
     width: 80;
     height: auto;
     max-height: 80%;
-    border: tall #235174;
+    border: heavy #235174;
+    border-top: heavy #8bd5ff;
     background: #08111a;
     padding: 1 2;
 }
 
+GPUStatusModal Label {
+    text-style: bold;
+    color: #8bd5ff;
+    margin-bottom: 1;
+}
+
+GPUStatusModal Button {
+    margin-top: 1;
+}
+
 LogScreen {
     background: #060d15;
+}
+
+LogScreen #log-filter {
+    dock: top;
+    height: auto;
+    margin: 0 1;
+    background: #0d1823;
+    border: tall #1a3e59;
 }
 
 LogScreen #log-content {
@@ -340,14 +374,27 @@ LogScreen #log-footer {
 
 GoalInputModal {
     align: center middle;
+    background: rgba(6, 13, 21, 0.85);
 }
 
 GoalInputModal > #goal-dialog {
     width: 70;
     height: auto;
-    border: tall #235174;
+    border: heavy #235174;
+    border-top: heavy #8bd5ff;
     background: #08111a;
     padding: 1 2;
+}
+
+GoalInputModal Label {
+    text-style: bold;
+    color: #8bd5ff;
+    margin-bottom: 1;
+}
+
+GoalInputModal Button {
+    margin-top: 1;
+    margin-right: 1;
 }
 
 GoalInputModal #goal-hint {

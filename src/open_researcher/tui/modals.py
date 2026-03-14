@@ -118,19 +118,19 @@ class GPUStatusModal(ModalScreen):
 
 
 class LogScreen(Screen):
-    """Full-screen log viewer."""
+    """Full-screen log viewer with search."""
 
     BINDINGS = [("escape", "go_back", "Back"), ("q", "go_back", "Back")]
 
     def __init__(self, log_path: str):
         super().__init__()
         self.log_path = log_path
+        self._all_lines: list[str] = []
 
     def compose(self) -> ComposeResult:
         import os as _os
         from pathlib import Path
 
-        content = ""
         p = Path(self.log_path)
         if p.exists():
             try:
@@ -139,13 +139,30 @@ class LogScreen(Screen):
                     f.seek(0, _os.SEEK_END)
                     pos = max(f.tell() - CHUNK, 0)
                     f.seek(pos)
-                    tail = f.read().splitlines()[-200:]
-                content = "\n".join(tail)
+                    self._all_lines = f.read().splitlines()[-200:]
             except OSError:
-                content = "(Error reading log file)"
-        yield TextArea(content, read_only=True, id="log-content")
-        footer = "Press [bold #7dcfff]\\[Esc][/bold #7dcfff] or [bold #7dcfff]\\[q][/bold #7dcfff] to return"
+                self._all_lines = ["(Error reading log file)"]
+        yield Input(placeholder="Filter logs...", id="log-filter")
+        yield TextArea("\n".join(self._all_lines), read_only=True, id="log-content")
+        footer = (
+            "[bold #7dcfff]\\[Esc][/bold #7dcfff] return  "
+            "[bold #7dcfff]\\[q][/bold #7dcfff] quit  "
+            "[#8899ab]Type to filter log lines[/#8899ab]"
+        )
         yield Static(footer, id="log-footer")
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id != "log-filter":
+            return
+        query = event.value.strip().lower()
+        if not query:
+            filtered = self._all_lines
+        else:
+            filtered = [line for line in self._all_lines if query in line.lower()]
+        try:
+            self.query_one("#log-content", TextArea).text = "\n".join(filtered)
+        except Exception:
+            pass
 
     def action_go_back(self) -> None:
         self.app.pop_screen()
