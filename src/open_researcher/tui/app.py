@@ -33,7 +33,6 @@ from open_researcher.tui.widgets import (
     PhaseStripBar,
     RecentExperiments,
     ResearchGraphSummaryPanel,
-    RoleActivityPanel,
     SessionChromeBar,
     StatsBar,
     TraceBanner,
@@ -88,7 +87,6 @@ class ResearchApp(App):
                 yield SessionChromeBar(id="session-chrome", classes="hero-card")
                 with Container(id="command-main"):
                     with Vertical(id="command-left", classes="column"):
-                        yield RoleActivityPanel(id="role-activity", classes="panel-card")
                         yield BootstrapStatusPanel(id="bootstrap-status", classes="panel-card")
                         yield ResearchGraphSummaryPanel(id="graph-summary", classes="panel-card")
                         yield LineageTimelinePanel(id="lineage-timeline", classes="panel-card")
@@ -391,21 +389,13 @@ class ResearchApp(App):
             self.query_one("#session-chrome", SessionChromeBar).update_chrome(
                 dashboard.session,
                 active_role=_active_role,
+                roles=dashboard.roles,
                 phase=self.app_phase,
                 completed=_completed,
                 total=_total,
             )
         except NoMatches:
             logger.debug("Error refreshing session chrome", exc_info=True)
-
-        try:
-            self.query_one("#role-activity", RoleActivityPanel).update_roles(
-                dashboard.roles,
-                paused=dashboard.session.paused,
-                skip_current=dashboard.session.skip_current,
-            )
-        except NoMatches:
-            logger.debug("Error refreshing role activity", exc_info=True)
 
         try:
             self.query_one("#bootstrap-status", BootstrapStatusPanel).update_summary(dashboard.bootstrap)

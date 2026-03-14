@@ -281,6 +281,7 @@ class SessionChromeBar(Static):
         chrome: SessionChrome,
         *,
         active_role: RoleStatus | None = None,
+        roles: list[RoleStatus] | None = None,
         phase: str = "",
         completed: int = 0,
         total: int = 0,
@@ -314,39 +315,61 @@ class SessionChromeBar(Static):
                 f"[{C_DIM}]best[/] [bold {C_BEST}]{best}[/]"
             )
 
+        def _pipeline() -> str:
+            """Inline pipeline: Manager → [▶ Experiment] → Critic."""
+            if not roles:
+                return ""
+            _order = ["manager_agent", "experiment_agent", "critic_agent"]
+            by_key = {r.key: r for r in roles}
+            parts: list[str] = []
+            for key in _order:
+                r = by_key.get(key)
+                if not r:
+                    continue
+                name = r.label.replace(" Agent", "").replace("Research ", "")
+                if r.status == "idle":
+                    parts.append(f"[{C_DIM}]{name}[/]")
+                else:
+                    color = _status_color(r.status)
+                    parts.append(f"[bold {color}]▶ {name}[/]")
+            return f"  [{C_DIM}]│[/] " + f" [{C_DIM}]→[/] ".join(parts) if parts else ""
+
         # State F: Paused (highest priority)
         if chrome.paused:
-            self.chrome_text = "\n".join([
+            self.chrome_text = "\n".join(filter(None, [
                 f"[bold {C_CORAL}]⏸ PAUSED[/] [{C_DIM}]— Press [bold {C_INFO}]r[/][{C_DIM}] to resume[/]",
                 self._last_result_line(chrome),
-                _progress(),
-            ])
+                _progress() + _pipeline(),
+            ]))
             return
 
         # State C: Scouting
         if phase == "scouting":
             detail = escape((active_role.detail if active_role else "") or "Analyzing repository structure")
-            self.chrome_text = "\n".join([
-                f"[bold {C_PRIMARY}]Scout Agent[/] [{C_DIM}]— Analyzing repository[/]",
+            self.chrome_text = "\n".join(filter(None, [
+                f"[bold {C_PRIMARY}]🔍 Scout Agent[/] [{C_DIM}]— Analyzing repository[/]",
                 f"  [{C_TEXT}]{detail}[/]",
-            ])
+                _pipeline(),
+            ]))
             return
 
         # State D: Preparing
         if phase == "preparing":
             detail = escape((active_role.detail if active_role else "") or "Installing dependencies")
-            self.chrome_text = "\n".join([
-                f"[bold {C_WARNING}]Repo Prepare[/] [{C_DIM}]— Setting up environment[/]",
+            self.chrome_text = "\n".join(filter(None, [
+                f"[bold {C_WARNING}]⚙ Repo Prepare[/] [{C_DIM}]— Setting up environment[/]",
                 f"  [{C_TEXT}]{detail}[/]",
-            ])
+                _pipeline(),
+            ]))
             return
 
         # State E: Reviewing
         if phase == "reviewing":
-            self.chrome_text = "\n".join([
-                f"[bold {C_SKY}]Review Gate[/] [{C_DIM}]— Waiting for operator confirmation[/]",
+            self.chrome_text = "\n".join(filter(None, [
+                f"[bold {C_SKY}]⏸ Review Gate[/] [{C_DIM}]— Waiting for operator confirmation[/]",
                 f"  [{C_DIM}]Approve the research plan to start experimenting[/]",
-            ])
+                _pipeline(),
+            ]))
             return
 
         # State A: Agent active
@@ -365,16 +388,16 @@ class SessionChromeBar(Static):
             lines = [line1]
             if detail:
                 lines.append(f"  [{C_TEXT}]{detail}[/]")
-            lines.append(_progress())
+            lines.append(_progress() + _pipeline())
             lines.append(_metric())
             self.chrome_text = "\n".join(lines)
             return
 
         # State B: All idle
-        self.chrome_text = "\n".join([
+        self.chrome_text = "\n".join(filter(None, [
             self._last_result_line(chrome),
-            _progress("Idle — waiting for next cycle"),
-        ])
+            _progress("Idle — waiting for next cycle") + _pipeline(),
+        ]))
 
     @staticmethod
     def _last_result_line(chrome: SessionChrome) -> str:
@@ -493,6 +516,18 @@ class ResearchGraphSummaryPanel(Static):
         return self.summary_text or _empty_state("research graph")
 
     def update_summary(self, summary: GraphSummary) -> None:
+        # Collapse to single line when graph has no meaningful data
+        has_data = (
+            summary.hypotheses > 0
+            or summary.experiment_specs > 0
+            or summary.evidence > 0
+            or summary.claims > 0
+            or summary.frontier_total > 0
+        )
+        if not has_data:
+            self.summary_text = f"[{C_DIM}]Research Graph — no data yet[/]"
+            return
+
         counts = summary.frontier_status_counts
         frontier_bits = [
             f"[{C_PRIMARY}]runnable {summary.frontier_runnable}[/]",

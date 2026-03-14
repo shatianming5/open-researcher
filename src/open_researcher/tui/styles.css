@@ -33,8 +33,8 @@ TabPane {
 }
 
 .hero-card {
-    background: #0b1622;
-    border: tall #235174;
+    background: #0d1926;
+    border: tall #3a7dba;
     padding: 1 2;
     margin-bottom: 1;
 }
@@ -75,7 +75,6 @@ TabPane {
 }
 
 #graph-summary,
-#role-activity,
 #lineage-timeline,
 #frontier-detail,
 #exp-status,
@@ -83,7 +82,6 @@ TabPane {
     height: auto;
 }
 
-#role-activity,
 #graph-summary,
 #lineage-timeline,
 #recent-exp {
@@ -295,7 +293,6 @@ TabPane {
     max-height: 24;
 }
 
-.layout-compact #role-activity,
 .layout-compact #graph-summary,
 .layout-compact #lineage-timeline {
     max-height: 16;
