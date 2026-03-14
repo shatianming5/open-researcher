@@ -133,6 +133,18 @@ If `OPEN_RESEARCHER_SINGLE_GPU_SATURATION=1` is present:
   `{"selected_profile": "<name>", "qualification_attempts": <n>, "expected_peak_gpu_mem_mb": <int>}`
 - after qualification, run the real full evaluation using the selected profile
 
+### 2c½. Failure Recovery Context
+
+Before running training/evaluation commands, check these environment variables:
+- `OPEN_RESEARCHER_MEMORY_POLICY`: if "rank_historical_success", historical fix data is available
+- `OPEN_RESEARCHER_FAILURE_CLASS`: pre-classified failure type for this idea
+- `OPEN_RESEARCHER_FIRST_FIX_ACTION`: recommended first remediation from history
+- `OPEN_RESEARCHER_RANKED_FIXES`: comma-separated top-3 historical fixes
+
+If `OPEN_RESEARCHER_FIRST_FIX_ACTION` is set and not "generate_new_plan", consider
+applying the suggested fix proactively (e.g., picking a non-default master_port,
+reducing batch size).
+
 ### 2d. Implement
 
 - Make the smallest code change that satisfies the selected experiment contract
@@ -165,6 +177,30 @@ If `OPEN_RESEARCHER_SINGLE_GPU_SATURATION=1` is present:
   - `status: "done"`
   - `result: {"metric_value": <v>, "verdict": "kept"|"discarded"}`
 - Preserve graph ids and metadata already present on the row
+
+### 2e½. Training Failure Recovery
+
+If a training or evaluation command fails, diagnose and retry transient errors:
+
+| Exit Code | Likely Cause | Recovery Action |
+|-----------|-------------|-----------------|
+| 120 | NCCL / distributed init | Pick a different `--master_port` (random in 29501-29650), retry |
+| 137 | OOM / killed by OS | Halve `--samples-per-gpu` or `--batch-size`, retry once |
+| 1 + "address already in use" in stderr | Port conflict | Pick new port, retry |
+| 1 + "CUDA error" in stderr | Transient GPU fault | Wait 30 seconds, retry once |
+| Any other | Code or config bug | Do **not** retry — record as crash |
+
+**Retry rules:**
+- Maximum **2 retries** per experiment.
+- Sleep 10-30 seconds between retries.
+- Each retry should be a fresh `torchrun` / training invocation.
+- Log every retry attempt (exit code, stderr snippet, action taken).
+
+**When recording a crash** (all retries exhausted or non-retriable error), include
+in `secondary_metrics` passed to `record.py`:
+- `failure_diagnosis`: one of `nccl_timeout`, `oom_killed`, `port_conflict`, `code_error`, `unknown`
+- `retry_count`: how many retries were attempted
+- `retry_outcomes`: short description of each retry result
 
 ### 2g. Loop
 - Go back to 2a for the next idea
