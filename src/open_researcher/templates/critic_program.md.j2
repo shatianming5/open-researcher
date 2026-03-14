@@ -88,6 +88,8 @@ Use `reason_code` on evidence rows:
 - `performance_signal`
 - `reproduction_run`
 - `confounded_measurement`
+- `transient_crash`
+- `systematic_crash`
 
 Use `reason_code` on claim updates:
 
@@ -168,6 +170,24 @@ Promotion rules:
 - If evidence contradicts the hypothesis, prefer `downgrade` or `reject`.
 - If the repo has an unresolved `anchor_role: "anchor"` frontier, treat non-anchor wins as provisional: keep them at `needs_repro` / `supported_but_needs_repro` until anchor evidence is confirmed.
 - Use any `resource_observation` attached to evidence to judge whether the measurement looks resource-confounded or reproducible.
+
+### Crash Evidence Assessment
+
+When reviewing evidence where the result row has `status: "crash"`:
+
+1. **Read diagnostic info** from `secondary_metrics`:
+   - `failure_diagnosis`, `retry_count`, `retry_outcomes`, `failure_exit_code`
+
+2. **Classify the crash type:**
+   - **Transient** (`nccl_timeout`, `port_conflict`, `oom_killed` with retries exhausted):
+     - Set `reliability: "invalid"`, `reason_code: "transient_crash"`
+     - Set `transition: "needs_repro"` — the frontier deserves another attempt
+   - **Systematic** (`code_error`, `unknown`, or same frontier crashed 2+ times):
+     - Set `reliability: "invalid"`, `reason_code: "systematic_crash"`
+     - Set `transition: "reject"` — the hypothesis/spec has fundamental issues
+
+3. **Repeated crash rule:** If the same frontier_id appears in 2 or more crash
+   evidence rows, always use `transition: "reject"` regardless of diagnosis.
 
 ## Rules
 
