@@ -10,6 +10,7 @@ POLICY_STATES = {
     "prefer_repro",
     "repeat_failure_risk",
     "duplicate_same_cycle",
+    "crash_prone",
 }
 NEGATIVE_TRANSITIONS = {"downgrade", "reject"}
 POSITIVE_TRANSITIONS = {"promote"}
@@ -78,6 +79,7 @@ def retrieve_history(
         "strong_positive_count": 0,
         "negative_count": 0,
         "open_repro_count": 0,
+        "crash_count": 0,
         "recent_matches": [],
     }
     if not family_key:
@@ -125,12 +127,15 @@ def retrieve_history(
             history["strong_positive_count"] += 1
         elif transition in NEGATIVE_TRANSITIONS:
             history["negative_count"] += 1
+        reason_code = str(row.get("reason_code", "")).strip()
+        if "crash" in reason_code:
+            history["crash_count"] += 1
         history["recent_matches"].append(
             {
                 "kind": "claim",
                 "frontier_id": frontier_id,
                 "outcome": transition or "observed",
-                "reason_code": str(row.get("reason_code", "")).strip() or "unspecified",
+                "reason_code": reason_code or "unspecified",
                 "summary": str(frontier.get("description", "")).strip(),
             }
         )
@@ -151,12 +156,15 @@ def retrieve_history(
             history["strong_positive_count"] += 1
         elif outcome in NEGATIVE_TRANSITIONS:
             history["negative_count"] += 1
+        reason_code = str(row.get("reason_code", "")).strip()
+        if "crash" in reason_code:
+            history["crash_count"] += 1
         history["recent_matches"].append(
             {
                 "kind": "memory",
                 "frontier_id": frontier_id,
                 "outcome": outcome or "observed",
-                "reason_code": str(row.get("reason_code", "")).strip() or "unspecified",
+                "reason_code": reason_code or "unspecified",
                 "summary": str(row.get("summary", "")).strip(),
             }
         )
@@ -208,6 +216,10 @@ def apply_history_policy(frontier_rows: list[dict], graph: dict, memory: dict) -
             row["runtime_priority"] = manager_priority + 3
             row["policy_state"] = "repeat_failure_risk"
             row["policy_reason"] = f"family has {history['negative_count']} negative outcomes"
+        elif history.get("crash_count", 0) >= 2 and history.get("strong_positive_count", 0) == 0:
+            row["runtime_priority"] = manager_priority + 4
+            row["policy_state"] = "crash_prone"
+            row["policy_reason"] = f"family has {history['crash_count']} crash outcomes"
 
     grouped: dict[str, list[dict]] = {}
     for row in updated:
