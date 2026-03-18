@@ -82,7 +82,7 @@ _DEFAULT_ACTIVITY: dict[str, Any] = {
     "phase": "idle",
     "round": 0,
     "workers": [],
-    "control": {"paused": False, "skip_current": False},
+    "control": {"paused": False, "skip_current": False, "awaiting_review": None},
 }
 
 # ---------------------------------------------------------------------------
@@ -147,7 +147,7 @@ class ResearchState:
     """
 
     def __init__(self, research_dir: Path) -> None:
-        self.dir = research_dir
+        self.dir = Path(research_dir).resolve()
         self._graph_lock = FileLock(str(self.dir / "graph.json.lock"), timeout=10)
         self._activity_lock = FileLock(str(self.dir / "activity.json.lock"), timeout=10)
         self._log_lock = FileLock(str(self.dir / "log.jsonl.lock"), timeout=10)
@@ -312,6 +312,21 @@ class ResearchState:
                 return True
             return False
 
+    def set_awaiting_review(self, review: dict | None) -> None:
+        """Set control.awaiting_review in activity.json."""
+        with self._activity_lock:
+            data = self._load_activity_unlocked()
+            data.setdefault("control", {})["awaiting_review"] = review
+            self._save_activity_unlocked(data)
+
+    def get_awaiting_review(self) -> dict | None:
+        """Read control.awaiting_review from activity.json."""
+        return self.load_activity().get("control", {}).get("awaiting_review")
+
+    def clear_awaiting_review(self) -> None:
+        """Set control.awaiting_review = null."""
+        self.set_awaiting_review(None)
+
     def _load_activity_unlocked(self) -> dict[str, Any]:
         """Read activity without acquiring lock (caller must hold it)."""
         path = self.dir / "activity.json"
@@ -390,4 +405,5 @@ class ResearchState:
             "best_value": best,
             "workers": activity.get("workers", []),
             "paused": activity.get("control", {}).get("paused", False),
+            "awaiting_review": activity.get("control", {}).get("awaiting_review"),
         }

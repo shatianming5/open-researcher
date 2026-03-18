@@ -340,3 +340,54 @@ class TestDeepMerge:
         base = {"a": {"b": 1}}
         _deep_merge(base, {"a": {"b": 99}})
         assert base["a"]["b"] == 1
+
+
+# ---------------------------------------------------------------------------
+# TestAwaitingReview
+# ---------------------------------------------------------------------------
+
+
+class TestAwaitingReview:
+    """Tests for awaiting_review state management."""
+
+    def test_default_activity_has_awaiting_review(self, tmp_path):
+        state = ResearchState(tmp_path)
+        activity = state.load_activity()
+        assert activity["control"]["awaiting_review"] is None
+
+    def test_set_awaiting_review(self, tmp_path):
+        state = ResearchState(tmp_path)
+        review = {"type": "hypothesis_review", "requested_at": "2026-03-19T14:00:00Z"}
+        state.set_awaiting_review(review)
+        result = state.get_awaiting_review()
+        assert result["type"] == "hypothesis_review"
+
+    def test_clear_awaiting_review(self, tmp_path):
+        state = ResearchState(tmp_path)
+        state.set_awaiting_review({"type": "direction_confirm", "requested_at": "2026-03-19T14:00:00Z"})
+        state.clear_awaiting_review()
+        assert state.get_awaiting_review() is None
+
+    def test_get_awaiting_review_when_not_set(self, tmp_path):
+        state = ResearchState(tmp_path)
+        assert state.get_awaiting_review() is None
+
+    def test_summary_includes_awaiting_review(self, tmp_path):
+        state = ResearchState(tmp_path)
+        s = state.summary()
+        assert "awaiting_review" in s
+        assert s["awaiting_review"] is None
+
+    def test_summary_includes_awaiting_review_when_set(self, tmp_path):
+        state = ResearchState(tmp_path)
+        state.set_awaiting_review({"type": "result_review", "requested_at": "2026-03-19T14:00:00Z"})
+        s = state.summary()
+        assert s["awaiting_review"]["type"] == "result_review"
+
+    def test_set_awaiting_review_preserves_other_control_fields(self, tmp_path):
+        state = ResearchState(tmp_path)
+        state.set_paused(True)
+        state.set_awaiting_review({"type": "frontier_review", "requested_at": "2026-03-19T14:00:00Z"})
+        activity = state.load_activity()
+        assert activity["control"]["paused"] is True
+        assert activity["control"]["awaiting_review"]["type"] == "frontier_review"
