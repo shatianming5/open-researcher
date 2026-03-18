@@ -524,6 +524,50 @@ class TestWorkerPoolLifecycle:
         assert len(results) == 1
         assert results[0]["value"] == "0.85"
 
+    def test_agent_receives_assigned_experiment(self, tmp_path):
+        """Agent's skill_content should include the assigned frontier JSON."""
+        rd = tmp_path / ".research"
+        rd.mkdir()
+        state = ResearchState(rd)
+
+        graph = _default_graph()
+        graph["frontier"] = [
+            {"id": "f1", "status": "approved", "priority": 1,
+             "hypothesis_id": "hyp-1", "experiment_spec_id": "spec-1"},
+        ]
+        state.save_graph(graph)
+
+        captured_content: list[str] = []
+        mock_agent = MagicMock()
+
+        def _capture_run(**kwargs):
+            captured_content.append(kwargs.get("skill_content", ""))
+            return {"status": "done", "metric": "acc", "value": "0.9"}
+
+        mock_agent.run.side_effect = _capture_run
+
+        pool = WorkerPool(
+            repo_path=tmp_path,
+            state=state,
+            agent_factory=lambda: mock_agent,
+            skill_content="base skill content",
+            max_workers=1,
+            gpu_mem_per_worker_mb=0,
+        )
+
+        with patch("open_researcher_v2.parallel.create_worktree", return_value=tmp_path):
+            with patch("open_researcher_v2.parallel.cleanup_worktree"):
+                pool.run()
+                pool.wait(timeout=10.0)
+
+        assert len(captured_content) == 1
+        content = captured_content[0]
+        assert "base skill content" in content
+        assert "## Assigned Experiment" in content
+        assert "f1" in content
+        assert "hyp-1" in content
+        assert "Do NOT claim a new item" in content
+
     def test_stop_signal(self, tmp_path):
         """Pool.stop() terminates workers."""
         rd = tmp_path / ".research"
