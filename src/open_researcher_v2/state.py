@@ -45,6 +45,16 @@ _DEFAULT_CONFIG: dict[str, Any] = {
     "workers": {"max": 0, "gpu_mem_per_worker_mb": 8192},
     "limits": {"max_rounds": 20, "timeout_minutes": 0},
     "agent": {"name": "claude-code", "config": {}},
+    "interaction": {
+        "mode": "autopilot",
+        "checkpoints": {
+            "after_scout": True,
+            "after_manager": True,
+            "after_critic_preflight": True,
+            "after_round": True,
+        },
+        "review_timeout_minutes": 0,
+    },
 }
 
 

@@ -61,6 +61,28 @@ class TestConfig:
         cfg = state.load_config()
         assert cfg["protocol"] == "research-v1"
 
+    def test_default_interaction_config(self, tmp_path):
+        state = ResearchState(tmp_path)
+        cfg = state.load_config()
+        interaction = cfg["interaction"]
+        assert interaction["mode"] == "autopilot"
+        assert interaction["checkpoints"]["after_scout"] is True
+        assert interaction["checkpoints"]["after_manager"] is True
+        assert interaction["checkpoints"]["after_critic_preflight"] is True
+        assert interaction["checkpoints"]["after_round"] is True
+        assert interaction["review_timeout_minutes"] == 0
+
+    def test_interaction_config_merge(self, tmp_path):
+        import yaml
+        (tmp_path / "config.yaml").write_text(yaml.dump({
+            "interaction": {"mode": "checkpoint", "checkpoints": {"after_scout": False}},
+        }))
+        state = ResearchState(tmp_path)
+        cfg = state.load_config()
+        assert cfg["interaction"]["mode"] == "checkpoint"
+        assert cfg["interaction"]["checkpoints"]["after_scout"] is False
+        assert cfg["interaction"]["checkpoints"]["after_manager"] is True  # default preserved
+
 
 # ---------------------------------------------------------------------------
 # TestGraph
