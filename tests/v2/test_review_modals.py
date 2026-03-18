@@ -141,3 +141,63 @@ class TestModalsPackageImport:
             GoalEditScreen, HypothesisReviewScreen, InjectIdeaScreen,
             ResultReviewScreen,
         ])
+
+
+class TestFullCheckpointFlow:
+    """Integration test: config -> checkpoint -> state change -> clear."""
+
+    def test_checkpoint_mode_end_to_end(self, tmp_path):
+        import threading
+        import yaml
+        from open_researcher_v2.state import ResearchState
+        from open_researcher_v2.skill_runner import SkillRunner
+        from open_researcher_v2.agent import Agent, AgentAdapter
+
+        # Setup
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        (research_dir / "config.yaml").write_text(yaml.dump({
+            "interaction": {
+                "mode": "checkpoint",
+                "checkpoints": {
+                    "after_scout": True,
+                    "after_manager": False,
+                    "after_critic_preflight": False,
+                    "after_round": False,
+                },
+            },
+        }))
+
+        state = ResearchState(research_dir)
+
+        class StubAdapter(AgentAdapter):
+            name = "stub"
+            command = "stub"
+            def run(self, workdir, *, on_output=None, program_file="program.md", env=None):
+                # Create the program file that Agent.run() expects to write
+                return 0
+
+        agent = Agent(StubAdapter())
+        runner = SkillRunner(tmp_path, state, agent, goal="test", tag="t1")
+
+        # Auto-approve after delay
+        def auto_approve():
+            import time
+            for _ in range(10):
+                time.sleep(0.3)
+                if state.get_awaiting_review():
+                    state.clear_awaiting_review()
+                    break
+
+        t = threading.Thread(target=auto_approve, daemon=True)
+        t.start()
+
+        rc = runner.run_bootstrap()
+        t.join(timeout=5.0)
+        assert rc == 0
+
+        # Verify review was requested and completed
+        logs = state.tail_log(50)
+        events = [e["event"] for e in logs]
+        assert "review_requested" in events
+        assert "review_completed" in events
