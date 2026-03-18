@@ -54,6 +54,7 @@ def run(
     workers: int = typer.Option(0, help="Max parallel workers (0=serial)"),
     headless: bool = typer.Option(False, help="Run without TUI"),
     agent_name: str = typer.Option("claude-code", help="Agent to use"),
+    mode: str = typer.Option("", help="Interaction mode: autopilot or checkpoint"),
 ) -> None:
     """Launch or resume a research session."""
     # Validate repo
@@ -75,6 +76,18 @@ def run(
     from .state import ResearchState  # noqa: E402
 
     state = ResearchState(research_dir)
+
+    # Apply --mode override to config
+    if mode:
+        import yaml
+
+        config_path = research_dir / "config.yaml"
+        cfg: dict = {}
+        if config_path.exists():
+            cfg = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        cfg.setdefault("interaction", {})["mode"] = mode
+        config_path.write_text(yaml.dump(cfg), encoding="utf-8")
+
     adapter = create_agent(agent_name)
     agent = Agent(adapter)
 
