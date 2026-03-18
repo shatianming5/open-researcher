@@ -14,6 +14,7 @@ from paperfarm.agent import (
     ClaudeCodeAdapter,
     CodexAdapter,
     GeminiAdapter,
+    OpenCodeAdapter,
     _ADAPTERS,
     create_agent,
 )
@@ -28,7 +29,7 @@ class TestAgentAdapter:
     """Tests for the adapter factory and base class."""
 
     def test_create_known_agents(self):
-        for name in ("claude-code", "codex", "aider", "gemini"):
+        for name in ("claude-code", "codex", "aider", "gemini", "opencode"):
             adapter = create_agent(name)
             assert adapter.name == name
             assert isinstance(adapter, AgentAdapter)
@@ -46,13 +47,14 @@ class TestAgentAdapter:
         assert adapter._config == {}
 
     def test_adapter_registry_contains_all(self):
-        assert set(_ADAPTERS.keys()) == {"claude-code", "codex", "aider", "gemini"}
+        assert set(_ADAPTERS.keys()) == {"claude-code", "codex", "aider", "gemini", "opencode"}
 
     def test_adapter_types(self):
         assert _ADAPTERS["claude-code"] is ClaudeCodeAdapter
         assert _ADAPTERS["codex"] is CodexAdapter
         assert _ADAPTERS["aider"] is AiderAdapter
         assert _ADAPTERS["gemini"] is GeminiAdapter
+        assert _ADAPTERS["opencode"] is OpenCodeAdapter
 
     @patch("shutil.which", return_value="/usr/local/bin/claude")
     def test_check_installed_true(self, mock_which):
@@ -238,3 +240,14 @@ class TestConcreteAdapters:
         assert "-p" in cmd
         prompt_idx = cmd.index("-p")
         assert cmd[prompt_idx + 1] == "my prompt"
+
+    @patch.object(OpenCodeAdapter, "_run_process", return_value=0)
+    def test_opencode_cmd(self, mock_run, tmp_path: Path):
+        self._setup_program(tmp_path, "my prompt")
+        adapter = OpenCodeAdapter()
+        rc = adapter.run(tmp_path, program_file="program.md")
+        assert rc == 0
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == "opencode"
+        assert cmd[1] == "run"
+        assert cmd[2] == "my prompt"

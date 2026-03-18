@@ -152,6 +152,7 @@ Skills reference these `.research/` files directly. The experiment agent calls `
 | [Codex CLI](https://github.com/openai/codex) | `--agent-name codex` | `codex exec --full-auto <prompt>` |
 | [Aider](https://github.com/paul-gauthier/aider) | `--agent-name aider` | `aider --yes-always --no-git --message-file <file>` |
 | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `--agent-name gemini` | `gemini -p <prompt>` |
+| [OpenCode](https://opencode.ai) | `--agent-name opencode` | `opencode run <prompt>` |
 
 Default is `claude-code`. All agents receive the same skill prompt and work against the same `.research/` state files.
 

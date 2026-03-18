@@ -1,6 +1,6 @@
 """Agent adapter pattern for launching AI agent CLI subprocesses.
 
-Provides a thin wrapper around agent CLIs (Claude Code, Codex, Aider, Gemini)
+Provides a thin wrapper around agent CLIs (Claude Code, Codex, Aider, Gemini, OpenCode)
 with a common interface for running them against a research workspace.
 
 Usage::
@@ -191,6 +191,25 @@ class GeminiAdapter(AgentAdapter):
         return self._run_process(cmd, workdir, on_output=on_output, env=env)
 
 
+class OpenCodeAdapter(AgentAdapter):
+    """Adapter for the ``opencode`` CLI (https://opencode.ai)."""
+
+    name = "opencode"
+    command = "opencode"
+
+    def run(
+        self,
+        workdir: Path,
+        *,
+        on_output: Callable[[str], None] | None = None,
+        program_file: str = "program.md",
+        env: dict[str, str] | None = None,
+    ) -> int:
+        prompt = (workdir / ".research" / program_file).read_text(encoding="utf-8")
+        cmd = [self.command, "run", prompt]
+        return self._run_process(cmd, workdir, on_output=on_output, env=env)
+
+
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
@@ -200,6 +219,7 @@ _ADAPTERS: dict[str, type[AgentAdapter]] = {
     "codex": CodexAdapter,
     "aider": AiderAdapter,
     "gemini": GeminiAdapter,
+    "opencode": OpenCodeAdapter,
 }
 
 
