@@ -24,23 +24,31 @@ TabbedContent {
 
 /* Execution tab: frontier + workers side by side */
 #tab-exec Horizontal {
-    height: 100%;
+    height: 1fr;
 }
 
 FrontierPanel {
-    width: 1fr;
-    height: 100%;
+    width: 2fr;
+    height: 1fr;
     border: solid $primary-background;
+}
+
+FrontierPanel DataTable {
+    height: 1fr;
 }
 
 WorkerPanel {
     width: 1fr;
-    height: 100%;
+    height: 1fr;
     border: solid $primary-background;
 }
 
+WorkerPanel DataTable {
+    height: 1fr;
+}
+
 LogPanel {
-    height: 100%;
+    height: 1fr;
     min-height: 6;
     border: solid $primary-background;
 }
@@ -72,6 +80,6 @@ ReviewScreen, GoalEditScreen, InjectIdeaScreen {
 
 #review-actions {
     dock: bottom;
-    height: 1;
-    padding-top: 1;
+    height: auto;
+    color: $text-muted;
 }

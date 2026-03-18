@@ -46,11 +46,11 @@ class StatsBar(Static):
         best = summary.get("best_value", "\u2014")
         suffix = ""
         if summary.get("paused"):
-            suffix = " [PAUSED]"
+            suffix = "  [bold yellow]\u23f8 PAUSED[/]"
         review = summary.get("awaiting_review")
         if review:
             rtype = review.get("type", "").replace("_", " ").upper()
-            suffix = f" \u23f3 REVIEW {rtype}"
+            suffix = f"  [bold yellow]\u23f3 REVIEW {rtype}[/]"
         self.update(
             f"Phase: {phase} | Round: {rnd} | Hyps: {hyps} "
             f"| Exps: {done}/{total} ({running}) | Best: {best}{suffix}"
@@ -67,11 +67,19 @@ class PhaseStripBar(Static):
 
     def update_phase(self, phase: str) -> None:
         parts: list[str] = []
+        passed = True
         for p in _PHASES:
             if p == phase:
-                parts.append(f"[bold green]{p.upper()}[/]")
+                parts.append(f"[bold green]\u25b6 {p.upper()}[/]")
+                passed = False
+            elif passed and phase not in ("idle", "failed", "crashed", "completed"):
+                parts.append(f"[green]\u2713 {p}[/]")
             else:
                 parts.append(f"[dim]{p}[/]")
+        if phase in ("failed", "crashed"):
+            parts.append(f"[bold red]\u2717 {phase.upper()}[/]")
+        elif phase == "completed":
+            parts.append(f"[bold green]\u2713 DONE[/]")
         self.update("  \u2023  ".join(parts))
 
 
