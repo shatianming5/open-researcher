@@ -278,7 +278,7 @@ agent:
 ## 🏡 Project Structure
 
 ```
-src/open_researcher/
+src/paperfarm/
 ├── cli.py              # Typer CLI (run / status / results)
 ├── agent.py            # Agent adapters (ClaudeCode, Codex, Aider, Gemini)
 ├── skill_runner.py     # Loads skills, substitutes [GOAL]/[TAG], drives the loop

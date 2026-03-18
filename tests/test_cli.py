@@ -1,4 +1,4 @@
-"""Tests for open_researcher.cli — typer CLI entry-points."""
+"""Tests for paperfarm.cli — typer CLI entry-points."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from open_researcher.cli import app, _auto_tag, _deploy_scripts
+from paperfarm.cli import app, _auto_tag, _deploy_scripts
 
 runner = CliRunner()
 
@@ -21,12 +21,12 @@ class TestImport:
     """Verify the CLI module can be imported without side-effects."""
 
     def test_import_app(self):
-        from open_researcher import cli  # noqa: F811
+        from paperfarm import cli  # noqa: F811
 
         assert hasattr(cli, "app")
 
     def test_import_commands(self):
-        from open_researcher.cli import run, status, results  # noqa: F811
+        from paperfarm.cli import run, status, results  # noqa: F811
 
         assert callable(run)
         assert callable(status)

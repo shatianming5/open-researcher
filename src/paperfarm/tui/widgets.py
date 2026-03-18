@@ -1,4 +1,4 @@
-"""TUI widgets for the Open-Researcher v2 command center.
+"""TUI widgets for the PaperFarm command center.
 
 Each widget exposes an ``update_data`` (or ``update_phase``) method that
 accepts plain dicts/lists produced by ``ResearchState.summary()``.

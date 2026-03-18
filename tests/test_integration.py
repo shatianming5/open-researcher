@@ -1,4 +1,4 @@
-"""End-to-end integration tests for the v2 research loop.
+"""End-to-end integration tests for the research loop.
 
 Tests the full serial flow (bootstrap + rounds) and parallel frontier
 claiming using mock agent adapters that never spawn real subprocesses.
@@ -14,10 +14,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from open_researcher.agent import Agent, AgentAdapter
-from open_researcher.parallel import WorkerPool
-from open_researcher.skill_runner import SkillRunner
-from open_researcher.state import ResearchState
+from paperfarm.agent import Agent, AgentAdapter
+from paperfarm.parallel import WorkerPool
+from paperfarm.skill_runner import SkillRunner
+from paperfarm.state import ResearchState
 
 
 # ---------------------------------------------------------------------------

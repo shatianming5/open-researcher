@@ -83,7 +83,7 @@ def create_worktree(repo_path: Path, worker_id: str) -> Path:
     worktrees_dir = repo_path / ".worktrees"
     worktrees_dir.mkdir(parents=True, exist_ok=True)
     wt_path = worktrees_dir / worker_id
-    branch_name = f"v2-worker-{worker_id}"
+    branch_name = f"pf-worker-{worker_id}"
 
     # Prune stale worktrees first
     subprocess.run(
@@ -136,7 +136,7 @@ def cleanup_worktree(repo_path: Path, worker_id: str) -> None:
     """Remove a worktree and its branch for *worker_id*."""
     repo_path = repo_path.resolve()
     wt_path = repo_path / ".worktrees" / worker_id
-    branch_name = f"v2-worker-{worker_id}"
+    branch_name = f"pf-worker-{worker_id}"
 
     # Remove symlink first so git worktree remove doesn't complain
     wt_research = wt_path / ".research"

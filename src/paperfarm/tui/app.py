@@ -1,4 +1,4 @@
-"""TUI main application for Open-Researcher v2.
+"""TUI main application for PaperFarm.
 
 Provides :class:`ResearchApp`, a Textual application that polls
 :class:`ResearchState` every second and pushes updates to the widgets.
@@ -16,8 +16,8 @@ from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.widgets import Footer, Header, TabbedContent, TabPane
 
-from open_researcher.state import ResearchState
-from open_researcher.tui.widgets import (
+from paperfarm.state import ResearchState
+from paperfarm.tui.widgets import (
     FrontierPanel,
     LogPanel,
     MetricChart,

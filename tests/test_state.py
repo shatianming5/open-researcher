@@ -1,4 +1,4 @@
-"""Comprehensive tests for open_researcher.state.ResearchState."""
+"""Comprehensive tests for paperfarm.state.ResearchState."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 import yaml
 import pytest
 
-from open_researcher.state import (
+from paperfarm.state import (
     ResearchState,
     _DEFAULT_CONFIG,
     _DEFAULT_ACTIVITY,

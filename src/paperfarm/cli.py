@@ -1,4 +1,4 @@
-"""CLI entry-points for Open-Researcher v2.
+"""CLI entry-points for PaperFarm.
 
 Provides three commands via :pypi:`typer`:
 

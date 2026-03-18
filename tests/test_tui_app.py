@@ -1,4 +1,4 @@
-"""Tests for the v2 TUI ResearchApp."""
+"""Tests for the TUI ResearchApp."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from open_researcher.state import ResearchState
-from open_researcher.tui.app import ResearchApp
-from open_researcher.tui.widgets import (
+from paperfarm.state import ResearchState
+from paperfarm.tui.app import ResearchApp
+from paperfarm.tui.widgets import (
     FrontierPanel,
     LogPanel,
     MetricChart,
@@ -41,7 +41,7 @@ class TestTUIAppImport:
     """Verify ResearchApp can be imported."""
 
     def test_import(self) -> None:
-        from open_researcher.tui.app import ResearchApp  # noqa: F811
+        from paperfarm.tui.app import ResearchApp  # noqa: F811
 
         assert ResearchApp is not None
 

@@ -1,11 +1,11 @@
-"""Smoke tests for v2 TUI widgets."""
+"""Smoke tests for TUI widgets."""
 
 from __future__ import annotations
 
 import pytest
 from textual.app import App, ComposeResult
 
-from open_researcher.tui.widgets import (
+from paperfarm.tui.widgets import (
     FrontierPanel,
     LogPanel,
     MetricChart,

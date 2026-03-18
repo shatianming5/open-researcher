@@ -14,7 +14,7 @@ import pytest
 RECORD_SCRIPT = (
     Path(__file__).resolve().parents[1]
     / "src"
-    / "open_researcher"
+    / "paperfarm"
     / "skills"
     / "scripts"
     / "record.py"

@@ -1,4 +1,4 @@
-"""Tests for open_researcher.parallel module."""
+"""Tests for paperfarm.parallel module."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from open_researcher.parallel import (
+from paperfarm.parallel import (
     WorkerPool,
     cleanup_worktree,
     create_worktree,
     detect_gpus,
 )
-from open_researcher.state import ResearchState, _default_graph
+from paperfarm.state import ResearchState, _default_graph
 
 
 # ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ class TestGPUDetection:
         mock_result.returncode = 0
         mock_result.stdout = fake_output
 
-        with patch("open_researcher.parallel.subprocess.run", return_value=mock_result) as mock_run:
+        with patch("paperfarm.parallel.subprocess.run", return_value=mock_result) as mock_run:
             gpus = detect_gpus()
 
         assert len(gpus) == 2
@@ -47,7 +47,7 @@ class TestGPUDetection:
 
     def test_nvidia_smi_not_found(self):
         with patch(
-            "open_researcher.parallel.subprocess.run",
+            "paperfarm.parallel.subprocess.run",
             side_effect=FileNotFoundError("nvidia-smi not found"),
         ):
             gpus = detect_gpus()
@@ -58,13 +58,13 @@ class TestGPUDetection:
         mock_result.returncode = 1
         mock_result.stdout = ""
 
-        with patch("open_researcher.parallel.subprocess.run", return_value=mock_result):
+        with patch("paperfarm.parallel.subprocess.run", return_value=mock_result):
             gpus = detect_gpus()
         assert gpus == []
 
     def test_nvidia_smi_timeout(self):
         with patch(
-            "open_researcher.parallel.subprocess.run",
+            "paperfarm.parallel.subprocess.run",
             side_effect=subprocess.TimeoutExpired(cmd="nvidia-smi", timeout=30),
         ):
             gpus = detect_gpus()
@@ -80,7 +80,7 @@ class TestGPUDetection:
         mock_result.returncode = 0
         mock_result.stdout = fake_output
 
-        with patch("open_researcher.parallel.subprocess.run", return_value=mock_result):
+        with patch("paperfarm.parallel.subprocess.run", return_value=mock_result):
             gpus = detect_gpus()
         assert len(gpus) == 1
         assert gpus[0]["index"] == 0
@@ -90,7 +90,7 @@ class TestGPUDetection:
         mock_result.returncode = 0
         mock_result.stdout = ""
 
-        with patch("open_researcher.parallel.subprocess.run", return_value=mock_result):
+        with patch("paperfarm.parallel.subprocess.run", return_value=mock_result):
             gpus = detect_gpus()
         assert gpus == []
 
@@ -312,7 +312,7 @@ class TestGPUAssignments:
             gpu_mem_per_worker_mb=8000,
         )
         with patch(
-            "open_researcher.parallel.detect_gpus",
+            "paperfarm.parallel.detect_gpus",
             return_value=[
                 {"index": 0, "memory_total_mb": 24000, "memory_free_mb": 24000},
                 {"index": 1, "memory_total_mb": 24000, "memory_free_mb": 16000},
@@ -340,7 +340,7 @@ class TestGPUAssignments:
             gpu_mem_per_worker_mb=8000,
         )
         with patch(
-            "open_researcher.parallel.detect_gpus",
+            "paperfarm.parallel.detect_gpus",
             return_value=[
                 {"index": 0, "memory_total_mb": 48000, "memory_free_mb": 48000},
             ],
@@ -361,7 +361,7 @@ class TestGPUAssignments:
             max_workers=2,
             gpu_mem_per_worker_mb=8000,
         )
-        with patch("open_researcher.parallel.detect_gpus", return_value=[]):
+        with patch("paperfarm.parallel.detect_gpus", return_value=[]):
             slots = pool._resolve_gpu_assignments()
 
         assert len(slots) == 2
@@ -380,7 +380,7 @@ class TestGPUAssignments:
             gpu_mem_per_worker_mb=50000,
         )
         with patch(
-            "open_researcher.parallel.detect_gpus",
+            "paperfarm.parallel.detect_gpus",
             return_value=[
                 {"index": 0, "memory_total_mb": 24000, "memory_free_mb": 24000},
             ],
@@ -510,8 +510,8 @@ class TestWorkerPoolLifecycle:
         )
 
         # Patch worktree ops to avoid needing a real git repo
-        with patch("open_researcher.parallel.create_worktree", return_value=tmp_path):
-            with patch("open_researcher.parallel.cleanup_worktree"):
+        with patch("paperfarm.parallel.create_worktree", return_value=tmp_path):
+            with patch("paperfarm.parallel.cleanup_worktree"):
                 pool.run()
                 pool.wait(timeout=10.0)
 
@@ -555,8 +555,8 @@ class TestWorkerPoolLifecycle:
             gpu_mem_per_worker_mb=0,
         )
 
-        with patch("open_researcher.parallel.create_worktree", return_value=tmp_path):
-            with patch("open_researcher.parallel.cleanup_worktree"):
+        with patch("paperfarm.parallel.create_worktree", return_value=tmp_path):
+            with patch("paperfarm.parallel.cleanup_worktree"):
                 pool.run()
                 pool.wait(timeout=10.0)
 
@@ -600,8 +600,8 @@ class TestWorkerPoolLifecycle:
             gpu_mem_per_worker_mb=0,
         )
 
-        with patch("open_researcher.parallel.create_worktree", return_value=tmp_path):
-            with patch("open_researcher.parallel.cleanup_worktree"):
+        with patch("paperfarm.parallel.create_worktree", return_value=tmp_path):
+            with patch("paperfarm.parallel.cleanup_worktree"):
                 pool.run()
                 # Let it run briefly
                 import time

@@ -46,12 +46,15 @@ dev = [
 ]
 
 [project.scripts]
-paperfarm = "open_researcher.cli:app"
+paperfarm = "paperfarm.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/shatianming5/PaperFarm"
 Repository = "https://github.com/shatianming5/PaperFarm"
 Issues = "https://github.com/shatianming5/PaperFarm/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/paperfarm"]
 
 [tool.ruff]
 target-version = "py310"

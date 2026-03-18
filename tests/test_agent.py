@@ -1,4 +1,4 @@
-"""Tests for open_researcher.agent — adapter pattern and Agent wrapper."""
+"""Tests for paperfarm.agent — adapter pattern and Agent wrapper."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from open_researcher.agent import (
+from paperfarm.agent import (
     Agent,
     AgentAdapter,
     AiderAdapter,

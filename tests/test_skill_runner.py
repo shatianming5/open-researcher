@@ -9,9 +9,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from open_researcher.agent import Agent, AgentAdapter
-from open_researcher.skill_runner import SkillRunner
-from open_researcher.state import ResearchState
+from paperfarm.agent import Agent, AgentAdapter
+from paperfarm.skill_runner import SkillRunner
+from paperfarm.state import ResearchState
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +89,7 @@ class TestSkillLoading:
 
     def test_skills_dir_exists(self):
         """The skills directory should exist relative to skill_runner.py."""
-        from open_researcher import skill_runner
+        from paperfarm import skill_runner
 
         skills_dir = Path(skill_runner.__file__).parent / "skills"
         assert skills_dir.is_dir()

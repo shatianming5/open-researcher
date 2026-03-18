@@ -10,7 +10,7 @@ import pytest
 ROLLBACK_SCRIPT = (
     Path(__file__).resolve().parents[1]
     / "src"
-    / "open_researcher"
+    / "paperfarm"
     / "skills"
     / "scripts"
     / "rollback.sh"
