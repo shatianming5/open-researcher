@@ -140,7 +140,7 @@ jobs:
       - name: Coverage
         run: |
           pytest tests/ \
-            --cov=open_researcher \
+            --cov=paperfarm \
             --cov-report=term-missing \
             --cov-report=xml \
             --cov-fail-under=${COVERAGE_MIN}
@@ -217,5 +217,5 @@ jobs:
           uv pip install --system dist/*.whl
 
       - name: Smoke CLI entrypoint
-        run: open-researcher --help > /dev/null
+        run: paperfarm --help > /dev/null
 
