@@ -192,7 +192,12 @@ class GeminiAdapter(AgentAdapter):
 
 
 class OpenCodeAdapter(AgentAdapter):
-    """Adapter for the ``opencode`` CLI (https://opencode.ai)."""
+    """Adapter for the ``opencode`` CLI (https://opencode.ai).
+
+    Config keys:
+        model: Model in ``provider/name`` format, e.g. ``custom/MiniMax-M2.5``.
+        env:   Extra environment variables (e.g. ``{"CUSTOM_API_KEY": "sk-..."}``).
+    """
 
     name = "opencode"
     command = "opencode"
@@ -206,8 +211,13 @@ class OpenCodeAdapter(AgentAdapter):
         env: dict[str, str] | None = None,
     ) -> int:
         prompt = (workdir / ".research" / program_file).read_text(encoding="utf-8")
-        cmd = [self.command, "run", prompt]
-        return self._run_process(cmd, workdir, on_output=on_output, env=env)
+        cmd = [self.command, "run"]
+        model = self._config.get("model")
+        if model:
+            cmd.extend(["-m", model])
+        cmd.append(prompt)
+        merged_env = {**(env or {}), **self._config.get("env", {})}
+        return self._run_process(cmd, workdir, on_output=on_output, env=merged_env)
 
 
 # ---------------------------------------------------------------------------

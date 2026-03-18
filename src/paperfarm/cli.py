@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -65,6 +66,8 @@ def run(
     workers: int = typer.Option(0, help="Max parallel workers (0=serial)"),
     headless: bool = typer.Option(False, help="Run without TUI"),
     agent_name: str = typer.Option("claude-code", help="Agent to use"),
+    agent_model: str = typer.Option("", help="Model for the agent (e.g. custom/MiniMax-M2.5)"),
+    agent_env: list[str] = typer.Option([], help="Extra env vars for agent (KEY=VALUE)"),
 ) -> None:
     """Launch or resume a research session."""
     # Validate repo
@@ -81,13 +84,26 @@ def run(
     if not tag:
         tag = _auto_tag()
 
+    # Build agent config from CLI options
+    agent_config: dict[str, Any] = {}
+    if agent_model:
+        agent_config["model"] = agent_model
+    if agent_env:
+        env_dict = {}
+        for kv in agent_env:
+            if "=" in kv:
+                k, v = kv.split("=", 1)
+                env_dict[k] = v
+        if env_dict:
+            agent_config["env"] = env_dict
+
     # Lazy imports to keep module-load fast
     from .agent import Agent, create_agent  # noqa: E402
     from .skill_runner import SkillRunner  # noqa: E402
     from .state import ResearchState  # noqa: E402
 
     state = ResearchState(research_dir)
-    adapter = create_agent(agent_name)
+    adapter = create_agent(agent_name, config=agent_config if agent_config else None)
     agent = Agent(adapter)
 
     if headless:
