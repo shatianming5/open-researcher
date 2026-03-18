@@ -1,10 +1,13 @@
 """CLI entry-points for Open-Researcher v2.
 
-Provides three commands via :pypi:`typer`:
+Provides commands via :pypi:`typer`:
 
-* ``run``     — launch a research session (serial, parallel, or TUI)
-* ``status``  — display a snapshot of the current session state
-* ``results`` — show the experiment results ledger
+* ``run``       — launch a research session (serial, parallel, or TUI)
+* ``status``    — display a snapshot of the current session state
+* ``results``   — show the experiment results ledger
+* ``review``    — show or act on a pending human review
+* ``inject``    — inject a human-authored experiment into the frontier
+* ``constrain`` — add user constraints for the research direction
 """
 
 from __future__ import annotations
@@ -80,24 +83,30 @@ def run(
         if workers > 0:
             from .parallel import WorkerPool  # noqa: E402
 
-            # Load experiment skill content for parallel workers
             runner = SkillRunner(
                 repo, state, agent, goal=goal, tag=tag,
                 on_output=lambda line: console.print(line, end=""),
             )
-            # First run bootstrap
+            # Run bootstrap first
             rc = runner.run_bootstrap()
             if rc != 0:
                 console.print(f"[red]Bootstrap failed (rc={rc})[/red]")
                 raise typer.Exit(code=rc)
 
-            # Then run parallel pool
+            # Load experiment skill content for parallel workers
+            skill_content = runner._compose_program("experiment")
+
+            # Read GPU memory config
+            config = state.load_config()
+            gpu_mem = config.get("workers", {}).get("gpu_mem_per_worker_mb", 8192)
+
             pool = WorkerPool(
                 repo_path=repo,
                 state=state,
                 agent_factory=lambda: Agent(create_agent(agent_name)),
-                skill_content="",
+                skill_content=skill_content,
                 max_workers=workers,
+                gpu_mem_per_worker_mb=gpu_mem,
                 on_output=lambda line: console.print(line, end=""),
             )
             pool.run()
@@ -198,3 +207,80 @@ def results(
         table.add_row(*(row.get(c, "") for c in columns))
 
     console.print(table)
+
+
+# ---------------------------------------------------------------------------
+# review
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def review(
+    repo: Path = typer.Argument(..., help="Path to target repo"),
+    skip: bool = typer.Option(False, help="Skip the pending review"),
+    approve_all: bool = typer.Option(False, "--approve-all", help="Approve all and continue"),
+    reject: list[str] = typer.Option([], help="Reject specific frontier IDs"),
+    priority: list[str] = typer.Option([], help="Set priority: FRONTIER_ID=PRIORITY"),
+) -> None:
+    """Show or act on a pending human review."""
+    from .state import ResearchState
+
+    research_dir = _resolve_research_dir(repo)
+    if not research_dir.is_dir():
+        console.print("[red]No .research directory found[/red]")
+        raise typer.Exit(code=1)
+
+    state = ResearchState(research_dir)
+    pending = state.get_awaiting_review()
+
+    if pending is None:
+        console.print("[dim]No pending review.[/dim]")
+        return
+
+    review_type = pending.get("type", "unknown")
+    requested_at = pending.get("requested_at", "")
+
+    if skip:
+        state.clear_awaiting_review()
+        state.append_log({"event": "review_skipped", "review_type": review_type})
+        console.print(f"Skipped review: {review_type}")
+        return
+
+    if approve_all:
+        state.clear_awaiting_review()
+        state.append_log({"event": "review_completed", "review_type": review_type})
+        console.print(f"Approved: {review_type}")
+        return
+
+    if reject:
+        graph = state.load_graph()
+        for fid in reject:
+            for item in graph.get("frontier", []):
+                if item.get("id") == fid:
+                    item["status"] = "rejected"
+        state.save_graph(graph)
+        state.clear_awaiting_review()
+        state.append_log({"event": "review_completed", "review_type": review_type})
+        console.print(f"Rejected {reject} and approved remaining")
+        return
+
+    if priority:
+        graph = state.load_graph()
+        for spec in priority:
+            fid, _, pval = spec.partition("=")
+            for item in graph.get("frontier", []):
+                if item.get("id") == fid:
+                    item["priority"] = int(pval)
+        state.save_graph(graph)
+        console.print(f"Updated priorities: {priority}")
+        return
+
+    # Default: show pending review info
+    console.print(f"[bold]Pending review:[/bold] {review_type}")
+    console.print(f"[dim]Requested at: {requested_at}[/dim]")
+    console.print()
+    console.print("Actions:")
+    console.print("  --approve-all    Approve and continue")
+    console.print("  --skip           Skip this review")
+    console.print("  --reject ID      Reject a frontier item")
+    console.print("  --priority ID=N  Adjust priority")

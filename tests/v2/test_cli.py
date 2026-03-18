@@ -26,11 +26,12 @@ class TestImport:
         assert hasattr(cli, "app")
 
     def test_import_commands(self):
-        from open_researcher_v2.cli import run, status, results  # noqa: F811
+        from open_researcher_v2.cli import run, status, results, review  # noqa: F811
 
         assert callable(run)
         assert callable(status)
         assert callable(results)
+        assert callable(review)
 
     def test_auto_tag_format(self):
         tag = _auto_tag()
@@ -146,3 +147,235 @@ class TestRunCommand:
         assert "--workers" in result.output
         assert "--headless" in result.output
         assert "--agent-name" in result.output
+
+    def test_run_help_shows_mode(self):
+        """run --help shows the --mode option."""
+        result = runner.invoke(app, ["run", "--help"])
+        assert result.exit_code == 0
+        assert "--mode" in result.output
+
+
+# ---------------------------------------------------------------------------
+# review command
+# ---------------------------------------------------------------------------
+
+
+class TestReviewCommand:
+    """Tests for the ``review`` subcommand."""
+
+    def test_review_shows_no_pending_when_none(self, tmp_path):
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        result = runner.invoke(app, ["review", str(tmp_path)])
+        assert result.exit_code == 0
+        assert "No pending review" in result.output
+
+    def test_review_shows_pending_review(self, tmp_path):
+        from open_researcher_v2.state import ResearchState
+
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        state = ResearchState(research_dir)
+        state.set_awaiting_review(
+            {"type": "hypothesis_review", "requested_at": "2026-03-19T14:00:00Z"}
+        )
+        result = runner.invoke(app, ["review", str(tmp_path)])
+        assert result.exit_code == 0
+        assert "hypothesis_review" in result.output
+
+    def test_review_skip_clears_review(self, tmp_path):
+        from open_researcher_v2.state import ResearchState
+
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        state = ResearchState(research_dir)
+        state.set_awaiting_review(
+            {"type": "frontier_review", "requested_at": "2026-03-19T14:00:00Z"}
+        )
+        result = runner.invoke(app, ["review", str(tmp_path), "--skip"])
+        assert result.exit_code == 0
+        assert state.get_awaiting_review() is None
+
+    def test_review_approve_all_clears_review(self, tmp_path):
+        from open_researcher_v2.state import ResearchState
+
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        state = ResearchState(research_dir)
+        state.set_awaiting_review(
+            {"type": "result_review", "requested_at": "2026-03-19T14:00:00Z"}
+        )
+        result = runner.invoke(app, ["review", str(tmp_path), "--approve-all"])
+        assert result.exit_code == 0
+        assert state.get_awaiting_review() is None
+
+    def test_review_no_research_dir(self, tmp_path):
+        """review exits with error if .research/ does not exist."""
+        result = runner.invoke(app, ["review", str(tmp_path)])
+        assert result.exit_code != 0
+        assert "No .research directory" in result.output
+
+    def test_review_reject_marks_frontier_items(self, tmp_path):
+        from open_researcher_v2.state import ResearchState
+
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        state = ResearchState(research_dir)
+        state.set_awaiting_review(
+            {"type": "frontier_review", "requested_at": "2026-03-19T14:00:00Z"}
+        )
+        graph = state.load_graph()
+        graph["frontier"] = [
+            {"id": "frontier-001", "status": "approved"},
+            {"id": "frontier-002", "status": "approved"},
+        ]
+        state.save_graph(graph)
+        result = runner.invoke(app, ["review", str(tmp_path), "--reject", "frontier-001"])
+        assert result.exit_code == 0
+        updated = state.load_graph()
+        assert updated["frontier"][0]["status"] == "rejected"
+        assert updated["frontier"][1]["status"] == "approved"
+
+    def test_review_priority_updates_frontier(self, tmp_path):
+        from open_researcher_v2.state import ResearchState
+
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        state = ResearchState(research_dir)
+        state.set_awaiting_review(
+            {"type": "frontier_review", "requested_at": "2026-03-19T14:00:00Z"}
+        )
+        graph = state.load_graph()
+        graph["frontier"] = [
+            {"id": "frontier-001", "priority": 1},
+        ]
+        state.save_graph(graph)
+        result = runner.invoke(
+            app, ["review", str(tmp_path), "--priority", "frontier-001=5"]
+        )
+        assert result.exit_code == 0
+        updated = state.load_graph()
+        assert updated["frontier"][0]["priority"] == 5
+
+
+# ---------------------------------------------------------------------------
+# inject command
+# ---------------------------------------------------------------------------
+
+
+class TestInjectCommand:
+    """Tests for the ``inject`` subcommand."""
+
+    def test_inject_adds_frontier_item(self, tmp_path):
+        from open_researcher_v2.state import ResearchState
+
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        state = ResearchState(research_dir)
+        result = runner.invoke(
+            app,
+            ["inject", str(tmp_path), "--desc", "Try __slots__ for hot path", "--priority", "3"],
+        )
+        assert result.exit_code == 0
+        graph = state.load_graph()
+        frontier = graph["frontier"]
+        assert len(frontier) == 1
+        assert frontier[0]["description"] == "Try __slots__ for hot path"
+        assert frontier[0]["priority"] == 3
+        assert frontier[0]["status"] == "approved"
+        assert frontier[0]["selection_reason_code"] == "human_injected"
+        assert graph["counters"]["frontier"] == 1
+
+    def test_inject_no_research_dir(self, tmp_path):
+        """inject exits with error if .research/ does not exist."""
+        result = runner.invoke(
+            app, ["inject", str(tmp_path), "--desc", "test"]
+        )
+        assert result.exit_code != 0
+        assert "No .research directory" in result.output
+
+    def test_inject_increments_counter(self, tmp_path):
+        """Injecting twice produces distinct frontier IDs."""
+        from open_researcher_v2.state import ResearchState
+
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        state = ResearchState(research_dir)
+        runner.invoke(app, ["inject", str(tmp_path), "--desc", "First"])
+        runner.invoke(app, ["inject", str(tmp_path), "--desc", "Second"])
+        graph = state.load_graph()
+        assert len(graph["frontier"]) == 2
+        assert graph["frontier"][0]["id"] == "frontier-001"
+        assert graph["frontier"][1]["id"] == "frontier-002"
+        assert graph["counters"]["frontier"] == 2
+
+
+# ---------------------------------------------------------------------------
+# constrain command
+# ---------------------------------------------------------------------------
+
+
+class TestConstrainCommand:
+    """Tests for the ``constrain`` subcommand."""
+
+    def test_constrain_adds_constraint(self, tmp_path):
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        result = runner.invoke(
+            app, ["constrain", str(tmp_path), "--add", "Do not touch I/O code"]
+        )
+        assert result.exit_code == 0
+        content = (research_dir / "user_constraints.md").read_text()
+        assert "Do not touch I/O code" in content
+
+    def test_constrain_appends_multiple(self, tmp_path):
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        (research_dir / "user_constraints.md").write_text("- Existing constraint\n")
+        result = runner.invoke(
+            app, ["constrain", str(tmp_path), "--add", "Focus on parser only"]
+        )
+        assert result.exit_code == 0
+        content = (research_dir / "user_constraints.md").read_text()
+        assert "Existing constraint" in content
+        assert "Focus on parser only" in content
+
+    def test_constrain_shows_existing(self, tmp_path):
+        """Without --add, constrain displays existing constraints."""
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        (research_dir / "user_constraints.md").write_text("- Constraint A\n- Constraint B\n")
+        result = runner.invoke(app, ["constrain", str(tmp_path)])
+        assert result.exit_code == 0
+        assert "Constraint A" in result.output
+
+    def test_constrain_no_constraints_set(self, tmp_path):
+        """Without --add and no file, shows 'No constraints set'."""
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        result = runner.invoke(app, ["constrain", str(tmp_path)])
+        assert result.exit_code == 0
+        assert "No constraints set" in result.output
+
+    def test_constrain_no_research_dir(self, tmp_path):
+        """constrain exits with error if .research/ does not exist."""
+        result = runner.invoke(
+            app, ["constrain", str(tmp_path), "--add", "test"]
+        )
+        assert result.exit_code != 0
+        assert "No .research directory" in result.output
+
+
+# ---------------------------------------------------------------------------
+# run --mode flag
+# ---------------------------------------------------------------------------
+
+
+class TestRunModeFlag:
+    """Tests for the ``--mode`` flag on the run command."""
+
+    def test_run_mode_in_help(self):
+        """run --help includes --mode option."""
+        result = runner.invoke(app, ["run", "--help"])
+        assert result.exit_code == 0
+        assert "--mode" in result.output
