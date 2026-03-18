@@ -17,6 +17,12 @@ from textual.containers import Horizontal
 from textual.widgets import Footer, Header, TabbedContent, TabPane
 
 from open_researcher_v2.state import ResearchState
+from open_researcher_v2.tui.modals.direction import DirectionConfirmScreen
+from open_researcher_v2.tui.modals.hypothesis import HypothesisReviewScreen
+from open_researcher_v2.tui.modals.frontier import FrontierReviewScreen
+from open_researcher_v2.tui.modals.result import ResultReviewScreen
+from open_researcher_v2.tui.modals.goal_edit import GoalEditScreen
+from open_researcher_v2.tui.modals.inject import InjectIdeaScreen
 from open_researcher_v2.tui.widgets import (
     FrontierPanel,
     LogPanel,
@@ -52,6 +58,8 @@ class ResearchApp(App):
         Binding("p", "pause", "Pause"),
         Binding("r", "resume", "Resume"),
         Binding("s", "skip", "Skip"),
+        Binding("g", "edit_goal", "Goal"),
+        Binding("i", "inject_idea", "Inject"),
         Binding("q", "quit", "Quit"),
     ]
 
@@ -67,6 +75,7 @@ class ResearchApp(App):
         self.state = state
         self.runner = runner
         self._runner_thread: threading.Thread | None = None
+        self._review_shown = False
 
     # -- layout -------------------------------------------------------------
 
@@ -97,12 +106,15 @@ class ResearchApp(App):
             self._runner_thread.start()
 
     def _run_runner(self) -> None:
-        """Execute the runner callable; exceptions are silently ignored."""
+        """Execute the runner callable; log errors to state on failure."""
         try:
             if self.runner is not None:
                 self.runner()
-        except Exception:
-            pass
+        except Exception as exc:
+            try:
+                self.state.append_log({"event": "runner_error", "line": str(exc)})
+            except Exception:
+                pass
 
     # -- polling ------------------------------------------------------------
 
@@ -138,6 +150,16 @@ class ResearchApp(App):
             results = self.state.load_results()
             chart: MetricChart = self.query_one("#chart", MetricChart)
             chart.update_data(results)
+
+            # Check for pending review
+            review = summary.get("awaiting_review")
+            if review and not self._review_shown:
+                self._review_shown = True
+                try:
+                    screen = self._make_review_screen(review)
+                    self.push_screen(screen, callback=self._on_review_done)
+                except Exception:
+                    self._review_shown = False
         except Exception:
             # Never let a polling error crash the TUI
             pass
@@ -164,3 +186,42 @@ class ResearchApp(App):
             self.state.set_skip_current(True)
         except Exception:
             pass
+
+    def _make_review_screen(self, review: dict):
+        """Create the appropriate review screen for the review type."""
+        rtype = review.get("type", "")
+        if rtype == "direction_confirm":
+            return DirectionConfirmScreen(state=self.state, review_request=review)
+        if rtype == "hypothesis_review":
+            return HypothesisReviewScreen(state=self.state, review_request=review)
+        if rtype == "frontier_review":
+            return FrontierReviewScreen(state=self.state, review_request=review)
+        if rtype == "result_review":
+            return ResultReviewScreen(state=self.state, review_request=review)
+        self.state.clear_awaiting_review()
+        raise ValueError(f"Unknown review type: {rtype}")
+
+    def _on_review_done(self, result) -> None:
+        self._review_shown = False
+
+    def action_edit_goal(self) -> None:
+        """Open goal edit modal."""
+        try:
+            self.push_screen(GoalEditScreen(state=self.state))
+        except Exception:
+            pass
+
+    def action_inject_idea(self) -> None:
+        """Open inject idea modal."""
+        try:
+            self.push_screen(InjectIdeaScreen(state=self.state))
+        except Exception:
+            pass
+
+    def action_quit(self) -> None:
+        """Quit TUI, cleaning up any pending review."""
+        if self.state.get_awaiting_review():
+            self.state.clear_awaiting_review()
+            self.state.append_log({"event": "review_skipped", "review_type": "quit"})
+        self._review_shown = False
+        super().action_quit()

@@ -264,3 +264,43 @@ class TestTUIAppRunner:
         app = ResearchApp(repo_path=str(tmp_path), state=state)
         async with app.run_test() as pilot:
             assert app._runner_thread is None
+
+
+# ---------------------------------------------------------------------------
+# TestReviewDetection
+# ---------------------------------------------------------------------------
+
+
+class TestReviewDetection:
+    """Test review modal wiring and detection."""
+
+    def test_review_shown_flag_default(self, tmp_path: Path) -> None:
+        state = _make_state(tmp_path)
+        app = ResearchApp(repo_path=str(tmp_path), state=state, runner=None)
+        assert app._review_shown is False
+
+    def test_action_quit_clears_review(self, tmp_path: Path) -> None:
+        from unittest.mock import patch
+
+        state = _make_state(tmp_path)
+        state.set_awaiting_review({"type": "test", "requested_at": "2026-03-19T14:00:00Z"})
+        the_app = ResearchApp(repo_path=str(tmp_path), state=state, runner=None)
+        with patch.object(the_app.__class__.__bases__[0], "action_quit"):
+            the_app.action_quit()
+        assert state.get_awaiting_review() is None
+
+    def test_make_review_screen_returns_correct_type(self, tmp_path: Path) -> None:
+        from open_researcher_v2.tui.modals.hypothesis import HypothesisReviewScreen
+
+        state = _make_state(tmp_path)
+        the_app = ResearchApp(repo_path=str(tmp_path), state=state, runner=None)
+        screen = the_app._make_review_screen({"type": "hypothesis_review", "requested_at": "now"})
+        assert isinstance(screen, HypothesisReviewScreen)
+
+    def test_make_review_screen_unknown_type_clears(self, tmp_path: Path) -> None:
+        state = _make_state(tmp_path)
+        state.set_awaiting_review({"type": "bogus", "requested_at": "now"})
+        the_app = ResearchApp(repo_path=str(tmp_path), state=state, runner=None)
+        with pytest.raises(ValueError):
+            the_app._make_review_screen({"type": "bogus"})
+        assert state.get_awaiting_review() is None
