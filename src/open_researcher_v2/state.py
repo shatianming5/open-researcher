@@ -33,51 +33,25 @@ from filelock import FileLock
 _DEFAULT_CONFIG: dict[str, Any] = {
     "protocol": "research-v1",
     "metrics": {
-        "primary": {"name": "", "direction": ""},
+        "primary": {"name": "", "direction": "maximize"},
     },
-    "bootstrap": {
-        "auto_prepare": True,
-        "working_dir": ".",
-        "python": "",
-        "install_command": "",
-        "data_command": "",
-        "smoke_command": "",
-    },
-    "steps": {
-        "understand": True,
-        "literature": True,
-        "plan": True,
-        "execute": True,
-    },
-    "workers": {
-        "max_parallel": 0,
-        "timeout": 600,
-        "max_experiments": 0,
-    },
-    "limits": {
-        "token_budget": 0,
-        "budget_policy": "warn",
-        "max_crashes": 3,
-    },
-    "agent": {
-        "worker_agent": "",
-        "web_search": True,
-    },
+    "bootstrap": {"steps": ["scout"]},
+    "steps": [
+        {"name": "manager", "skill": "manager.md"},
+        {"name": "critic", "skill": "critic.md"},
+        {"name": "experiment", "skill": "experiment.md"},
+        {"name": "critic", "skill": "critic.md"},
+    ],
+    "workers": {"max": 0, "gpu_mem_per_worker_mb": 8192},
+    "limits": {"max_rounds": 20, "timeout_minutes": 0},
+    "agent": {"name": "claude-code", "config": {}},
 }
 
 
 def _default_graph() -> dict[str, Any]:
     """Return a fresh default graph structure (always a new copy)."""
     return {
-        "version": "research-v1",
-        "repo_profile": {
-            "profile_key": "general_code",
-            "task_family": "general_code",
-            "primary_metric": "",
-            "direction": "",
-            "source": "bootstrap",
-            "resource_capabilities": {},
-        },
+        "repo_profile": {},
         "hypotheses": [],
         "experiment_specs": [],
         "evidence": [],
@@ -86,13 +60,10 @@ def _default_graph() -> dict[str, Any]:
         "frontier": [],
         "counters": {
             "hypothesis": 0,
-            "experiment_spec": 0,
-            "evidence": 0,
-            "claim_update": 0,
-            "branch_relation": 0,
+            "spec": 0,
             "frontier": 0,
-            "idea": 0,
-            "execution": 0,
+            "evidence": 0,
+            "claim": 0,
         },
     }
 
@@ -109,10 +80,9 @@ _RESULTS_FIELDS = [
 
 _DEFAULT_ACTIVITY: dict[str, Any] = {
     "phase": "idle",
-    "paused": False,
-    "skip_current": False,
-    "workers": {},
-    "updated_at": "",
+    "round": 0,
+    "workers": [],
+    "control": {"paused": False, "skip_current": False},
 }
 
 # ---------------------------------------------------------------------------
@@ -275,57 +245,70 @@ class ResearchState:
                 return copy.deepcopy(_DEFAULT_ACTIVITY)
             return data
 
-    def _save_activity(self, data: dict[str, Any]) -> None:
+    def save_activity(self, data: dict[str, Any]) -> None:
+        """Write ``activity.json`` atomically under lock."""
+        with self._activity_lock:
+            _atomic_write(self.dir / "activity.json", json.dumps(data, indent=2))
+
+    def _save_activity_unlocked(self, data: dict[str, Any]) -> None:
         """Write ``activity.json`` atomically (caller must hold lock)."""
         _atomic_write(self.dir / "activity.json", json.dumps(data, indent=2))
 
-    def update_phase(self, phase: str) -> None:
-        """Set the top-level ``phase`` in activity."""
+    def update_phase(self, phase: str, round_num: int | None = None) -> None:
+        """Set the top-level ``phase`` (and optionally ``round``) in activity."""
         with self._activity_lock:
             data = self._load_activity_unlocked()
             data["phase"] = phase
-            data["updated_at"] = _now_iso()
-            self._save_activity(data)
+            if round_num is not None:
+                data["round"] = round_num
+            self._save_activity_unlocked(data)
 
     def update_worker(self, worker_id: str, **fields: Any) -> None:
-        """Update or insert a worker entry in ``activity.json``."""
+        """Update or insert a worker entry in ``activity.json``.
+
+        Workers are stored as a list of dicts with ``id`` field.
+        """
         with self._activity_lock:
             data = self._load_activity_unlocked()
-            workers = data.get("workers", {})
-            if not isinstance(workers, dict):
-                workers = {}
-            entry = workers.get(worker_id, {})
-            entry.update(fields)
-            entry["updated_at"] = _now_iso()
-            workers[worker_id] = entry
+            workers = data.get("workers", [])
+            if not isinstance(workers, list):
+                workers = []
+            existing = next((w for w in workers if w.get("id") == worker_id), None)
+            if existing is None:
+                existing = {"id": worker_id}
+                workers.append(existing)
+            existing.update(fields)
+            existing["updated_at"] = _now_iso()
             data["workers"] = workers
-            data["updated_at"] = _now_iso()
-            self._save_activity(data)
+            self._save_activity_unlocked(data)
+
+    def is_paused(self) -> bool:
+        """Return True if research is paused."""
+        return self.load_activity().get("control", {}).get("paused", False)
 
     def set_paused(self, paused: bool) -> None:
-        """Toggle the ``paused`` flag in activity."""
+        """Toggle the ``paused`` flag in activity.control."""
         with self._activity_lock:
             data = self._load_activity_unlocked()
-            data["paused"] = paused
-            data["updated_at"] = _now_iso()
-            self._save_activity(data)
+            data.setdefault("control", {})["paused"] = paused
+            self._save_activity_unlocked(data)
 
     def set_skip_current(self, skip: bool) -> None:
-        """Set the ``skip_current`` flag in activity."""
+        """Set the ``skip_current`` flag in activity.control."""
         with self._activity_lock:
             data = self._load_activity_unlocked()
-            data["skip_current"] = skip
-            data["updated_at"] = _now_iso()
-            self._save_activity(data)
+            data.setdefault("control", {})["skip_current"] = skip
+            self._save_activity_unlocked(data)
 
     def consume_skip(self) -> bool:
-        """If ``skip_current`` is True, reset it to False and return True."""
+        """If ``control.skip_current`` is True, reset it and return True."""
         with self._activity_lock:
             data = self._load_activity_unlocked()
-            if data.get("skip_current"):
-                data["skip_current"] = False
-                data["updated_at"] = _now_iso()
-                self._save_activity(data)
+            ctrl = data.get("control", {})
+            if ctrl.get("skip_current"):
+                ctrl["skip_current"] = False
+                data["control"] = ctrl
+                self._save_activity_unlocked(data)
                 return True
             return False
 
@@ -347,8 +330,8 @@ class ResearchState:
     def append_log(self, entry: dict[str, Any]) -> None:
         """Append a JSON line to ``log.jsonl``."""
         record = dict(entry)
-        if "timestamp" not in record:
-            record["timestamp"] = _now_iso()
+        if "ts" not in record:
+            record["ts"] = _now_iso()
         line = json.dumps(record, separators=(",", ":")) + "\n"
         with self._log_lock:
             self.dir.mkdir(parents=True, exist_ok=True)
@@ -357,7 +340,7 @@ class ResearchState:
                 fh.flush()
                 os.fsync(fh.fileno())
 
-    def tail_log(self, n: int = 20) -> list[dict[str, Any]]:
+    def tail_log(self, n: int = 50) -> list[dict[str, Any]]:
         """Return the last *n* entries from ``log.jsonl``."""
         path = self.dir / "log.jsonl"
         if not path.exists():
@@ -381,27 +364,30 @@ class ResearchState:
 
     def summary(self) -> dict[str, Any]:
         """Aggregate state snapshot for TUI / status display."""
-        config = self.load_config()
         graph = self.load_graph()
         results = self.load_results()
         activity = self.load_activity()
 
-        total_experiments = len(results)
-        by_status: dict[str, int] = {}
-        for row in results:
-            s = row.get("status", "unknown")
-            by_status[s] = by_status.get(s, 0) + 1
-
         frontier = graph.get("frontier", [])
-        hypotheses = graph.get("hypotheses", [])
+
+        # Best value from kept results
+        kept = [r for r in results if r.get("status") == "keep"]
+        best = "—"
+        if kept:
+            try:
+                best = str(max(kept, key=lambda r: float(r.get("value", 0)))["value"])
+            except (ValueError, KeyError):
+                pass
 
         return {
             "phase": activity.get("phase", "idle"),
-            "paused": activity.get("paused", False),
-            "total_experiments": total_experiments,
-            "results_by_status": by_status,
-            "total_hypotheses": len(hypotheses),
-            "frontier_size": len(frontier),
-            "workers": activity.get("workers", {}),
-            "config": config,
+            "round": activity.get("round", 0),
+            "hypotheses": len(graph.get("hypotheses", [])),
+            "experiments_total": len(frontier),
+            "experiments_done": sum(1 for f in frontier if f.get("status") in ("archived", "rejected")),
+            "experiments_running": sum(1 for f in frontier if f.get("status") == "running"),
+            "results_count": len(results),
+            "best_value": best,
+            "workers": activity.get("workers", []),
+            "paused": activity.get("control", {}).get("paused", False),
         }
