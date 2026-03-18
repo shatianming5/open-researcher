@@ -15,16 +15,14 @@ Use this goal to guide your analysis. Focus your strategy on achieving this obje
 - **Write**: `.research/research-strategy.md` — research direction, focus areas, constraints
 - **Write**: `.research/evaluation.md` — primary metric, evaluation command, baseline method
 - **Update**: `.research/config.yaml` — fill in `metrics.primary.*` and the `bootstrap` section
-- **Write**: `.research/activity.json` — update `scout_agent` key with your status
+- **Update**: `.research/activity.json` — update `phase` field with your status
 
 ## Status Updates
 
-Before each action, update your status in `.research/activity.json`:
-```json
-{"scout_agent": {"status": "<phase>", "detail": "<what you're doing>", "updated_at": "<ISO timestamp>"}}
-```
+Before each action, update `.research/activity.json` (read current, update phase/detail fields):
+- Set `"phase"` to your current status: `"scout"`, `"analyzing"`, `"searching"`, `"strategizing"`
 
-Valid statuses: `analyzing`, `searching`, `strategizing`, `idle`
+Valid phases: `analyzing`, `searching`, `strategizing`, `idle`
 
 ## Phase 1: Understand the Project
 
@@ -85,7 +83,7 @@ Update status: `{"status": "strategizing", "detail": "defining research strategy
    - `bootstrap.requires_gpu` if the repo is GPU-only
 5. Write to `.research/evaluation.md`
 6. Update `.research/config.yaml`: set `metrics.primary.*` and `bootstrap.*`
-7. If the repo clearly exposes stable runtime shapes, record them in `.research/research_graph.json -> repo_profile.resource_capabilities`
+7. If the repo clearly exposes stable runtime shapes, record them in `.research/graph.json -> repo_profile.resource_capabilities`
    - keep this factual and repo-grounded
    - do not invent launch modes that the repo does not already expose
 7. Update status: `{"status": "idle", "detail": "analysis complete"}`
