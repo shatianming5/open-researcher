@@ -1,0 +1,17 @@
+# Default research protocol — defines the loop steps.
+protocol: research-v1
+bootstrap:
+  - scout
+loop:
+  - name: manager
+    skill: manager.md
+    role: planning
+  - name: critic
+    skill: critic.md
+    role: review
+  - name: experiment
+    skill: experiment.md
+    role: execution
+  - name: critic
+    skill: critic.md
+    role: review
