@@ -50,6 +50,7 @@ dev = [
 
 [project.scripts]
 open-researcher = "open_researcher.cli:app"
+open-researcher-v2 = "open_researcher_v2.cli:app"
 paperfarm = "open_researcher.cli:app"
 
 [project.entry-points."open_researcher.plugins"]
