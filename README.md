@@ -262,75 +262,63 @@ agents:
 
 ## 📊 Interactive TUI Dashboard
 
-The interactive UI is now a **research-v1 command center**, not a generic tabbed monitor. It is built around the real runtime objects in `.research/`: frontier rows, hypotheses, evidence, claims, control state, and the shared event stream.
+The interactive TUI is a **research command center** built around the runtime state in `.research/`: frontier items, experiment results, worker status, and the event stream. It supports **human-in-the-loop checkpoints** — review hypotheses, override results, inject ideas, and edit goals without leaving the terminal.
 
 ### Screenshots
 
 <p align="center">
-  <img src="imgs/overview.png" alt="Open Researcher overview dashboard" width="100%" />
+  <img src="imgs/tui-01_execution_r5.png" alt="Execution tab — frontier + parallel workers" width="100%" />
 </p>
-<p align="center"><em>Field Overview</em>: research command center with frontier focus, lineage, and live role activity.</p>
+<p align="center"><em>Execution</em>: frontier table sorted by priority with colored status, parallel workers running on multiple GPUs.</p>
 
 <p align="center">
-  <img src="imgs/execution.png" alt="Open Researcher execution dashboard" width="100%" />
+  <img src="imgs/tui-05_metrics.png" alt="Metrics tab — experiment trend chart" width="100%" />
 </p>
-<p align="center"><em>Harvest In Progress</em>: metric trend, run summary, and recent experiment results.</p>
+<p align="center"><em>Metrics</em>: braille-dot trend chart tracking kept experiment results across rounds.</p>
 
 <p align="center">
-  <img src="imgs/docs.png" alt="Open Researcher docs dashboard" width="100%" />
+  <img src="imgs/tui-06_logs.png" alt="Logs tab — multi-round event stream" width="100%" />
 </p>
-<p align="center"><em>Docs</em>: searchable research documents with grouped navigation and live preview.</p>
+<p align="center"><em>Logs</em>: color-coded event stream with aligned prefixes — SKILL / RES / WAIT / INJ / GOAL events across 5 rounds.</p>
 
-```
-┌─ OPEN RESEARCHER ─ research-v1 ────────────────────────────────────────┐
-│ Research  branch main  frontier 3  best=0.3290                        │
-├─ Command ─ Execution ─ Logs ─ Docs ────────────────────────────────────┤
-│ Role Activity      │ Frontier Focus          │ Frontier Detail         │
-│ Research Manager   │ frontier-001 / exec-014 │ status / priority /     │
-│ Research Critic    │ hypothesis + spec       │ claim chips             │
-│ Experiment Agent   │ select a frontier       │ collapsible hypothesis  │
-│                    │ to inspect               │ spec / evidence / claim │
-│────────────────────┼─────────────────────────┼─────────────────────────│
-│ Research Graph     │ Lineage & Timeline      │ Docs sidebar + search   │
-│ hypotheses/specs   │ hypothesis tree         │ grouped by type         │
-│ evidence/claims    │ recent manager / critic │ recent docs + preview   │
-└────────────────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="imgs/tui-07_hyp_review.png" alt="Hypothesis review modal" width="100%" />
+</p>
+<p align="center"><em>Hypothesis Review</em>: human-in-the-loop checkpoint — toggle, approve all, or reject frontier items before the next round.</p>
+
+<p align="center">
+  <img src="imgs/tui-04_paused.png" alt="Paused state" width="100%" />
+</p>
+<p align="center"><em>Paused</em>: one-key pause/resume with bold indicator on the status bar.</p>
+
+<p align="center">
+  <img src="imgs/tui-11_completed.png" alt="Completed state" width="100%" />
+</p>
+<p align="center"><em>Completed</em>: all phases checked off, final frontier state with best metric displayed.</p>
 
 <details>
-<summary><b>📑 4 Tabs & Keyboard Shortcuts</b></summary>
+<summary><b>📑 3 Tabs & Keyboard Shortcuts</b></summary>
 <br/>
 
-**4 tabs**:
+**3 tabs**:
 
-- **Command** — Session chrome, role activity, frontier focus, collapsible frontier detail drawer, graph summary, hypothesis lineage, recent timeline
-- **Execution** — Metric trend, baseline/current/best summary, recent results, execution focus
-- **Logs** — Trace-aware runtime log with `frontier_id / execution_id / reason_code`
-- **Docs** — Searchable docs workbench with grouped navigation, recent history, preview, and live document viewer
+- **Execution** — Frontier table (sorted by priority, colored status) + Workers panel (GPU, frontier assignment)
+- **Metrics** — Braille-dot trend chart of kept experiment values across rounds
+- **Logs** — Color-coded event stream: SKILL / DONE / W+ / W- / RES / WAIT / REVW / INJ / GOAL
 
-**Keyboard shortcuts**: `1-4` switch tabs, `p` pause, `r` resume, `s` skip frontier, `g` GPU status, `l` open run log, `q` quit.
+**Keyboard shortcuts**: `p` pause, `r` resume, `s` skip, `g` edit goal, `i` inject idea, `q` quit.
 
 </details>
 
 <details>
-<summary><b>🔎 Command Page Highlights</b></summary>
+<summary><b>🔎 Human-in-the-Loop Checkpoints</b></summary>
 <br/>
 
-- **Frontier Focus** shows the top projected frontier rows ordered by runtime priority, not a separate editable idea pool.
-- **Frontier Detail Drawer** is selection-driven and includes collapsible sections for hypothesis, experiment spec, metric/evidence comparison, and claim updates.
-- **Metric & Evidence Compare** shows latest observed metric, best observed metric, baseline/current/global best references, and evidence reliability counts.
-- **Lineage & Timeline** combines branch relations from `research_graph.json` with the latest typed events from `events.jsonl`.
-
-</details>
-
-<details>
-<summary><b>📚 Docs Workbench Highlights</b></summary>
-<br/>
-
-- Documents are grouped by type: **Research State**, **Research Notes**, and **Role Programs**.
-- Search highlights matching text in titles, filenames, and previews.
-- Recent documents are tracked in-session so you can jump back to the last files you inspected.
-- Dynamic docs such as `research_graph.md`, `research_memory.md`, and `projected_backlog.md` are generated from canonical JSON state.
+- **Hypothesis Review** — After manager proposes ideas, review frontier items: toggle keep/reject, approve all, or skip.
+- **Result Review** — After experiments complete, review AI decisions (keep/discard) and override any result.
+- **Inject Idea** (`i` key) — Add a human-authored experiment to the frontier at any time.
+- **Edit Goal** (`g` key) — Update research constraints and direction mid-run.
+- **Pause/Resume** (`p`/`r` keys) — Temporarily halt the research loop.
 
 </details>
 
