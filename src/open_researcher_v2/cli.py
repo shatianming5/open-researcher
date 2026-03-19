@@ -106,45 +106,36 @@ def run(
     adapter = create_agent(agent_name)
     agent = Agent(adapter)
 
+    runner = SkillRunner(
+        repo, state, agent, goal=goal, tag=tag,
+        on_output=lambda line: console.print(line, end="") if headless else None,
+    )
+
     if headless:
         # -- headless mode (serial or parallel) --
         if workers > 0:
             from .parallel import WorkerPool  # noqa: E402
 
-            runner = SkillRunner(
-                repo, state, agent, goal=goal, tag=tag,
-                on_output=lambda line: console.print(line, end=""),
-            )
-            # Run bootstrap first
-            rc = runner.run_bootstrap()
-            if rc != 0:
-                console.print(f"[red]Bootstrap failed (rc={rc})[/red]")
-                raise typer.Exit(code=rc)
-
-            # Load experiment skill content for parallel workers
-            skill_content = runner._compose_program("experiment")
-
-            # Read GPU memory config
             config = state.load_config()
             gpu_mem = config.get("workers", {}).get("gpu_mem_per_worker_mb", 8192)
 
-            pool = WorkerPool(
-                repo_path=repo,
-                state=state,
-                agent_factory=lambda: Agent(create_agent(agent_name)),
-                skill_content=skill_content,
-                max_workers=workers,
-                gpu_mem_per_worker_mb=gpu_mem,
-                on_output=lambda line: console.print(line, end=""),
-            )
-            pool.run()
-            pool.wait()
+            def _make_pool() -> WorkerPool:
+                return WorkerPool(
+                    repo_path=repo,
+                    state=state,
+                    agent_factory=lambda: Agent(create_agent(agent_name)),
+                    skill_content=runner._compose_program("experiment"),
+                    max_workers=workers,
+                    gpu_mem_per_worker_mb=gpu_mem,
+                    on_output=lambda line: console.print(line, end=""),
+                )
+
+            rc = runner.run_parallel(_make_pool)
+            if rc != 0:
+                console.print(f"[red]Session ended with rc={rc}[/red]")
+                raise typer.Exit(code=rc)
         else:
             # Serial mode
-            runner = SkillRunner(
-                repo, state, agent, goal=goal, tag=tag,
-                on_output=lambda line: console.print(line, end=""),
-            )
             rc = runner.run_serial()
             if rc != 0:
                 console.print(f"[red]Session ended with rc={rc}[/red]")
@@ -153,13 +144,33 @@ def run(
         # -- TUI mode --
         from .tui.app import ResearchApp  # noqa: E402
 
-        runner = SkillRunner(
-            repo, state, agent, goal=goal, tag=tag,
-        )
+        if workers > 0:
+            from .parallel import WorkerPool  # noqa: E402
+
+            config = state.load_config()
+            gpu_mem = config.get("workers", {}).get("gpu_mem_per_worker_mb", 8192)
+
+            def _make_pool_tui() -> WorkerPool:
+                return WorkerPool(
+                    repo_path=repo,
+                    state=state,
+                    agent_factory=lambda: Agent(create_agent(agent_name)),
+                    skill_content=runner._compose_program("experiment"),
+                    max_workers=workers,
+                    gpu_mem_per_worker_mb=gpu_mem,
+                    on_output=lambda line: state.append_log(
+                        {"event": "output", "message": line.rstrip()}
+                    ),
+                )
+
+            tui_runner = lambda: runner.run_parallel(_make_pool_tui)
+        else:
+            tui_runner = runner.run_serial
+
         tui_app = ResearchApp(
             repo_path=str(repo),
             state=state,
-            runner=runner.run_serial,
+            runner=tui_runner,
         )
         tui_app.run()
 

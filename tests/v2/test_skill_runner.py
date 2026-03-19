@@ -478,3 +478,237 @@ class TestCheckpoints:
         review_events = [e for e in logs if e.get("event") == "review_requested"]
         assert len(review_events) == 1
         assert review_events[0]["review_type"] == "hypothesis_review"
+
+    def test_await_review_clears_on_pause(self, tmp_path):
+        """When paused during a review, awaiting_review should be cleared."""
+        import threading, time
+        runner, _, state = _make_runner(tmp_path, config_overrides={
+            "interaction": {"mode": "checkpoint"},
+        })
+        def pause_after_delay():
+            time.sleep(0.3)
+            state.set_paused(True)
+        t = threading.Thread(target=pause_after_delay)
+        t.start()
+        runner._await_review("hypothesis_review")
+        t.join()
+        # Review should be cleared (not left stale)
+        assert state.get_awaiting_review() is None
+        logs = state.tail_log(10)
+        events = [e["event"] for e in logs]
+        assert "review_skipped" in events
+
+
+# ---------------------------------------------------------------------------
+# TestRunParallel
+# ---------------------------------------------------------------------------
+
+
+class _MockPool:
+    """A lightweight mock for WorkerPool with run/wait methods."""
+
+    def __init__(self):
+        self.run_called = False
+        self.wait_called = False
+
+    def run(self):
+        self.run_called = True
+
+    def wait(self):
+        self.wait_called = True
+
+
+class TestRunParallel:
+    """Tests for SkillRunner.run_parallel orchestration."""
+
+    def test_parallel_runs_correct_step_order(self, tmp_path):
+        """run_parallel should call: scout → manager → critic → workers → critic per round."""
+        pools = []
+
+        def pool_factory():
+            p = _MockPool()
+            pools.append(p)
+            return p
+
+        runner, adapter, state = _make_runner(
+            tmp_path,
+            config_overrides={"limits": {"max_rounds": 1}},
+        )
+        rc = runner.run_parallel(pool_factory)
+        assert rc == 0
+
+        # Step names from adapter calls:
+        # bootstrap: scout (1 call)
+        # round 1: manager, critic, critic (3 agent calls + 1 pool)
+        step_names = [c["program_file"] for c in adapter.calls]
+        assert step_names == ["scout.md", "manager.md", "critic.md", "critic.md"]
+
+        # Pool should have been created and used
+        assert len(pools) == 1
+        assert pools[0].run_called
+        assert pools[0].wait_called
+
+    def test_parallel_runs_multiple_rounds(self, tmp_path):
+        """run_parallel runs correct number of rounds."""
+        pools = []
+
+        def pool_factory():
+            p = _MockPool()
+            pools.append(p)
+            return p
+
+        runner, adapter, state = _make_runner(
+            tmp_path,
+            config_overrides={"limits": {"max_rounds": 3}},
+        )
+        rc = runner.run_parallel(pool_factory)
+        assert rc == 0
+
+        # 1 bootstrap + 3 rounds * 3 agent calls = 10 total agent calls
+        assert len(adapter.calls) == 10
+        # 3 pools (one per round)
+        assert len(pools) == 3
+
+    def test_parallel_respects_max_rounds(self, tmp_path):
+        """run_parallel stops after max_rounds."""
+        pools = []
+
+        def pool_factory():
+            p = _MockPool()
+            pools.append(p)
+            return p
+
+        runner, adapter, state = _make_runner(
+            tmp_path,
+            config_overrides={"limits": {"max_rounds": 2}},
+        )
+        rc = runner.run_parallel(pool_factory)
+        assert rc == 0
+        assert len(pools) == 2
+
+    def test_parallel_bootstrap_failure_stops(self, tmp_path):
+        """If bootstrap fails, run_parallel returns the error code."""
+        runner, adapter, state = _make_runner(tmp_path, adapter_rc=1)
+        rc = runner.run_parallel(lambda: _MockPool())
+        assert rc == 1
+        assert len(adapter.calls) == 1  # only scout attempted
+
+    def test_parallel_manager_failure_stops(self, tmp_path):
+        """If manager fails, run_parallel returns the error code."""
+        call_count = [0]
+        runner, adapter, state = _make_runner(
+            tmp_path,
+            config_overrides={"limits": {"max_rounds": 2}},
+        )
+        original_run = adapter.run
+
+        def _fail_on_manager(workdir, *, on_output=None, program_file="program.md", env=None):
+            result = original_run(workdir, on_output=on_output, program_file=program_file, env=env)
+            call_count[0] += 1
+            # Fail on manager (2nd call, after scout)
+            if call_count[0] == 2:
+                return 3
+            return result
+
+        adapter.run = _fail_on_manager
+        rc = runner.run_parallel(lambda: _MockPool())
+        assert rc == 3
+
+    def test_parallel_pause_stops_loop(self, tmp_path):
+        """Pausing before a round starts should prevent that round."""
+        runner, adapter, state = _make_runner(
+            tmp_path,
+            config_overrides={"limits": {"max_rounds": 5}},
+        )
+        original_run = adapter.run
+        call_count = [0]
+
+        def _pausing_run(workdir, *, on_output=None, program_file="program.md", env=None):
+            result = original_run(workdir, on_output=on_output, program_file=program_file, env=env)
+            call_count[0] += 1
+            # After bootstrap (1st call), set paused
+            if call_count[0] == 1:
+                state.set_paused(True)
+            return result
+
+        adapter.run = _pausing_run
+        rc = runner.run_parallel(lambda: _MockPool())
+        assert rc == 0
+        # Only bootstrap ran (1 call), then pause stopped the loop
+        assert call_count[0] == 1
+
+    def test_parallel_frontier_complete_stops(self, tmp_path):
+        """If all frontier items are terminal, stop early."""
+        pools = []
+
+        def pool_factory():
+            p = _MockPool()
+            pools.append(p)
+            return p
+
+        runner, adapter, state = _make_runner(
+            tmp_path,
+            config_overrides={"limits": {"max_rounds": 10}},
+        )
+        # Pre-populate graph with a fully-done frontier
+        graph = state.load_graph()
+        graph["frontier"] = [
+            {"id": "f-1", "status": "archived"},
+            {"id": "f-2", "status": "rejected"},
+        ]
+        state.save_graph(graph)
+
+        rc = runner.run_parallel(pool_factory)
+        assert rc == 0
+        # Should stop after round 1: 1 bootstrap + 3 agent calls + 1 pool = done
+        assert len(pools) == 1
+        logs = state.tail_log(100)
+        assert any(e.get("event") == "frontier_complete" for e in logs)
+
+    def test_parallel_logs_worker_events(self, tmp_path):
+        """run_parallel logs parallel_workers_started and parallel_workers_finished."""
+        runner, adapter, state = _make_runner(
+            tmp_path,
+            config_overrides={"limits": {"max_rounds": 1}},
+        )
+        rc = runner.run_parallel(lambda: _MockPool())
+        assert rc == 0
+
+        logs = state.tail_log(100)
+        events = [e["event"] for e in logs if "event" in e]
+        assert "parallel_workers_started" in events
+        assert "parallel_workers_finished" in events
+
+    def test_parallel_updates_phase_to_idle(self, tmp_path):
+        """After run_parallel completes, phase should be idle."""
+        runner, _, state = _make_runner(
+            tmp_path,
+            config_overrides={"limits": {"max_rounds": 1}},
+        )
+        runner.run_parallel(lambda: _MockPool())
+
+        activity = state.load_activity()
+        assert activity["phase"] == "idle"
+
+    def test_parallel_sets_experiment_phase_during_workers(self, tmp_path):
+        """During worker execution, phase should be set to 'experiment'."""
+        phases_seen = []
+
+        class _PhaseCapturingPool:
+            def __init__(self, state):
+                self._state = state
+
+            def run(self):
+                activity = self._state.load_activity()
+                phases_seen.append(activity.get("phase"))
+
+            def wait(self):
+                pass
+
+        runner, adapter, state = _make_runner(
+            tmp_path,
+            config_overrides={"limits": {"max_rounds": 1}},
+        )
+        runner.run_parallel(lambda: _PhaseCapturingPool(state))
+
+        assert "experiment" in phases_seen

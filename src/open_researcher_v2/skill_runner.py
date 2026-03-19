@@ -191,6 +191,8 @@ class SkillRunner:
                 self.state.append_log({"event": "review_completed", "review_type": review_type})
                 break
             if self.state.is_paused():
+                self.state.clear_awaiting_review()
+                self.state.append_log({"event": "review_skipped", "review_type": review_type, "reason": "paused"})
                 break
             if deadline and time.monotonic() > deadline:
                 self.state.clear_awaiting_review()
@@ -276,6 +278,84 @@ class SkillRunner:
             item.get("status") in ("archived", "rejected")
             for item in frontier
         )
+
+    def run_parallel(
+        self,
+        pool_factory: "Callable[[], Any]",
+    ) -> int:
+        """Run the parallel research loop: bootstrap → (manager → critic → workers → critic) × N.
+
+        Parameters
+        ----------
+        pool_factory:
+            Callable returning a fresh ``WorkerPool`` instance.
+            Called each round so workers get fresh skill content.
+
+        Returns 0 on clean completion, non-zero on failure.
+        """
+        # -- bootstrap --
+        rc = self.run_bootstrap()
+        if rc != 0:
+            return rc
+
+        config = self.state.load_config()
+        max_rounds = config.get("limits", {}).get("max_rounds", 20)
+
+        for round_num in range(1, max_rounds + 1):
+            if self.state.is_paused():
+                self.state.append_log({"event": "loop_paused", "round": round_num})
+                self.state.update_phase("paused", round_num)
+                break
+
+            self._critic_call_count_this_round = 0
+            self.state.update_phase("round", round_num)
+            self.state.append_log({"event": "round_started", "round": round_num})
+
+            # Step 1: Manager — proposes hypotheses & frontier items
+            rc = self._run_skill("manager", "manager.md")
+            if rc != 0:
+                return rc
+            self._critic_call_count_this_round = 0
+            review_type = self._checkpoint_type("manager", round_num)
+            if review_type:
+                self._await_review(review_type)
+
+            # Step 2: Critic preflight — approve/reject draft frontier items
+            rc = self._run_skill("critic", "critic.md")
+            if rc != 0:
+                return rc
+            self._critic_call_count_this_round += 1
+            review_type = self._checkpoint_type("critic", round_num)
+            if review_type:
+                self._await_review(review_type)
+
+            # Step 3: Parallel workers — run approved experiments
+            self.state.update_phase("experiment")
+            self.state.append_log({"event": "parallel_workers_started", "round": round_num})
+
+            pool = pool_factory()
+            pool.run()
+            pool.wait()
+
+            self.state.append_log({"event": "parallel_workers_finished", "round": round_num})
+
+            # Step 4: Critic post-review — evaluate results
+            rc = self._run_skill("critic", "critic.md")
+            if rc != 0:
+                return rc
+            self._critic_call_count_this_round += 1
+            review_type = self._checkpoint_type("critic", round_num)
+            if review_type:
+                self._await_review(review_type)
+
+            self.state.append_log({"event": "round_completed", "round": round_num})
+
+            if self._frontier_all_done():
+                self.state.append_log({"event": "frontier_complete", "round": round_num})
+                break
+
+        self.state.update_phase("idle")
+        return 0
 
     def run_serial(self) -> int:
         """Run the full serial research loop: bootstrap then N rounds.
