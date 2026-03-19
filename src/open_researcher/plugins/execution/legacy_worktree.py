@@ -4,8 +4,8 @@ Migrated from ``open_researcher.worktree``.  This is the full-featured
 worktree manager used by the original research loop.
 """
 
-import json
 import hashlib
+import json
 import logging
 import os
 import shutil
@@ -243,7 +243,6 @@ def _symlink_data_directories(
     candidates = set(WORKTREE_SYMLINK_DATA_DIRS)
     candidates.update(extra_dirs)
     repo_root = repo_path.resolve()
-    wt_root = worktree_path.resolve()
     for dirname in sorted(candidates):
         # Security: reject path-traversal in directory names
         if "/" in dirname or dirname in (".", "..") or dirname.startswith("."):
@@ -470,7 +469,11 @@ def _git_overlay_manifest_path(repo_path: Path) -> Path | None:
 def remove_worktree(repo_path: Path, worktree_path: Path) -> None:
     """Remove a git worktree and its branch."""
     worktrees_root = worktree_path.parent
-    lock_path = worktrees_root / ".cleanup.lock" if worktrees_root.exists() else repo_path / ".research" / "worktree_cleanup.lock"
+    lock_path = (
+        worktrees_root / ".cleanup.lock"
+        if worktrees_root.exists()
+        else repo_path / ".research" / "worktree_cleanup.lock"
+    )
     lock = FileLock(str(lock_path), timeout=60)
     with lock:
         wt_name = worktree_path.name

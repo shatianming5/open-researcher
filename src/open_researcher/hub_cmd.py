@@ -15,8 +15,6 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-_ascii_mode = bool(os.environ.get("NO_COLOR", "").strip() or os.environ.get("TERM", "") == "dumb")
-
 from open_researcher.hub import (
     HUB_REGISTRY_URL,
     apply_manifest_to_config_yaml,
@@ -26,6 +24,8 @@ from open_researcher.hub import (
     manifest_summary,
     manifest_to_bootstrap_overrides,
 )
+
+_ascii_mode = bool(os.environ.get("NO_COLOR", "").strip() or os.environ.get("TERM", "") == "dumb")
 
 hub_app = typer.Typer(
     help=(

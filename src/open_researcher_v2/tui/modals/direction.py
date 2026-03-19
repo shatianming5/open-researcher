@@ -30,7 +30,11 @@ class DirectionConfirmScreen(ReviewScreen):
             yield Static(f"\n[bold]Strategy:[/]\n{strategy[:500]}")
             yield Label("\nAdditional constraints:")
             yield TextArea(id="constraints-input")
-            yield Static("[Enter] Confirm & Continue    [Esc] Skip", id="review-actions")
+            yield Static("[reverse] enter [/reverse] Confirm & Continue    [reverse] esc [/reverse] Skip", id="review-actions")
+
+    def on_mount(self) -> None:
+        """Auto-focus the constraints input."""
+        self.query_one("#constraints-input", TextArea).focus()
 
     def _apply_decisions(self) -> None:
         try:

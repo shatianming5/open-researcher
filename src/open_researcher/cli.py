@@ -317,7 +317,11 @@ def doctor():
 def run(
     agent: str = typer.Option(None, help="Agent to use (claude-code, codex, aider, opencode, kimi-cli, gemini-cli)."),
     tag: str = typer.Option(None, help="Experiment tag when bootstrapping a new workflow."),
-    mode: str = typer.Option("interactive", "--mode", help="Run mode: `interactive` (TUI) or `headless` (requires --goal)."),
+    mode: str = typer.Option(
+        "interactive",
+        "--mode",
+        help="Run mode: `interactive` (TUI) or `headless` (requires --goal).",
+    ),
     headless: bool = typer.Option(False, "--headless", hidden=True, help="Deprecated; use `--mode headless`."),
     workers: Optional[int] = typer.Option(
         None,
@@ -373,6 +377,7 @@ def start(
     token_budget: int = typer.Option(0, "--token-budget", help="Stop/warn after N total tokens (0 = unlimited)."),
 ):
     """Legacy alias for bootstrap mode; prefer `run` for both new and existing workflows."""
+    typer.echo("`start` is deprecated; use `run` instead.", err=True)
     _dispatch_workflow(
         repo_path=Path.cwd(),
         agent=agent,

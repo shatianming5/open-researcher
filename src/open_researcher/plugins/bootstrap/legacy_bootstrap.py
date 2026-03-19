@@ -331,6 +331,18 @@ def _set_step_resolution(
     )
 
 
+def _dry_run_step_preview(step: dict) -> str:
+    command = str(step.get("command", "")).strip()
+    if command:
+        return command
+    status = str(step.get("status", "")).strip()
+    if status == "skipped":
+        return "<not required>"
+    if status == "disabled":
+        return "<disabled>"
+    return "<unresolved>"
+
+
 def _is_explicit_bootstrap_source(source: str) -> bool:
     return str(source or "").strip().startswith("config.bootstrap.")
 
@@ -435,14 +447,14 @@ def resolve_bootstrap_plan(repo_path: Path, research_dir: Path, cfg: ResearchCon
         command=install_command,
         source=install_source,
         status=install_status,
-        detail="Dependency installation step",
+        detail="Dependency installation step" if install_command else "No install step required",
     )
     _set_step_resolution(
         state["data"],
         command=data_command,
         source=data_source,
         status="pending" if data_command else "skipped",
-        detail="Dataset/setup step" if data_command else "No data step detected",
+        detail="Dataset/setup step" if data_command else "No data step required for readiness",
     )
     _set_step_resolution(
         state["smoke"],
@@ -720,6 +732,16 @@ def _run_prepare_command(
             args=command, returncode=124,
             stdout="", stderr=f"Command timed out after {timeout}s",
         )
+    except FileNotFoundError as exc:
+        result = subprocess.CompletedProcess(
+            args=command, returncode=127,
+            stdout="", stderr=f"Command not found: {exc}",
+        )
+    except OSError as exc:
+        result = subprocess.CompletedProcess(
+            args=command, returncode=126,
+            stdout="", stderr=f"OS error running command: {exc}",
+        )
     _append_prepare_log(log_path, step_name, command, result, env_mode=env_mode)
     return result
 
@@ -899,7 +921,11 @@ def run_bootstrap_prepare(
 ) -> tuple[int, dict]:
     if on_prepare_event is not None:
         _raw_event_cb = on_prepare_event
-        on_prepare_event = lambda event: _safe_prepare_event(_raw_event_cb, event)
+
+        def _wrapped_prepare_event(event):
+            return _safe_prepare_event(_raw_event_cb, event)
+
+        on_prepare_event = _wrapped_prepare_event
     state_path = research_dir / "bootstrap_state.json"
     ensure_bootstrap_state(state_path)
     state = resolve_bootstrap_plan(repo_path, research_dir, cfg)
@@ -1122,10 +1148,11 @@ def format_bootstrap_dry_run(repo_path: Path, research_dir: Path, cfg: ResearchC
     ]
     for step_name in _step_names():
         step = state.get(step_name, {})
-        command = str(step.get("command", "")).strip() or "<unresolved>"
+        command = _dry_run_step_preview(step)
         source = str(step.get("source", "")).strip() or "none"
         lines.append(f"[bold]{step_name.title()}:[/bold] {command}")
         lines.append(f"[dim]  source: {source}[/dim]")
+        lines.append(f"[dim]  status: {step.get('status', 'pending')}[/dim]")
     expected = state.get("expected_paths", [])
     if expected:
         lines.append(f"[bold]Expected paths:[/bold] {', '.join(expected)}")

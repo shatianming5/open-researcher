@@ -1,5 +1,4 @@
 """Tests for the Plugin protocol and Registry."""
-import asyncio
 import pytest
 
 pytestmark = pytest.mark.asyncio

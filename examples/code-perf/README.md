@@ -29,7 +29,7 @@ open-researcher init --tag code-perf
 open-researcher run --agent claude-code
 
 # Or run headless with a specific goal
-open-researcher start --mode headless \
+open-researcher run --mode headless \
   --goal "Maximize JSON parsing throughput (ops/sec) by optimizing the Python parser implementation with better algorithms, data structures, caching, and code-level optimizations" \
   --max-experiments 20
 ```

@@ -5,6 +5,8 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import DataTable, Label, Static, TextArea
+from textual.widgets._data_table import Coordinate
+from rich.text import Text
 
 from .base import ReviewScreen
 
@@ -36,21 +38,36 @@ class ResultReviewScreen(ReviewScreen):
                 fid = r.get("frontier_id", "")
                 val = r.get("value", "")
                 status = r.get("status", "")
-                table.add_row(fid, str(val), status, "\u2014")
+                status_style = "bold green" if status == "keep" else "dim" if status == "discard" else "yellow"
+                table.add_row(fid, str(val), Text(status, style=status_style), Text("\u2014", style="dim"))
             yield table
             yield Label("\nConstraints for next round:")
             yield TextArea(id="next-constraints")
-            yield Static("[Space] Override  [Enter] Next round  [Esc] Skip", id="review-actions")
+            yield Static("[reverse] space [/reverse] Override  [reverse] enter [/reverse] Next round  [reverse] esc [/reverse] Skip", id="review-actions")
+
+    # Column index of Override? column (4th column = index 3)
+    _OVERRIDE_COL = 3
 
     def action_toggle_override(self) -> None:
         table: DataTable = self.query_one("#result-table", DataTable)
-        if table.cursor_row is not None:
-            row_key = list(table.rows)[table.cursor_row]
+        row = table.cursor_row
+        if row is not None:
+            row_key = list(table.rows)[row]
             cells = table.get_row(row_key)
             fid = str(cells[0])
             ai_status = str(cells[2])
-            new = "keep" if ai_status == "discard" else "discard"
-            self._overrides[fid] = new
+            if fid in self._overrides:
+                # Toggle off — remove override
+                del self._overrides[fid]
+                table.update_cell_at(Coordinate(row, self._OVERRIDE_COL), Text("\u2014", style="dim"))
+            else:
+                new = "keep" if ai_status == "discard" else "discard"
+                self._overrides[fid] = new
+                if new == "keep":
+                    icon = Text("\u2713 keep", style="green")
+                else:
+                    icon = Text("\u2717 discard", style="red")
+                table.update_cell_at(Coordinate(row, self._OVERRIDE_COL), icon)
 
     def _apply_decisions(self) -> None:
         if self._overrides:

@@ -4,14 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import json
-import sqlite3
-import threading
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ── claude_code read_text encoding + error handling ──
 

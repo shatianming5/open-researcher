@@ -12,9 +12,9 @@ from pathlib import Path
 
 from rich.console import Console
 
-logger = logging.getLogger(__name__)
-
 from open_researcher.storage import atomic_write_text
+
+logger = logging.getLogger(__name__)
 
 console = Console()
 
@@ -373,8 +373,14 @@ def do_demo(serve: bool = False, port: int = 8000) -> None:
         return
 
     console.print("Launching TUI with sample nanoGPT experiment data...\n")
-    console.print("[dim]Tabs: [bold]1[/bold] Command (overview)  [bold]2[/bold] Execution (metrics)  [bold]3[/bold] Logs  [bold]4[/bold] Docs[/dim]")
-    console.print("[dim]Actions: [bold]p[/bold] pause  [bold]s[/bold] skip  [bold]g[/bold] GPU status  [bold]l[/bold] log viewer  [bold]?[/bold] help[/dim]")
+    console.print(
+        "[dim]Tabs: [bold]1[/bold] Command (overview)  [bold]2[/bold] Execution (metrics)"
+        "  [bold]3[/bold] Logs  [bold]4[/bold] Docs[/dim]"
+    )
+    console.print(
+        "[dim]Actions: [bold]p[/bold] pause  [bold]s[/bold] skip  [bold]g[/bold] GPU status"
+        "  [bold]l[/bold] log viewer  [bold]?[/bold] help[/dim]"
+    )
 
     with tempfile.TemporaryDirectory(prefix="or-demo-") as tmp:
         repo = Path(tmp)

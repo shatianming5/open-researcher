@@ -14,6 +14,38 @@ from open_researcher.config import RESEARCH_PROTOCOL, load_config
 from open_researcher.role_programs import missing_role_programs, resolve_role_program_file
 
 
+def _resolve_git_root(repo_path: Path) -> tuple[Path | None, str | None]:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        result = None
+        error = str(exc)
+    else:
+        error = result.stderr.strip() or result.stdout.strip()
+        if result.returncode == 0:
+            root = Path(result.stdout.strip())
+            return root, None
+
+    git_dir = repo_path / ".git"
+    if git_dir.exists():
+        return repo_path, None
+    return None, error or ".git not found"
+
+
+def _has_completed_smoke_ready_state(bootstrap: dict | None) -> bool:
+    if not isinstance(bootstrap, dict):
+        return False
+    if str(bootstrap.get("status", "")).strip() != "completed":
+        return False
+    return str(bootstrap.get("smoke", {}).get("status", "")).strip() == "completed"
+
+
 def _load_json_object(path: Path) -> tuple[dict | None, str | None]:
     try:
         payload = json.loads(path.read_text())
@@ -145,11 +177,11 @@ def run_doctor(repo_path: Path) -> list[dict]:
     research = repo_path / ".research"
 
     # 1. Git repository
-    git_dir = repo_path / ".git"
-    if git_dir.exists():
-        results.append({"check": "Git repository", "status": "OK", "detail": str(git_dir)})
+    git_root, git_error = _resolve_git_root(repo_path)
+    if git_root is not None:
+        results.append({"check": "Git repository", "status": "OK", "detail": str(git_root)})
     else:
-        results.append({"check": "Git repository", "status": "FAIL", "detail": ".git not found"})
+        results.append({"check": "Git repository", "status": "FAIL", "detail": git_error or ".git not found"})
 
     # 2. .research/ directory
     if research.is_dir():
@@ -293,6 +325,7 @@ def run_doctor(repo_path: Path) -> list[dict]:
 
     # 11. bootstrap_state.json parseable
     bootstrap_path = research / "bootstrap_state.json"
+    bootstrap: dict | None = None
     if bootstrap_path.exists():
         bootstrap, error = _load_json_object(bootstrap_path)
         if error is not None:
@@ -348,13 +381,37 @@ def run_doctor(repo_path: Path) -> list[dict]:
         if expected:
             missing = [item["path"] for item in expected if not item.get("exists")]
             if missing:
-                results.append(
-                    {
-                        "check": "bootstrap expected paths",
-                        "status": "FAIL",
-                        "detail": ", ".join(missing),
-                    }
-                )
+                smoke_command = str(plan.get("smoke", {}).get("command", "")).strip()
+                if _has_completed_smoke_ready_state(bootstrap):
+                    results.append(
+                        {
+                            "check": "bootstrap expected paths",
+                            "status": "WARN",
+                            "detail": (
+                                ", ".join(missing)
+                                + "; latest successful smoke is treated as the authoritative readiness signal"
+                            ),
+                        }
+                    )
+                elif smoke_command:
+                    results.append(
+                        {
+                            "check": "bootstrap expected paths",
+                            "status": "WARN",
+                            "detail": (
+                                ", ".join(missing)
+                                + "; configured smoke check is the authoritative readiness gate"
+                            ),
+                        }
+                    )
+                else:
+                    results.append(
+                        {
+                            "check": "bootstrap expected paths",
+                            "status": "FAIL",
+                            "detail": ", ".join(missing),
+                        }
+                    )
             else:
                 results.append(
                     {

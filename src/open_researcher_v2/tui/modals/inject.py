@@ -25,23 +25,41 @@ class InjectIdeaScreen(Screen):
         self._priority = 3
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="review-dialog"):
+        with Vertical(id="inject-dialog"):
             yield Label("Inject Experiment", id="review-title")
             yield Label("Description:")
             yield Input(id="inject-desc", placeholder="Describe the experiment...")
             yield Label("Priority (1-5):")
             yield Input(id="inject-priority", value="3")
-            yield Static("[Enter] Add to frontier    [Esc] Cancel", id="review-actions")
+            yield Static("[reverse] enter [/reverse] Add to frontier    [reverse] esc [/reverse] Cancel", id="review-actions")
+
+    def on_mount(self) -> None:
+        """Auto-focus the description input."""
+        self.query_one("#inject-desc", Input).focus()
+
+    def _notify(self, message: str, severity: str = "information") -> None:
+        try:
+            self.app.notify(message, severity=severity)
+        except Exception:
+            pass
 
     def action_inject(self) -> None:
         try:
             self._description = self.query_one("#inject-desc", Input).value
-            self._priority = int(self.query_one("#inject-priority", Input).value)
+            pri_text = self.query_one("#inject-priority", Input).value
         except Exception:
-            pass
+            pri_text = str(self._priority)
+        try:
+            self._priority = int(pri_text)
+        except ValueError:
+            self._notify(f"Invalid priority: {pri_text!r}", severity="error")
+            return
+        if not 1 <= self._priority <= 5:
+            self._notify("Priority must be 1-5", severity="error")
+            return
 
         if not self._description.strip():
-            self.dismiss(None)
+            self._notify("Description required", severity="error")
             return
 
         graph = self.state.load_graph()
@@ -59,6 +77,10 @@ class InjectIdeaScreen(Screen):
         graph.setdefault("counters", {})["frontier"] = counter
         self.state.save_graph(graph)
         self.state.append_log({"event": "human_injected", "frontier_id": item["id"]})
+        try:
+            self.app.notify(f"Injected {item['id']}", severity="information")
+        except Exception:
+            pass
         self.dismiss(True)
 
     def action_cancel(self) -> None:

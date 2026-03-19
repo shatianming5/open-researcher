@@ -1,4 +1,5 @@
 import pytest
+
 pytestmark = pytest.mark.asyncio
 
 async def test_fake_agent_conforms_to_protocol():
@@ -14,9 +15,9 @@ async def test_fake_agent_conforms_to_protocol():
     assert agent.run("/tmp", "test.md") == 0
 
 async def test_agents_plugin_registers_and_discovers():
+    from open_researcher.kernel.kernel import Kernel
     from open_researcher.plugins.agents import AgentsPlugin
     from open_researcher.plugins.agents.base import AgentAdapter
-    from open_researcher.kernel.kernel import Kernel
 
     class FakeAgent(AgentAdapter):
         name = "fake"

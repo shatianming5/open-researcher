@@ -6,8 +6,8 @@ pytestmark = pytest.mark.asyncio
 
 async def test_execution_plugin_lifecycle():
     from open_researcher.kernel import Kernel
-    from open_researcher.plugins.storage import StoragePlugin
     from open_researcher.plugins.execution import ExecutionPlugin
+    from open_researcher.plugins.storage import StoragePlugin
 
     storage = StoragePlugin(db_path=":memory:")
     execution = ExecutionPlugin()

@@ -179,7 +179,9 @@ class IdeaBacklog:
                     claimed_at = idea.get("claimed_at") or idea.get("started_at")
                     if claimed_at:
                         try:
-                            age_seconds = (datetime.now(timezone.utc) - datetime.fromisoformat(claimed_at)).total_seconds()
+                            age_seconds = (
+                                datetime.now(timezone.utc) - datetime.fromisoformat(claimed_at)
+                            ).total_seconds()
                             if age_seconds > 1800:  # 30 minutes
                                 logger.warning("Claim token for %s expired (age=%.0fs)", idea.get("id"), age_seconds)
                                 return False
@@ -311,7 +313,9 @@ class IdeaPool(IdeaBacklog):
                     claimed_at = idea.get("claimed_at") or idea.get("started_at")
                     if claimed_at:
                         try:
-                            age_seconds = (datetime.now(timezone.utc) - datetime.fromisoformat(claimed_at)).total_seconds()
+                            age_seconds = (
+                                datetime.now(timezone.utc) - datetime.fromisoformat(claimed_at)
+                            ).total_seconds()
                             if age_seconds > 1800:  # 30 minutes
                                 logger.warning("Claim token for %s expired (age=%.0fs)", idea.get("id"), age_seconds)
                                 return False
@@ -354,7 +358,9 @@ class IdeaPool(IdeaBacklog):
                     claimed_at = idea.get("claimed_at") or idea.get("started_at")
                     if claimed_at:
                         try:
-                            age_seconds = (datetime.now(timezone.utc) - datetime.fromisoformat(claimed_at)).total_seconds()
+                            age_seconds = (
+                                datetime.now(timezone.utc) - datetime.fromisoformat(claimed_at)
+                            ).total_seconds()
                             if age_seconds > 1800:  # 30 minutes
                                 logger.warning("Claim token for %s expired (age=%.0fs)", idea.get("id"), age_seconds)
                                 return False

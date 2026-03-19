@@ -31,12 +31,16 @@ class GoalEditScreen(Screen):
         if path.exists():
             existing = path.read_text(encoding="utf-8")
 
-        with Vertical(id="review-dialog"):
+        with Vertical(id="goal-dialog"):
             yield Label("Edit Research Goal", id="review-title")
             yield Static(f"Primary metric: [bold]{goal}[/]")
             yield Label("\nUser constraints (editable):")
             yield TextArea(existing, id="constraints-edit")
-            yield Static("[Enter] Save    [Esc] Cancel", id="review-actions")
+            yield Static("[reverse] enter [/reverse] Save    [reverse] esc [/reverse] Cancel", id="review-actions")
+
+    def on_mount(self) -> None:
+        """Auto-focus the constraints editor."""
+        self.query_one("#constraints-edit", TextArea).focus()
 
     def action_save(self) -> None:
         try:
@@ -48,6 +52,10 @@ class GoalEditScreen(Screen):
             path = self.state.dir / "user_constraints.md"
             path.write_text(self._user_text.strip() + "\n", encoding="utf-8")
             self.state.append_log({"event": "goal_updated"})
+            try:
+                self.app.notify("Goal updated", severity="information")
+            except Exception:
+                pass
         self.dismiss(True)
 
     def action_cancel(self) -> None:

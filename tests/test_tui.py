@@ -78,7 +78,10 @@ def test_experiment_status_panel_baseline():
     assert "BASELINE" in panel.status_text or "baseline" in panel.status_text
 
 
-def test_idea_list_panel_renders():
+def test_idea_list_panel_renders_unicode_when_terminal_supports_it(monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setenv("TERM", "xterm-256color")
+
     panel = IdeaListPanel()
     ideas = [
         {
@@ -98,6 +101,32 @@ def test_idea_list_panel_renders():
     assert "\u25b6" in text
     assert "\u2713" in text
     assert "\u00b7" in text
+    assert "idea-001" in text
+
+
+def test_idea_list_panel_renders_ascii_when_terminal_requests_safe_output(monkeypatch):
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setenv("TERM", "xterm-256color")
+
+    panel = IdeaListPanel()
+    ideas = [
+        {
+            "id": "idea-001",
+            "description": "Add dropout",
+            "status": "done",
+            "priority": 1,
+            "result": {"metric_value": 1.23, "verdict": "kept"},
+        },
+        {"id": "idea-002", "description": "Batch norm", "status": "running", "priority": 2, "result": None},
+        {"id": "idea-003", "description": "LR warmup", "status": "pending", "priority": 3, "result": None},
+    ]
+    panel.update_ideas(ideas)
+    text = panel.ideas_text
+    lines = text.strip().split("\n")
+    assert len(lines) == 3
+    assert ">" in text
+    assert "OK" in text
+    assert " ." in text or ". " in text
     assert "idea-001" in text
 
 

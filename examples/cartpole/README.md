@@ -30,7 +30,7 @@ open-researcher init --tag cartpole
 open-researcher run --agent claude-code
 
 # Or run headless with a specific goal
-open-researcher start --mode headless \
+open-researcher run --mode headless \
   --goal "Maximize average reward on CartPole-v1 by improving the RL algorithm, network architecture, reward shaping, and exploration strategy" \
   --max-experiments 20
 ```

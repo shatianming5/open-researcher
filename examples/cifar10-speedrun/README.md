@@ -27,7 +27,7 @@ open-researcher init --tag cifar10
 open-researcher run --agent claude-code
 
 # Or run headless with a specific goal
-open-researcher start --mode headless \
+open-researcher run --mode headless \
   --goal "Improve CIFAR-10 test accuracy above 95% by optimizing model architecture, data augmentation, learning rate schedule, and training techniques" \
   --max-experiments 20
 ```

@@ -29,6 +29,12 @@ You are the **Experiment Agent**. You run experiments one at a time from the sha
 | `.research/events.jsonl` | Read | Canonical runtime/control event stream |
 | `.research/control.json` | Read | Compatibility snapshot of pause/skip state |
 
+## Context Hygiene
+
+- Ignore `.venv/`, `__pycache__/`, checkpoints, large generated artifacts, and unrelated runtime logs unless the selected experiment explicitly needs them.
+- When checking `.research/events.jsonl`, inspect only the latest control-relevant records. Do not scan or ingest the whole journal.
+- Prefer the claimed frontier row, linked graph objects, `evaluation.md`, and repo source files over generated runtime chatter.
+
 ## Status Updates
 
 Before each action, update `.research/activity.json`:
@@ -77,7 +83,7 @@ Skip this phase when you were launched for a concrete `research-v1` frontier exe
 ## Phase 2: Experiment Loop (when progress.phase == "experimenting")
 
 ### 2a. Check Control
-- Read `.research/events.jsonl` for the latest `control_command` events
+- Read only the latest `control_command` events from `.research/events.jsonl` (for example via `tail`), not the full journal
 - Use `.research/control.json` as the quick snapshot if needed
 - If `paused: true`: update status to `paused`, sleep 10s, recheck
 - If `skip_current: true`: skip to next idea, reset flag

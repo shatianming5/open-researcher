@@ -4,15 +4,8 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import threading
-import time
-from pathlib import Path
-from unittest.mock import patch
-
-import pytest
-
 
 # ── legacy_bootstrap.py fixes ──
 
@@ -237,8 +230,9 @@ class TestEvaluationContractAtomicWrite:
     """P1: evaluation_contract uses atomic_write_text."""
 
     def test_uses_atomic_write_import(self):
-        import open_researcher.evaluation_contract as mod
         import inspect
+
+        import open_researcher.evaluation_contract as mod
 
         source = inspect.getsource(mod)
         assert "atomic_write_text" in source
@@ -359,9 +353,9 @@ class TestDetectionCrossPlatform:
     """P2: detect_python_env uses sys.platform for cross-platform venv paths."""
 
     def test_detect_venv(self, tmp_path):
-        from open_researcher.plugins.bootstrap.detection import detect_python_env
-
         import sys
+
+        from open_researcher.plugins.bootstrap.detection import detect_python_env
 
         if sys.platform == "win32":
             venv_bin = tmp_path / ".venv" / "Scripts"

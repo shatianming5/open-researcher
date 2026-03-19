@@ -12,18 +12,18 @@ import time
 
 import pytest
 
-from open_researcher.kernel import Kernel, Event, PluginBase
-from open_researcher.plugins.storage import StoragePlugin
+from open_researcher.kernel import Event, Kernel
 from open_researcher.plugins.agents import AgentsPlugin
 from open_researcher.plugins.agents.base import AgentAdapter
-from open_researcher.plugins.orchestrator import OrchestratorPlugin
-from open_researcher.plugins.execution import ExecutionPlugin
 from open_researcher.plugins.bootstrap import BootstrapPlugin
 from open_researcher.plugins.cli import CLIPlugin
+from open_researcher.plugins.execution import ExecutionPlugin
+from open_researcher.plugins.graph.store import GraphStore
+from open_researcher.plugins.orchestrator import OrchestratorPlugin
+from open_researcher.plugins.scheduler.idea_pool import IdeaPoolStore
+from open_researcher.plugins.storage import StoragePlugin
 from open_researcher.plugins.tui import TUIPlugin
 from open_researcher.plugins.tui.view_model import ViewModel
-from open_researcher.plugins.graph.store import GraphStore
-from open_researcher.plugins.scheduler.idea_pool import IdeaPoolStore
 
 pytestmark = pytest.mark.asyncio
 
@@ -88,7 +88,13 @@ async def test_simulated_research_cycle(full_kernel):
 
     # 2. Manager phase
     await k.bus.emit(Event(type="manager.cycle_started", payload={"cycle": 1}, source="orchestrator"))
-    await k.bus.emit(Event(type="hypothesis.proposed", payload={"id": "h-1", "claim": "Test hypothesis"}, source="orchestrator"))
+    await k.bus.emit(
+        Event(
+            type="hypothesis.proposed",
+            payload={"id": "h-1", "claim": "Test hypothesis"},
+            source="orchestrator",
+        )
+    )
 
     # 3. Critic phase
     await k.bus.emit(Event(type="critic.review_started", payload={"stage": "preflight"}, source="orchestrator"))

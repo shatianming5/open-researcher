@@ -1,5 +1,6 @@
 """Tests for the async EventBus."""
 import asyncio
+
 import pytest
 
 pytestmark = pytest.mark.asyncio
@@ -126,7 +127,10 @@ async def test_off_removes_handler():
     bus = EventBus(store)
 
     received = []
-    handler = lambda e: received.append(e)
+
+    def handler(event):
+        received.append(event)
+
     bus.on("test", handler)
     bus.off("test", handler)
 

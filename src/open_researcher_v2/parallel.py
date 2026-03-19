@@ -263,13 +263,14 @@ class WorkerPool:
         result: dict,
     ) -> None:
         """Mark a frontier item as ``needs_post_review`` and record the result."""
-        # Update graph
-        graph = self.state.load_graph()
-        for item in graph.get("frontier", []):
-            if item.get("id") == frontier_id:
-                item["status"] = "needs_post_review"
-                break
-        self.state.save_graph(graph)
+        # Update graph under claim lock to prevent concurrent load-modify-save races
+        with self._claim_lock:
+            graph = self.state.load_graph()
+            for item in graph.get("frontier", []):
+                if item.get("id") == frontier_id:
+                    item["status"] = "needs_post_review"
+                    break
+            self.state.save_graph(graph)
 
         # Append result row
         self.state.append_result(
@@ -378,14 +379,19 @@ class WorkerPool:
             result: dict = {"status": "error", "description": "unknown"}
             try:
                 agent = self.agent_factory()
-                result = agent.run(
-                    work_dir=wt_path,
-                    skill_content=self.skill_content,
-                    frontier_item=item,
+                rc = agent.run(
+                    wt_path,
+                    program_content=self.skill_content,
+                    program_file=f"exp-{frontier_id}.md",
                     env=env_override,
+                    on_output=lambda line: self.on_output(
+                        f"[{worker_id}] {line}"
+                    ),
                 )
-                if not isinstance(result, dict):
-                    result = {"status": "done", "description": str(result)}
+                result = {
+                    "status": "keep" if rc == 0 else "error",
+                    "description": f"exit_code={rc}",
+                }
             except Exception as exc:
                 self.on_output(f"[{worker_id}] agent error: {exc}")
                 result = {"status": "error", "description": str(exc)}

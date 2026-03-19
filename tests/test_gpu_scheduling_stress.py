@@ -11,16 +11,13 @@ These tests target the critical issues found during deep analysis:
 
 import json
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from open_researcher.plugins.execution.legacy_gpu import GPUManager
-
 
 NVIDIA_SMI_4GPU = """\
 index, memory.total [MiB], memory.used [MiB], memory.free [MiB], utilization.gpu [%]
@@ -220,7 +217,6 @@ def test_ttl_reaps_old_reservations_on_refresh(gpu_file):
     """refresh() automatically cleans up reservations older than the TTL."""
     from datetime import timedelta
 
-    from open_researcher.plugins.execution.legacy_gpu import _utc_now
 
     # Create a manager with a very short TTL for testing
     mgr = GPUManager(gpu_file, reservation_ttl_minutes=1)
@@ -723,7 +719,7 @@ def test_normalize_gpu_row_migrates_legacy_allocated_to(mgr):
 
 def test_allocator_plugin_release_failure_is_not_raised(gpu_file):
     """GPUAllocatorPlugin.release() must not raise even if manager throws."""
-    from open_researcher.worker_plugins import GPUAllocatorPlugin, GPUAllocation
+    from open_researcher.worker_plugins import GPUAllocation, GPUAllocatorPlugin
 
     class ExplodingManager:
         allow_same_gpu_packing = True
@@ -912,10 +908,10 @@ index, memory.total [MiB], memory.used [MiB], memory.free [MiB], utilization.gpu
 
 def test_reservation_age_handles_z_suffix():
     """_reservation_age_minutes must parse ISO timestamps ending with 'Z'."""
-    from open_researcher.plugins.execution.legacy_gpu import _reservation_age_minutes
-
     # Timestamp 10 minutes ago with Z suffix
     from datetime import timedelta
+
+    from open_researcher.plugins.execution.legacy_gpu import _reservation_age_minutes
     ts = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
     ts_z = ts.replace("+00:00", "Z")
 
@@ -926,8 +922,9 @@ def test_reservation_age_handles_z_suffix():
 
 def test_reservation_age_handles_plus_offset():
     """_reservation_age_minutes must parse ISO timestamps with +00:00."""
-    from open_researcher.plugins.execution.legacy_gpu import _reservation_age_minutes
     from datetime import timedelta
+
+    from open_researcher.plugins.execution.legacy_gpu import _reservation_age_minutes
 
     ts = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
     age = _reservation_age_minutes({"started_at": ts})

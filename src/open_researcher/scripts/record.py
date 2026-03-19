@@ -79,6 +79,26 @@ def _load_auto_secondary_metrics(
     return metrics
 
 
+def _resolve_research_dir() -> Path:
+    override = str(os.environ.get("OPEN_RESEARCHER_RESEARCH_DIR", "")).strip()
+    if override:
+        path = Path(override)
+        if not path.is_absolute():
+            path = (Path.cwd() / path).resolve()
+        return path
+
+    git_root_result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+    )
+    if git_root_result.returncode != 0:
+        print("[ERROR] Failed to determine git root. Are you in a git repository?", file=sys.stderr)
+        raise SystemExit(1)
+    git_root = git_root_result.stdout.strip()
+    return Path(git_root) / ".research"
+
+
 def main():
     parser = argparse.ArgumentParser(description="Record experiment result")
     parser.add_argument("--metric", required=True, help="Primary metric name")
@@ -114,17 +134,7 @@ def main():
         secondary["_open_researcher_trace"] = trace
     secondary["_open_researcher_result_id"] = uuid4().hex
 
-    # Find .research/results.tsv relative to git root
-    git_root_result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True,
-        text=True,
-    )
-    if git_root_result.returncode != 0:
-        print("[ERROR] Failed to determine git root. Are you in a git repository?", file=sys.stderr)
-        raise SystemExit(1)
-    git_root = git_root_result.stdout.strip()
-    research_dir = Path(git_root) / ".research"
+    research_dir = _resolve_research_dir()
     results_path = research_dir / "results.tsv"
     auto_secondary = _load_auto_secondary_metrics(
         research_dir,

@@ -363,3 +363,21 @@ def test_format_bootstrap_dry_run_surfaces_expected_paths_and_unresolved(tmp_pat
     assert "Expected paths:" in rendered
     assert "data/missing.txt" in rendered
     assert "Unresolved:" in rendered
+
+
+def test_format_bootstrap_dry_run_marks_skipped_data_step_as_not_required(tmp_path: Path) -> None:
+    research = tmp_path / ".research"
+    research.mkdir()
+    cfg = ResearchConfig(
+        bootstrap_auto_prepare=True,
+        bootstrap_smoke_command=_py_inline("print('smoke ok')"),
+    )
+
+    lines = format_bootstrap_dry_run(tmp_path, research, cfg)
+    rendered = "\n".join(lines)
+
+    assert "Data:" in rendered
+    assert "<not required>" in rendered
+    assert "status: skipped" in rendered
+    assert "Bootstrap resolution is ready." in rendered
+    assert "Unresolved:" not in rendered

@@ -495,9 +495,7 @@ class TestWorkerPoolLifecycle:
         output_lines: list[str] = []
 
         mock_agent = MagicMock()
-        mock_agent.run.return_value = {
-            "status": "done", "metric": "acc", "value": "0.85",
-        }
+        mock_agent.run.return_value = 0  # agent.run() returns int exit code
 
         pool = WorkerPool(
             repo_path=tmp_path,
@@ -522,7 +520,7 @@ class TestWorkerPoolLifecycle:
 
         results = state.load_results()
         assert len(results) == 1
-        assert results[0]["value"] == "0.85"
+        assert results[0]["status"] == "keep"
 
     def test_stop_signal(self, tmp_path):
         """Pool.stop() terminates workers."""
@@ -545,7 +543,7 @@ class TestWorkerPoolLifecycle:
         state.load_graph = _rigged_load
 
         mock_agent = MagicMock()
-        mock_agent.run.return_value = {"status": "done"}
+        mock_agent.run.return_value = 0  # agent.run() returns int exit code
 
         pool = WorkerPool(
             repo_path=tmp_path,

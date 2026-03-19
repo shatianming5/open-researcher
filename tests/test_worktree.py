@@ -10,8 +10,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from open_researcher.plugins.orchestrator.safety import GitWorkspaceError, capture_clean_workspace_snapshot, ensure_clean_workspace
 from open_researcher.idea_pool import IdeaPool
+from open_researcher.plugins.orchestrator.safety import (
+    GitWorkspaceError,
+    capture_clean_workspace_snapshot,
+    ensure_clean_workspace,
+)
 from open_researcher.storage import atomic_write_json
 from open_researcher.worktree import create_worktree, remove_worktree, worktrees_root
 

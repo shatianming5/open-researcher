@@ -108,6 +108,80 @@ def test_doctor_no_git(valid_repo):
     assert check_map["Git repository"] == "FAIL"
 
 
+def test_doctor_accepts_nested_repo_inside_git_checkout(tmp_path):
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+
+    repo = tmp_path / "examples" / "code-perf"
+    repo.mkdir(parents=True)
+    research = repo / ".research"
+    research.mkdir()
+    (research / "config.yaml").write_text(
+        yaml.dump(
+            {
+                "mode": "autonomous",
+                "bootstrap": {"auto_prepare": False},
+                "metrics": {"primary": {"name": "acc", "direction": "maximize"}},
+            }
+        )
+    )
+    (research / "results.tsv").write_text("timestamp\tcommit\tmetric\n")
+    (research / "research_graph.json").write_text(
+        json.dumps(
+            {
+                "version": "research-v1",
+                "repo_profile": {},
+                "hypotheses": [],
+                "experiment_specs": [],
+                "evidence": [],
+                "claim_updates": [],
+                "branch_relations": [],
+                "frontier": [],
+                "counters": {},
+            }
+        )
+    )
+    (research / "research_memory.json").write_text(
+        json.dumps(
+            {
+                "version": "research-v1",
+                "repo_type_priors": [],
+                "ideation_memory": [],
+                "experiment_memory": [],
+            }
+        )
+    )
+    (research / "idea_pool.json").write_text(json.dumps({"ideas": []}))
+    (research / "activity.json").write_text("{}")
+    (research / "events.jsonl").write_text("")
+    (research / "experiment_progress.json").write_text(json.dumps({"phase": "init"}))
+    (research / "bootstrap_state.json").write_text(
+        json.dumps(
+            {
+                "version": "research-v1",
+                "status": "disabled",
+                "repo_profile": {"kind": "python", "python_project": True, "manifests": []},
+                "working_dir": ".",
+                "python_env": {"executable": "", "source": ""},
+                "install": {},
+                "data": {},
+                "smoke": {},
+                "errors": [],
+                "unresolved": [],
+            }
+        )
+    )
+    (research / "scout_program.md").write_text("# scout_program.md\n")
+    internal = research / ".internal" / "role_programs"
+    internal.mkdir(parents=True, exist_ok=True)
+    for name in ["manager.md", "critic.md", "experiment.md"]:
+        (internal / name).write_text(f"# {name}\n")
+
+    checks = run_doctor(repo)
+    git_check = next(c for c in checks if c["check"] == "Git repository")
+    assert git_check["status"] == "OK"
+    assert git_check["detail"] == str(tmp_path)
+
+
 def test_doctor_no_research(tmp_path):
     """.research check fails when directory is missing."""
     (tmp_path / ".git").mkdir()
@@ -133,6 +207,29 @@ def test_doctor_bad_config(valid_repo):
     checks = run_doctor(valid_repo)
     check_map = {c["check"]: c["status"] for c in checks}
     assert check_map["config.yaml"] == "FAIL"
+
+
+def test_doctor_expected_paths_warn_when_smoke_is_authoritative(valid_repo):
+    (valid_repo / "requirements.txt").write_text("pytest\n")
+    (valid_repo / ".research" / "config.yaml").write_text(
+        yaml.dump(
+            {
+                "mode": "autonomous",
+                "bootstrap": {
+                    "auto_prepare": True,
+                    "smoke_command": "python -c 'print(1)'",
+                    "expected_paths": ["data/ready.txt"],
+                },
+                "metrics": {"primary": {"name": "acc", "direction": "maximize"}},
+            }
+        )
+    )
+
+    checks = run_doctor(valid_repo)
+    expected = next(c for c in checks if c["check"] == "bootstrap expected paths")
+
+    assert expected["status"] == "WARN"
+    assert "authoritative readiness gate" in expected["detail"]
 
 
 def test_doctor_bad_idea_pool(valid_repo):

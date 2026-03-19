@@ -6,8 +6,8 @@ pytestmark = pytest.mark.asyncio
 
 async def test_cli_plugin_lifecycle():
     from open_researcher.kernel import Kernel
-    from open_researcher.plugins.storage import StoragePlugin
     from open_researcher.plugins.cli import CLIPlugin
+    from open_researcher.plugins.storage import StoragePlugin
 
     storage = StoragePlugin(db_path=":memory:")
     cli = CLIPlugin()

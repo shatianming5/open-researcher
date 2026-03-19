@@ -19,14 +19,14 @@ from open_researcher.activity import ActivityMonitor
 from open_researcher.bootstrap import command_env_for_python, read_bootstrap_state
 from open_researcher.config import load_config
 from open_researcher.control_plane import consume_skip_current, read_control
+from open_researcher.gpu_manager import GPUManager
+from open_researcher.idea_pool import IdeaPool
 from open_researcher.plugins.orchestrator.safety import (
     GitWorkspaceError,
     capture_clean_workspace_snapshot,
     ensure_clean_workspace,
     rollback_workspace,
 )
-from open_researcher.gpu_manager import GPUManager
-from open_researcher.idea_pool import IdeaPool
 from open_researcher.resource_scheduler import classify_single_gpu_saturation_status
 from open_researcher.results_cmd import augment_result_secondary_metrics, load_results
 from open_researcher.role_programs import resolve_role_program_file

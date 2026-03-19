@@ -1,6 +1,7 @@
 # tests/test_record.py
 import csv
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -167,3 +168,53 @@ def test_record_auto_harvests_eval_output_metrics():
         assert secondary["cpp_ms"] == 4.2402
         assert secondary["invalid_reason"] == ""
         assert "speedup_ratio" not in secondary
+
+
+def test_record_honors_explicit_research_dir_override():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        repo = Path(tmpdir)
+        subprocess.run(["git", "init"], cwd=repo, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=repo, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, capture_output=True)
+        (repo / "dummy.txt").write_text("hello")
+        subprocess.run(["git", "add", "."], cwd=repo, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=repo, capture_output=True)
+
+        nested = repo / "nested"
+        nested.mkdir()
+        research_dir = nested / ".research"
+        research_dir.mkdir()
+        (research_dir / "results.tsv").write_text(
+            "timestamp\tcommit\tprimary_metric\tmetric_value\tsecondary_metrics\tstatus\tdescription\n"
+        )
+
+        target_script = research_dir / "scripts" / "record.py"
+        target_script.parent.mkdir(parents=True, exist_ok=True)
+        target_script.write_text(RECORD_SCRIPT.read_text())
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(target_script),
+                "--metric",
+                "accuracy",
+                "--value",
+                "0.91",
+                "--status",
+                "keep",
+                "--desc",
+                "nested-baseline",
+            ],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            env={
+                **dict(os.environ),
+                "OPEN_RESEARCHER_RESEARCH_DIR": str(research_dir),
+            },
+        )
+        assert result.returncode == 0, result.stderr
+
+        rows = list(csv.DictReader((research_dir / "results.tsv").open(), delimiter="\t"))
+        assert len(rows) == 1
+        assert rows[0]["description"] == "nested-baseline"

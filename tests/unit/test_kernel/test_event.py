@@ -1,5 +1,4 @@
 """Tests for the core Event dataclass."""
-import time
 
 
 def test_event_creation():

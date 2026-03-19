@@ -26,4 +26,4 @@ class FrontierReviewScreen(HypothesisReviewScreen):
                 table.add_row(fid, str(item.get("priority", "")),
                               item.get("status", ""), item.get("description", "")[:40], keep)
             yield table
-            yield Static("[Space] Toggle  [a] Approve all  [Enter] Confirm  [Esc] Skip", id="review-actions")
+            yield Static("[reverse] space [/reverse] Toggle  [reverse] a [/reverse] Approve all  [reverse] enter [/reverse] Confirm  [reverse] esc [/reverse] Skip", id="review-actions")

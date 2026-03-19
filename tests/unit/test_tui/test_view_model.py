@@ -1,5 +1,4 @@
 """Tests for the TUI ViewModel."""
-import pytest
 from open_researcher.kernel.event import Event
 
 

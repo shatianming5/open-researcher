@@ -5,9 +5,7 @@ of the research session state that the Textual app can read.
 """
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass, field
-from typing import Any
 
 from open_researcher.kernel.event import Event
 

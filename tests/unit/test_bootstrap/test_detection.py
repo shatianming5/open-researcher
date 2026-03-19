@@ -1,6 +1,4 @@
 """Tests for repository and environment detection."""
-import pytest
-from pathlib import Path
 
 
 def test_detect_repo_python_project(tmp_path):

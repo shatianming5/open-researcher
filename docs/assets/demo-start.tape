@@ -1,4 +1,4 @@
-# VHS Tape: open-researcher start 完整流程
+# VHS Tape: open-researcher run 完整流程
 # 用法: vhs docs/assets/demo-start.tape
 # 需要: 一个已 init 的项目目录
 
@@ -16,7 +16,7 @@ Type "# Open Researcher — 零配置自动研究流程"
 Enter
 Sleep 1s
 
-Type "open-researcher start --agent claude-code"
+Type "open-researcher run --agent claude-code"
 Sleep 500ms
 Enter
 Sleep 8s

@@ -391,10 +391,11 @@ make ci     # full local CI: lint + test + coverage + package smoke
 | `run` | Primary command: bootstrap if needed, otherwise run the existing workflow |
 | `run --mode headless --goal "..." --max-experiments N` | Headless JSON Lines mode |
 | `run --workers N` | Set experiment worker count for serial or parallel execution |
-| `start` | Legacy alias for bootstrap mode |
 | `init [--tag NAME]` | Initialize `.research/` directory |
 | `demo` | Try the TUI with sample data (no agent needed) |
 | `demo --serve [--port N]` | Serve the demo TUI in a browser (requires `PaperFarm[serve]`) |
+
+Hidden compatibility alias: `start` still works for older scripts, but it is deprecated. Use `run`.
 
 </details>
 

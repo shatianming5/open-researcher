@@ -6,19 +6,16 @@
 4. Config int() coercion for timeout / max_crashes / max_experiments / max_workers / search_interval
 """
 
-import copy
-import json
-import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
+
+from open_researcher.config import load_config
+from open_researcher.idea_pool import IdeaBacklog, IdeaPool
+from open_researcher.token_tracking import TokenLedger, TokenMetrics, load_ledger, save_ledger
 
 # ---------------------------------------------------------------------------
 # Bug 1 & 2: idea_pool _finalize_terminal_status and mark_done idempotency
 # ---------------------------------------------------------------------------
-
-from open_researcher.idea_pool import IdeaBacklog, IdeaPool
 
 
 @pytest.fixture()
@@ -124,7 +121,7 @@ class TestMarkDoneIdempotency:
         assert ok is False
 
     def test_pool_mark_done_idempotent_with_claim_token(self, pool):
-        idea = pool.add("test idea")
+        pool.add("test idea")
         # Claim the idea using the parallel API
         claimed = pool.claim_idea(worker_id="w1")
         assert claimed is not None
@@ -140,7 +137,7 @@ class TestMarkDoneIdempotency:
         assert ok2 is True, "IdeaPool.mark_done retry with same claim_token must succeed"
 
     def test_pool_mark_done_rejects_wrong_token(self, pool):
-        idea = pool.add("test idea")
+        pool.add("test idea")
         claimed = pool.claim_idea(worker_id="w1")
         assert claimed is not None
         ok = pool.mark_done(claimed["id"], 0.9, "good", claim_token="bogus")
@@ -148,7 +145,7 @@ class TestMarkDoneIdempotency:
 
     def test_pool_mark_done_preserves_finished_claim_token_on_retry(self, pool):
         """On retry, finished_claim_token should remain the original token."""
-        idea = pool.add("test idea")
+        pool.add("test idea")
         claimed = pool.claim_idea(worker_id="w1")
         token = claimed["claim_token"]
 
@@ -163,8 +160,6 @@ class TestMarkDoneIdempotency:
 # ---------------------------------------------------------------------------
 # Bug 3: TokenLedger should be loaded from disk on ResearchLoop init
 # ---------------------------------------------------------------------------
-
-from open_researcher.token_tracking import TokenLedger, TokenMetrics, save_ledger, load_ledger
 
 
 def test_load_ledger_round_trip(tmp_path):
@@ -194,8 +189,8 @@ def test_research_loop_loads_ledger_from_disk(tmp_path):
     ledger.record(metrics, phase="scout", experiment_num=1)
     save_ledger(ledger, ledger_path)
 
-    from open_researcher.plugins.orchestrator.legacy_loop import ResearchLoop
     from open_researcher.config import ResearchConfig
+    from open_researcher.plugins.orchestrator.legacy_loop import ResearchLoop
 
     cfg = ResearchConfig()
     loop = ResearchLoop(
@@ -215,8 +210,6 @@ def test_research_loop_loads_ledger_from_disk(tmp_path):
 # ---------------------------------------------------------------------------
 # Bug 4: Config int() coercion
 # ---------------------------------------------------------------------------
-
-from open_researcher.config import load_config
 
 
 def _write_config(tmp_path, yaml_text):

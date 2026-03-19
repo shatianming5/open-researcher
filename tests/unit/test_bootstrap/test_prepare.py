@@ -1,7 +1,4 @@
 """Tests for bootstrap preparation and state management."""
-import time
-import pytest
-from pathlib import Path
 
 
 def test_bootstrap_state_lifecycle():

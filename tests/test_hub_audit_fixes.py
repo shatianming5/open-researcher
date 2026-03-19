@@ -3,18 +3,12 @@
 from __future__ import annotations
 
 import json
-import os
 import socket
-import textwrap
 import urllib.error
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from pathlib import Path
-from threading import Thread
 from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
-
 
 # ── hub.py _fetch_json fixes ──
 
@@ -282,6 +276,7 @@ class TestHubCmdShellInjection:
 
     def test_shlex_split_used(self):
         import inspect
+
         import open_researcher.hub_cmd as mod
 
         source = inspect.getsource(mod)
@@ -299,6 +294,7 @@ class TestHubCmdTempFileCleanup:
 
     def test_cleanup_in_source(self):
         import inspect
+
         import open_researcher.hub_cmd as mod
 
         source = inspect.getsource(mod)
@@ -314,6 +310,7 @@ class TestHubCmdExceptionHandling:
 
     def test_no_broad_except_exception_in_http(self):
         import inspect
+
         import open_researcher.hub_cmd as mod
 
         source = inspect.getsource(mod.install)
@@ -331,6 +328,7 @@ class TestHubCmdSubprocessTimeout:
 
     def test_timeout_in_source(self):
         import inspect
+
         import open_researcher.hub_cmd as mod
 
         source = inspect.getsource(mod.install)
@@ -346,6 +344,7 @@ class TestHubCmdEnvBlockTypeSafety:
     def test_non_dict_env_handled(self):
         # This is a source inspection test since we can't easily invoke CLI
         import inspect
+
         import open_researcher.hub_cmd as mod
 
         source = inspect.getsource(mod.install)
@@ -360,6 +359,7 @@ class TestHubCmdUrlEncoding:
 
     def test_url_quote_in_source(self):
         import inspect
+
         import open_researcher.hub_cmd as mod
 
         source = inspect.getsource(mod.install)

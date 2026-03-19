@@ -104,6 +104,17 @@ def test_start_help():
     assert "start" in plain.lower() or "Start" in plain
 
 
+def test_start_prints_deprecation_notice():
+    from unittest.mock import patch
+
+    with patch("open_researcher.cli._dispatch_workflow") as mock_dispatch:
+        result = runner.invoke(app, ["start"])
+
+    assert result.exit_code == 0
+    assert "`start` is deprecated; use `run` instead." in result.output
+    mock_dispatch.assert_called_once()
+
+
 def test_start_headless_requires_goal():
     """start --mode headless without --goal should fail."""
     with runner.isolated_filesystem():
@@ -321,9 +332,26 @@ def test_start_deprecated_headless_flag_routes_to_headless_entrypoint():
 
         assert result.exit_code == 0
         assert "--headless` is deprecated" in result.stdout
+        assert "`start` is deprecated; use `run` instead." in result.output
         mock_headless.assert_called_once()
         kwargs = mock_headless.call_args.kwargs
         assert kwargs["workers"] == 2
+
+
+def test_public_examples_use_run_not_start():
+    public_docs = [
+        Path("README.md"),
+        Path("docs/assets/demo-start.tape"),
+        *sorted(Path("examples").glob("*/README.md")),
+    ]
+
+    offenders = []
+    for doc in public_docs:
+        text = doc.read_text(encoding="utf-8")
+        if "open-researcher start" in text:
+            offenders.append(str(doc))
+
+    assert offenders == []
 
 
 def test_run_workers_route_to_research_runtime():

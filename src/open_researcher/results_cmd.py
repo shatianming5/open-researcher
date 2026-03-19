@@ -3,16 +3,15 @@
 import csv
 import json as json_mod
 import logging
-import sys
 from pathlib import Path
-
-logger = logging.getLogger(__name__)
 
 from filelock import FileLock
 from rich.console import Console
 from rich.table import Table
 
 from open_researcher.storage import atomic_write_text
+
+logger = logging.getLogger(__name__)
 
 
 def _safe_float(value) -> float | None:

@@ -8,9 +8,9 @@ pytestmark = pytest.mark.asyncio
 
 async def test_full_kernel_boot_with_plugins():
     """All core plugins boot, communicate via events, and shutdown cleanly."""
-    from open_researcher.kernel import Kernel, Event
-    from open_researcher.plugins.storage import StoragePlugin
+    from open_researcher.kernel import Event, Kernel
     from open_researcher.plugins.agents import AgentsPlugin
+    from open_researcher.plugins.storage import StoragePlugin
 
     storage = StoragePlugin(db_path=":memory:")
     agents = AgentsPlugin()
@@ -37,7 +37,7 @@ async def test_full_kernel_boot_with_plugins():
 
 async def test_event_flow_between_plugins():
     """Verify events emitted by one plugin are received by another."""
-    from open_researcher.kernel import Kernel, Event, PluginBase
+    from open_researcher.kernel import Event, Kernel, PluginBase
 
     received_events = []
 
@@ -76,8 +76,8 @@ async def test_event_flow_between_plugins():
 async def test_graph_store_with_storage_plugin():
     """GraphStore uses the StoragePlugin's database."""
     from open_researcher.kernel import Kernel
-    from open_researcher.plugins.storage import StoragePlugin
     from open_researcher.plugins.graph.store import GraphStore
+    from open_researcher.plugins.storage import StoragePlugin
 
     storage = StoragePlugin(db_path=":memory:")
     k = Kernel(db_path=":memory:")
@@ -93,8 +93,8 @@ async def test_graph_store_with_storage_plugin():
 async def test_idea_pool_with_storage_plugin():
     """IdeaPoolStore uses the StoragePlugin's database."""
     from open_researcher.kernel import Kernel
-    from open_researcher.plugins.storage import StoragePlugin
     from open_researcher.plugins.scheduler.idea_pool import IdeaPoolStore
+    from open_researcher.plugins.storage import StoragePlugin
 
     storage = StoragePlugin(db_path=":memory:")
     k = Kernel(db_path=":memory:")

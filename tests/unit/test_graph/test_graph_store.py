@@ -5,8 +5,8 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture
 async def graph_store():
-    from open_researcher.plugins.storage.db import Database
     from open_researcher.plugins.graph.store import GraphStore
+    from open_researcher.plugins.storage.db import Database
 
     db = Database(":memory:")
     await db.open()
@@ -73,8 +73,8 @@ async def test_add_and_list_evidence(graph_store):
 async def test_graph_plugin_lifecycle():
     """GraphPlugin creates a GraphStore from StoragePlugin's database."""
     from open_researcher.kernel import Kernel
-    from open_researcher.plugins.storage import StoragePlugin
     from open_researcher.plugins.graph import GraphPlugin
+    from open_researcher.plugins.storage import StoragePlugin
 
     storage = StoragePlugin(db_path=":memory:")
     graph = GraphPlugin()

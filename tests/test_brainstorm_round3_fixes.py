@@ -9,19 +9,19 @@
 """
 
 import json
-import os
-import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-import pytest
-
+from open_researcher.graph_context import enforce_context_token_limit, filter_graph_for_context
+from open_researcher.plugins.bootstrap.legacy_bootstrap import (
+    default_bootstrap_state,
+    write_bootstrap_state,
+)
+from open_researcher.plugins.graph.legacy_store import ResearchGraphStore
+from open_researcher.resource_scheduler import sort_pending_ideas
+from open_researcher.watchdog import TimeoutWatchdog
 
 # ---------------------------------------------------------------------------
 # Fix 1: sort_pending_ideas safe int for priority
 # ---------------------------------------------------------------------------
-
-from open_researcher.resource_scheduler import sort_pending_ideas
 
 
 def test_sort_pending_ideas_non_numeric_priority():
@@ -57,8 +57,6 @@ def test_sort_pending_ideas_empty():
 # ---------------------------------------------------------------------------
 # Fix 2: filter_graph_for_context excludes None from ID sets
 # ---------------------------------------------------------------------------
-
-from open_researcher.graph_context import filter_graph_for_context, enforce_context_token_limit
 
 
 def test_filter_graph_none_hypothesis_id():
@@ -110,12 +108,6 @@ def test_enforce_context_token_limit_zero_returns_original():
 # Fix 4: write_bootstrap_state atomic write
 # ---------------------------------------------------------------------------
 
-from open_researcher.plugins.bootstrap.legacy_bootstrap import (
-    write_bootstrap_state,
-    read_bootstrap_state,
-    default_bootstrap_state,
-)
-
 
 def test_write_bootstrap_state_atomic(tmp_path):
     """write_bootstrap_state should produce valid JSON even on concurrent reads."""
@@ -151,8 +143,6 @@ def test_write_bootstrap_state_no_partial_on_error(tmp_path):
 # Fix 5: watchdog logs exceptions
 # ---------------------------------------------------------------------------
 
-from open_researcher.watchdog import TimeoutWatchdog
-
 
 def test_watchdog_fire_logs_exception(caplog):
     """Watchdog should log exception from on_timeout callback, not silence it."""
@@ -180,8 +170,6 @@ def test_watchdog_fire_success():
 # ---------------------------------------------------------------------------
 # Fix 6: _frontier_sort_key safe conversions
 # ---------------------------------------------------------------------------
-
-from open_researcher.plugins.graph.legacy_store import ResearchGraphStore
 
 
 def test_frontier_sort_key_non_numeric_values(tmp_path):

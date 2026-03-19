@@ -1,0 +1,2 @@
+# No external dependencies — stdlib only.
+# This file exists so bootstrap detects the project as Python.

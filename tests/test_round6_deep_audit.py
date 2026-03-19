@@ -2,14 +2,8 @@
 
 from __future__ import annotations
 
-import json
-import logging
-import threading
 import types
-from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 # ---------------------------------------------------------------------------
 # P0 #1: hub_cmd.py — torch.cuda RuntimeError / Exception catch
@@ -22,6 +16,7 @@ class TestHubCmdTorchExceptionCatch:
     def test_torch_runtime_error_caught(self, tmp_path):
         """RuntimeError from torch.cuda should not crash the install command."""
         from typer.testing import CliRunner
+
         from open_researcher.hub_cmd import hub_app
 
         runner = CliRunner()
@@ -50,10 +45,6 @@ class TestHubCmdTorchExceptionCatch:
 
     def test_torch_import_error_still_caught(self, tmp_path):
         """ImportError from torch should still be caught (existing behavior)."""
-        from typer.testing import CliRunner
-        from open_researcher.hub_cmd import hub_app
-
-        runner = CliRunner()
 
         mock_manifest = {
             "env": {"install_command": "", "test_command": ""},
@@ -82,8 +73,9 @@ class TestGPUTelemetryThreadJoin:
 
     def test_thread_join_has_timeout(self):
         """Verify the stop function uses join(timeout=5) and checks is_alive."""
-        from open_researcher.worker import WorkerManager
         import inspect
+
+        from open_researcher.worker import WorkerManager
 
         source = inspect.getsource(WorkerManager._start_gpu_telemetry_monitor)
         assert "timeout=5" in source or "timeout=" in source
@@ -101,6 +93,7 @@ class TestHeadlessAgentInitNone:
     def test_do_run_headless_initializes_agents_to_none(self):
         """do_run_headless: agent vars are set to None before try."""
         import inspect
+
         from open_researcher.headless import do_run_headless
 
         src = inspect.getsource(do_run_headless)
@@ -111,6 +104,7 @@ class TestHeadlessAgentInitNone:
     def test_do_start_headless_initializes_agents_to_none(self):
         """do_start_headless: agent vars are set to None before try."""
         import inspect
+
         from open_researcher.headless import do_start_headless
 
         src = inspect.getsource(do_start_headless)
@@ -122,6 +116,7 @@ class TestHeadlessAgentInitNone:
     def test_finally_checks_none_before_terminate(self):
         """finally block checks `if agent is not None` before calling terminate."""
         import inspect
+
         from open_researcher.headless import do_run_headless
 
         src = inspect.getsource(do_run_headless)
@@ -236,6 +231,7 @@ class TestHubCmdGPUCaseInsensitive:
 
     def test_gpu_required_uppercase(self):
         from typer.testing import CliRunner
+
         from open_researcher.hub_cmd import hub_app
 
         runner = CliRunner()
@@ -263,8 +259,9 @@ class TestLoadDetachedStateUnicode:
     """_load_detached_state must handle UnicodeDecodeError."""
 
     def test_unicode_decode_error_returns_none(self, tmp_path):
-        from open_researcher.worker import WorkerManager
         import inspect
+
+        from open_researcher.worker import WorkerManager
 
         source = inspect.getsource(WorkerManager._load_detached_state)
         # Verify UnicodeDecodeError is caught
@@ -282,6 +279,7 @@ class TestTTLReapUnknownAge:
     def test_reservation_age_none_is_logged(self):
         """Verify the reap code handles age=None (malformed started_at)."""
         import inspect
+
         from open_researcher.plugins.execution import legacy_gpu
 
         src = inspect.getsource(legacy_gpu)
@@ -299,6 +297,7 @@ class TestLegacyGPUReadTextEncoding:
 
     def test_read_text_has_encoding(self):
         import inspect
+
         from open_researcher.plugins.execution.legacy_gpu import GPUManager
 
         src = inspect.getsource(GPUManager._read)
@@ -316,6 +315,7 @@ class TestWorkerPluginsExceptionLogging:
     def test_worker_slots_logs_refresh_failure(self):
         """worker_slots should log when refresh() fails in saturation mode."""
         import inspect
+
         from open_researcher.worker_plugins import GPUAllocatorPlugin
 
         src = inspect.getsource(GPUAllocatorPlugin.worker_slots)
@@ -324,6 +324,7 @@ class TestWorkerPluginsExceptionLogging:
     def test_status_rows_logs_refresh_failure(self):
         """_status_rows should log when refresh() fails."""
         import inspect
+
         from open_researcher.worker_plugins import GPUAllocatorPlugin
 
         src = inspect.getsource(GPUAllocatorPlugin._status_rows)
@@ -341,6 +342,7 @@ class TestHubCmdNegativeExitCodes:
     def test_install_negative_exit_code_clamped(self):
         """If subprocess returns -9 (SIGKILL), exit code should be >= 1."""
         from typer.testing import CliRunner
+
         from open_researcher.hub_cmd import hub_app
 
         runner = CliRunner()

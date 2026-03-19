@@ -53,10 +53,17 @@ class AgentAdapter(abc.ABC):
         """Run the agent in *workdir*. Returns exit code."""
 
     def terminate(self) -> None:
-        """Send SIGTERM to the running agent subprocess (if any)."""
+        """Send SIGTERM to the running agent subprocess, with SIGKILL fallback."""
+        proc = None
         with self._lock:
             if self._proc is not None and self._proc.poll() is None:
                 self._proc.send_signal(signal.SIGTERM)
+                proc = self._proc
+        if proc is not None:
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
 
     # -- common helper -------------------------------------------------------
 

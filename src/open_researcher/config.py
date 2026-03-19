@@ -1,5 +1,6 @@
 """Typed config reader for .research/config.yaml."""
 
+import re as _re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -108,9 +109,6 @@ def _cfg_float(value, default: float) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
-
-
-import re as _re
 
 # Security: conservative pattern for SSH host/user to prevent option injection
 # Accepts hostname, FQDN, IPv4, optional :port, or bracketed IPv6 [::1]

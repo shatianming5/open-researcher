@@ -8,24 +8,14 @@ from __future__ import annotations
 import csv
 import json
 import threading
-import time
 from pathlib import Path
 
 from filelock import FileLock
 
 from open_researcher.activity import ActivityMonitor
 from open_researcher.config import ResearchConfig
-from open_researcher.plugins.orchestrator.safety import CrashCounter
 from open_researcher.evaluation_contract import ensure_evaluation_contract
 from open_researcher.git_identity import ensure_local_git_identity
-from open_researcher.plugins.orchestrator.safety import (
-    GitWorkspaceError,
-    capture_clean_workspace_snapshot,
-    ensure_clean_workspace,
-    rollback_workspace,
-)
-from open_researcher.plugins.execution.legacy_parallel import estimate_parallel_frontier_target
-from open_researcher.phase_gate import PhaseGate
 from open_researcher.kernel.events import (
     AgentOutput,
     AllIdeasProcessed,
@@ -54,14 +44,22 @@ from open_researcher.kernel.events import (
     TokenBudgetWarning,
     TokenMetricsUpdated,
 )
+from open_researcher.phase_gate import PhaseGate
+from open_researcher.plugins.execution.legacy_parallel import estimate_parallel_frontier_target
 from open_researcher.plugins.graph.legacy_store import ResearchGraphStore
+from open_researcher.plugins.orchestrator.safety import (
+    CrashCounter,
+    GitWorkspaceError,
+    capture_clean_workspace_snapshot,
+    ensure_clean_workspace,
+    rollback_workspace,
+)
+from open_researcher.plugins.storage.file_ops import atomic_write_json, locked_read_json
 from open_researcher.research_memory import ResearchMemoryStore
 from open_researcher.results_cmd import load_results, write_final_results_tsv
 from open_researcher.role_programs import resolve_role_program_file
-from open_researcher.plugins.storage.file_ops import atomic_write_json, locked_read_json
 from open_researcher.token_tracking import (
     BudgetCheckResult,
-    TokenLedger,
     TokenMetrics,
     load_ledger,
     save_ledger,

@@ -1,7 +1,6 @@
 """Bootstrap plugin — repository detection and environment preparation."""
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from open_researcher.kernel.plugin import PluginBase

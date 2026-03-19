@@ -434,7 +434,11 @@ def print_status(repo_path: Path, sparkline: bool = False) -> None:
 
         lines.append(f"  Recent {len(state['recent'])} experiments:")
         _ascii = bool(os.environ.get("NO_COLOR", "").strip() or os.environ.get("TERM", "") == "dumb")
-        status_icons = {"keep": "OK" if _ascii else "✓", "discard": "X" if _ascii else "✗", "crash": "!!" if _ascii else "💥"}
+        status_icons = {
+            "keep": "OK" if _ascii else "✓",
+            "discard": "X" if _ascii else "✗",
+            "crash": "!!" if _ascii else "💥",
+        }
         for r in reversed(state["recent"]):
             icon = status_icons.get(r.get("status", ""), "?")
             val = _safe_float(r.get("metric_value", ""))

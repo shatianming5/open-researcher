@@ -31,6 +31,8 @@ FrontierPanel {
     width: 2fr;
     height: 1fr;
     border: solid $primary-background;
+    border-title-color: $text;
+    border-title-style: bold;
 }
 
 FrontierPanel DataTable {
@@ -41,6 +43,8 @@ WorkerPanel {
     width: 1fr;
     height: 1fr;
     border: solid $primary-background;
+    border-title-color: $text;
+    border-title-style: bold;
 }
 
 WorkerPanel DataTable {
@@ -51,11 +55,13 @@ LogPanel {
     height: 1fr;
     min-height: 6;
     border: solid $primary-background;
+    border-title-color: $text;
+    border-title-style: bold;
 }
 
 MetricChart {
     height: auto;
-    min-height: 8;
+    min-height: 15;
 }
 
 /* Review modal screens */
@@ -66,6 +72,25 @@ ReviewScreen, GoalEditScreen, InjectIdeaScreen {
 #review-dialog {
     width: 80;
     max-height: 30;
+    border: thick $accent;
+    background: $surface;
+    padding: 1 2;
+}
+
+/* Smaller dialogs for inject/goal modals (fewer controls) */
+#inject-dialog {
+    width: 70;
+    height: auto;
+    max-height: 16;
+    border: thick $accent;
+    background: $surface;
+    padding: 1 2;
+}
+
+#goal-dialog {
+    width: 80;
+    height: auto;
+    max-height: 22;
     border: thick $accent;
     background: $surface;
     padding: 1 2;

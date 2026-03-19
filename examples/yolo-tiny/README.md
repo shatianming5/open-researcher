@@ -28,7 +28,7 @@ open-researcher init --tag yolo
 open-researcher run --agent claude-code
 
 # Or run headless with a specific goal
-open-researcher start --mode headless \
+open-researcher run --mode headless \
   --goal "Maximize mAP50 on COCO8 object detection by tuning YOLOv8 training hyperparameters, augmentation strategies, and model architecture choices" \
   --max-experiments 20
 ```

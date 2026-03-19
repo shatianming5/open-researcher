@@ -1,8 +1,8 @@
 """Tests for the event adapter that bridges old events to kernel EventBus."""
 import asyncio
+from dataclasses import dataclass
 
 import pytest
-from dataclasses import dataclass
 
 
 def test_event_type_name_conversion():
@@ -27,7 +27,7 @@ def test_event_type_name_conversion():
 
 @pytest.mark.asyncio
 async def test_bus_emitter_creates_kernel_events():
-    from open_researcher.kernel import Kernel, Event
+    from open_researcher.kernel import Kernel
     from open_researcher.plugins.orchestrator.event_adapter import make_bus_emitter
 
     @dataclass
@@ -52,8 +52,8 @@ async def test_bus_emitter_creates_kernel_events():
 @pytest.mark.asyncio
 async def test_orchestrator_plugin_lifecycle():
     from open_researcher.kernel import Kernel
-    from open_researcher.plugins.storage import StoragePlugin
     from open_researcher.plugins.orchestrator import OrchestratorPlugin
+    from open_researcher.plugins.storage import StoragePlugin
 
     storage = StoragePlugin(db_path=":memory:")
     orch = OrchestratorPlugin()

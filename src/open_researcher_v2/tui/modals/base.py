@@ -32,9 +32,17 @@ class ReviewScreen(Screen):
     def _apply_decisions(self) -> None:
         """Subclass hook: write user decisions to graph.json / files."""
 
+    def _notify(self, message: str, severity: str = "information") -> None:
+        """Safe notify — no-op if not mounted in an app."""
+        try:
+            self.app.notify(message, severity=severity)
+        except Exception:
+            pass
+
     def action_confirm(self) -> None:
         self._apply_decisions()
         self.state.clear_awaiting_review()
+        self._notify("\u2713 Review confirmed")
         self.dismiss(True)
 
     def action_skip(self) -> None:
@@ -43,4 +51,5 @@ class ReviewScreen(Screen):
             "event": "review_skipped",
             "review_type": self.review_request.get("type", "unknown"),
         })
+        self._notify("Review skipped", severity="warning")
         self.dismiss(None)

@@ -14,7 +14,7 @@ from typing import Any, Callable
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
-from textual.widgets import Footer, Header, TabbedContent, TabPane
+from textual.widgets import Footer, TabbedContent, TabPane
 
 from open_researcher_v2.state import ResearchState
 from open_researcher_v2.tui.modals.direction import DirectionConfirmScreen
@@ -80,7 +80,6 @@ class ResearchApp(App):
     # -- layout -------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
-        yield Header()
         yield StatsBar(id="stats")
         yield PhaseStripBar(id="phase")
         with TabbedContent():
@@ -170,22 +169,25 @@ class ResearchApp(App):
         """Pause research by setting the paused flag."""
         try:
             self.state.set_paused(True)
+            self.notify("\u23f8 Paused", severity="warning")
         except Exception:
-            pass
+            self.notify("Failed to pause", severity="error")
 
     def action_resume(self) -> None:
         """Resume research by clearing the paused flag."""
         try:
             self.state.set_paused(False)
+            self.notify("\u25b6 Resumed", severity="information")
         except Exception:
-            pass
+            self.notify("Failed to resume", severity="error")
 
     def action_skip(self) -> None:
         """Request skipping the current experiment."""
         try:
             self.state.set_skip_current(True)
+            self.notify("\u23ed Skip requested", severity="warning")
         except Exception:
-            pass
+            self.notify("Failed to skip", severity="error")
 
     def _make_review_screen(self, review: dict):
         """Create the appropriate review screen for the review type."""

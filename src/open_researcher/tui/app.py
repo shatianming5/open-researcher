@@ -544,7 +544,10 @@ class ResearchApp(App):
             self.notify("Paused", severity="information")
             self._refresh_data()
         else:
-            self.notify("Pause failed — check if another session holds the lock. Try again or restart.", severity="error")
+            self.notify(
+                "Pause failed — check if another session holds the lock. Try again or restart.",
+                severity="error",
+            )
 
     def action_resume(self) -> None:
         if self._dashboard_cache and not self._dashboard_cache.session.paused:
@@ -554,7 +557,10 @@ class ResearchApp(App):
             self.notify("Resumed", severity="information")
             self._refresh_data()
         else:
-            self.notify("Resume failed — check if another session holds the lock. Try again or restart.", severity="error")
+            self.notify(
+                "Resume failed — check if another session holds the lock. Try again or restart.",
+                severity="error",
+            )
 
     def action_skip(self) -> None:
         if self.app_phase != "experimenting":
@@ -567,7 +573,10 @@ class ResearchApp(App):
             self.notify("Skip queued", severity="information")
             self._refresh_data()
         else:
-            self.notify("Skip failed — check if another session holds the lock. Try again or restart.", severity="error")
+            self.notify(
+                "Skip failed — check if another session holds the lock. Try again or restart.",
+                severity="error",
+            )
 
     def action_clear_skip(self) -> None:
         if self.app_phase != "experimenting":
@@ -577,7 +586,10 @@ class ResearchApp(App):
             self.notify("Skip cancelled", severity="information")
             self._refresh_data()
         else:
-            self.notify("Cancel skip failed — check if another session holds the lock. Try again or restart.", severity="error")
+            self.notify(
+                "Cancel skip failed — check if another session holds the lock. Try again or restart.",
+                severity="error",
+            )
 
     def action_gpu_status(self) -> None:
         gpu_path = self.research_dir / "gpu_status.json"
@@ -606,7 +618,11 @@ class ResearchApp(App):
             if active_tab != "tab-docs":
                 return
             doc_viewer = self.query_one("#doc-viewer", DocViewer)
-            idx = DocViewer.DOC_FILES.index(doc_viewer.current_file) if doc_viewer.current_file in DocViewer.DOC_FILES else -1
+            idx = (
+                DocViewer.DOC_FILES.index(doc_viewer.current_file)
+                if doc_viewer.current_file in DocViewer.DOC_FILES
+                else -1
+            )
             next_idx = (idx + 1) % len(DocViewer.DOC_FILES)
             target = DocViewer.DOC_FILES[next_idx]
             await doc_viewer.select_doc(target)
@@ -620,7 +636,11 @@ class ResearchApp(App):
             if active_tab != "tab-docs":
                 return
             doc_viewer = self.query_one("#doc-viewer", DocViewer)
-            idx = DocViewer.DOC_FILES.index(doc_viewer.current_file) if doc_viewer.current_file in DocViewer.DOC_FILES else 0
+            idx = (
+                DocViewer.DOC_FILES.index(doc_viewer.current_file)
+                if doc_viewer.current_file in DocViewer.DOC_FILES
+                else 0
+            )
             prev_idx = (idx - 1) % len(DocViewer.DOC_FILES)
             target = DocViewer.DOC_FILES[prev_idx]
             await doc_viewer.select_doc(target)

@@ -5,8 +5,8 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture
 async def pool():
-    from open_researcher.plugins.storage.db import Database
     from open_researcher.plugins.scheduler.idea_pool import IdeaPoolStore
+    from open_researcher.plugins.storage.db import Database
 
     db = Database(":memory:")
     await db.open()
@@ -56,8 +56,8 @@ async def test_claim_respects_priority(pool):
 async def test_scheduler_plugin_lifecycle():
     """SchedulerPlugin creates an IdeaPoolStore from StoragePlugin's database."""
     from open_researcher.kernel import Kernel
-    from open_researcher.plugins.storage import StoragePlugin
     from open_researcher.plugins.scheduler import SchedulerPlugin
+    from open_researcher.plugins.storage import StoragePlugin
 
     storage = StoragePlugin(db_path=":memory:")
     scheduler = SchedulerPlugin()

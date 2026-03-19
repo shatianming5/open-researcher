@@ -1,8 +1,6 @@
 """Tests for GPU detection and allocation."""
 import threading
 
-import pytest
-
 
 def test_gpu_allocator_allocate_and_release():
     from open_researcher.plugins.execution.gpu import GPUAllocator

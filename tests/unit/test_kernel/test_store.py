@@ -1,5 +1,4 @@
 """Tests for SQLite-backed EventStore."""
-import asyncio
 import pytest
 
 pytestmark = pytest.mark.asyncio
@@ -42,9 +41,10 @@ async def test_replay_by_type():
 
 
 async def test_replay_since_timestamp():
+    import time
+
     from open_researcher.kernel.event import Event
     from open_researcher.kernel.store import EventStore
-    import time
 
     store = EventStore(":memory:")
     await store.open()

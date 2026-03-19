@@ -32,21 +32,18 @@ from open_researcher.tui.view_model import (
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Terminal compatibility: honor NO_COLOR and TERM=dumb
-# ---------------------------------------------------------------------------
-_ASCII_MODE: bool | None = None
-
-
 def _use_ascii() -> bool:
-    """Return True when the terminal lacks Unicode/color support."""
-    global _ASCII_MODE
-    if _ASCII_MODE is None:
-        _ASCII_MODE = bool(
-            os.environ.get("NO_COLOR", "").strip()
-            or os.environ.get("TERM", "") == "dumb"
-        )
-    return _ASCII_MODE
+    """Render ASCII-safe symbols when the terminal opts out of rich output.
+
+    Contract:
+    - if `NO_COLOR` is set, prefer ASCII-safe symbols
+    - if `TERM=dumb`, prefer ASCII-safe symbols
+    - otherwise, use the richer Unicode icon set
+    """
+    return bool(
+        os.environ.get("NO_COLOR", "").strip()
+        or os.environ.get("TERM", "") == "dumb"
+    )
 
 
 # Unicode vs ASCII icon sets
@@ -379,15 +376,24 @@ class SessionChromeBar(Static):
                 else:
                     color = _status_color(r.status)
                     parts.append(f"[bold {color}]{_icon('play')} {name}[/]")
-            return f"  [{C_DIM}]{_icon('sep')}[/] " + f" [{C_DIM}]{_icon('arrow_right')}[/] ".join(parts) if parts else ""
+            if not parts:
+                return ""
+            separator = f" [{C_DIM}]{_icon('arrow_right')}[/] "
+            return f"  [{C_DIM}]{_icon('sep')}[/] " + separator.join(parts)
 
         # State F: Paused (highest priority)
         if chrome.paused:
-            self.chrome_text = "\n".join(filter(None, [
-                f"[bold {C_CORAL}]{_icon('pause')} PAUSED[/] [{C_DIM}]— Press [bold {C_INFO}]r[/][{C_DIM}] to resume[/]",
-                self._last_result_line(chrome),
-                _progress() + _pipeline(),
-            ]))
+            self.chrome_text = "\n".join(
+                filter(
+                    None,
+                    [
+                        f"[bold {C_CORAL}]{_icon('pause')} PAUSED[/] "
+                        f"[{C_DIM}]— Press [bold {C_INFO}]r[/][{C_DIM}] to resume[/]",
+                        self._last_result_line(chrome),
+                        _progress() + _pipeline(),
+                    ],
+                )
+            )
             return
 
         # State C: Scouting
@@ -1187,7 +1193,8 @@ class LineageTimelinePanel(Static):
             branch_items = children.get(node_id, [])
             for index, item in enumerate(branch_items):
                 connector = _icon("tree_end") if index == len(branch_items) - 1 else _icon("tree_mid")
-                child_prefix = f"{prefix}{_icon('tree_space') if index == len(branch_items) - 1 else _icon('tree_pipe')}"
+                child_prefix_icon = _icon("tree_space") if index == len(branch_items) - 1 else _icon("tree_pipe")
+                child_prefix = f"{prefix}{child_prefix_icon}"
                 lines.append(
                     f"{prefix}[{C_ACCENT}]{connector} {escape(item.relation)}[/] "
                     f"[{C_PRIMARY}]{escape(item.child_id or 'child')}[/]"
@@ -1559,7 +1566,8 @@ class MetricChart(Static):
             logger.debug("Error initializing metric chart", exc_info=True)
 
     def update_data(self, rows: list[dict], metric_name: str = "metric", direction: str = "") -> None:
-        data_hash = hash((len(rows), metric_name, direction, tuple((r.get("metric_value"), r.get("status")) for r in rows[-20:])))
+        recent_points = tuple((r.get("metric_value"), r.get("status")) for r in rows[-20:])
+        data_hash = hash((len(rows), metric_name, direction, recent_points))
         if data_hash == self._data_hash:
             return
         self._data_hash = data_hash
