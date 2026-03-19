@@ -8,6 +8,7 @@ can monitor a live research session.
 
 from __future__ import annotations
 
+import logging
 import threading
 from typing import Any, Callable
 
@@ -18,6 +19,8 @@ from textual.widgets import Footer, TabbedContent, TabPane
 
 from open_researcher_v2.state import ResearchState
 from open_researcher_v2.tui.modals.direction import DirectionConfirmScreen
+
+logger = logging.getLogger(__name__)
 from open_researcher_v2.tui.modals.hypothesis import HypothesisReviewScreen
 from open_researcher_v2.tui.modals.frontier import FrontierReviewScreen
 from open_researcher_v2.tui.modals.result import ResultReviewScreen
@@ -110,10 +113,11 @@ class ResearchApp(App):
             if self.runner is not None:
                 self.runner()
         except Exception as exc:
+            logger.error("Runner failed: %s", exc, exc_info=True)
             try:
                 self.state.append_log({"event": "runner_error", "line": str(exc)})
             except Exception:
-                pass
+                logger.debug("Failed to log runner error to state", exc_info=True)
 
     # -- polling ------------------------------------------------------------
 
@@ -158,10 +162,11 @@ class ResearchApp(App):
                     screen = self._make_review_screen(review)
                     self.push_screen(screen, callback=self._on_review_done)
                 except Exception:
+                    logger.debug("Failed to push review screen", exc_info=True)
                     self._review_shown = False
         except Exception:
             # Never let a polling error crash the TUI
-            pass
+            logger.debug("Polling error", exc_info=True)
 
     # -- actions ------------------------------------------------------------
 
@@ -171,6 +176,7 @@ class ResearchApp(App):
             self.state.set_paused(True)
             self.notify("\u23f8 Paused", severity="warning")
         except Exception:
+            logger.debug("Failed to pause", exc_info=True)
             self.notify("Failed to pause", severity="error")
 
     def action_resume(self) -> None:
@@ -179,6 +185,7 @@ class ResearchApp(App):
             self.state.set_paused(False)
             self.notify("\u25b6 Resumed", severity="information")
         except Exception:
+            logger.debug("Failed to resume", exc_info=True)
             self.notify("Failed to resume", severity="error")
 
     def action_skip(self) -> None:
@@ -187,6 +194,7 @@ class ResearchApp(App):
             self.state.set_skip_current(True)
             self.notify("\u23ed Skip requested", severity="warning")
         except Exception:
+            logger.debug("Failed to skip", exc_info=True)
             self.notify("Failed to skip", severity="error")
 
     def _make_review_screen(self, review: dict):
@@ -211,14 +219,14 @@ class ResearchApp(App):
         try:
             self.push_screen(GoalEditScreen(state=self.state))
         except Exception:
-            pass
+            logger.debug("Failed to open goal edit", exc_info=True)
 
     def action_inject_idea(self) -> None:
         """Open inject idea modal."""
         try:
             self.push_screen(InjectIdeaScreen(state=self.state))
         except Exception:
-            pass
+            logger.debug("Failed to open inject idea", exc_info=True)
 
     def action_quit(self) -> None:
         """Quit TUI, cleaning up any pending review."""

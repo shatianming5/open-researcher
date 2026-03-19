@@ -120,13 +120,21 @@ def create_worktree(repo_path: Path, worker_id: str) -> Path:
     # Symlink .research into the worktree
     research_dir = repo_path / ".research"
     wt_research = wt_path / ".research"
-    if wt_research.is_symlink() or wt_research.is_file():
-        wt_research.unlink()
-    elif wt_research.is_dir():
-        shutil.rmtree(wt_research)
+    try:
+        if wt_research.is_symlink() or wt_research.is_file():
+            wt_research.unlink()
+        elif wt_research.is_dir():
+            shutil.rmtree(wt_research)
+    except OSError as exc:
+        logger.warning("Failed to clean %s before symlink: %s", wt_research, exc)
 
     if research_dir.exists():
-        os.symlink(str(research_dir), str(wt_research))
+        try:
+            os.symlink(str(research_dir), str(wt_research))
+        except OSError as exc:
+            raise RuntimeError(
+                f"Cannot symlink .research into worktree {wt_path}: {exc}"
+            ) from exc
 
     logger.debug("Created worktree %s (branch %s)", wt_path, branch_name)
     return wt_path

@@ -335,7 +335,11 @@ class SkillRunner:
 
             pool = pool_factory()
             pool.run()
-            pool.wait()
+            timeout_min = config.get("limits", {}).get("timeout_minutes", 0)
+            pool_timeout = timeout_min * 60 if timeout_min > 0 else None
+            pool.wait(timeout=pool_timeout)
+            if pool_timeout is not None:
+                pool.stop()  # signal remaining workers to finish
 
             self.state.append_log({"event": "parallel_workers_finished", "round": round_num})
 

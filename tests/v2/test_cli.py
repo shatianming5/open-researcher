@@ -259,6 +259,73 @@ class TestReviewCommand:
         updated = state.load_graph()
         assert updated["frontier"][0]["priority"] == 5
 
+    def test_review_approve_all_archives_needs_post_review(self, tmp_path):
+        """--approve-all transitions needs_post_review items to archived."""
+        from open_researcher_v2.state import ResearchState
+
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        state = ResearchState(research_dir)
+        state.set_awaiting_review(
+            {"type": "result_review", "requested_at": "2026-03-19T14:00:00Z"}
+        )
+        graph = state.load_graph()
+        graph["frontier"] = [
+            {"id": "frontier-001", "status": "needs_post_review"},
+            {"id": "frontier-002", "status": "approved"},
+        ]
+        state.save_graph(graph)
+        result = runner.invoke(app, ["review", str(tmp_path), "--approve-all"])
+        assert result.exit_code == 0
+        updated = state.load_graph()
+        assert updated["frontier"][0]["status"] == "archived"
+        assert updated["frontier"][1]["status"] == "approved"
+
+    def test_review_archive_marks_items(self, tmp_path):
+        """--archive transitions specific items to archived."""
+        from open_researcher_v2.state import ResearchState
+
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        state = ResearchState(research_dir)
+        state.set_awaiting_review(
+            {"type": "result_review", "requested_at": "2026-03-19T14:00:00Z"}
+        )
+        graph = state.load_graph()
+        graph["frontier"] = [
+            {"id": "frontier-001", "status": "needs_post_review"},
+            {"id": "frontier-002", "status": "needs_post_review"},
+        ]
+        state.save_graph(graph)
+        result = runner.invoke(
+            app, ["review", str(tmp_path), "--archive", "frontier-001"]
+        )
+        assert result.exit_code == 0
+        updated = state.load_graph()
+        assert updated["frontier"][0]["status"] == "archived"
+        assert updated["frontier"][1]["status"] == "needs_post_review"
+        assert state.get_awaiting_review() is None
+
+    def test_review_default_shows_frontier_table(self, tmp_path):
+        """Default review shows items needing review."""
+        from open_researcher_v2.state import ResearchState
+
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        state = ResearchState(research_dir)
+        state.set_awaiting_review(
+            {"type": "result_review", "requested_at": "2026-03-19T14:00:00Z"}
+        )
+        graph = state.load_graph()
+        graph["frontier"] = [
+            {"id": "frontier-001", "status": "needs_post_review", "description": "test exp"},
+        ]
+        state.save_graph(graph)
+        result = runner.invoke(app, ["review", str(tmp_path)])
+        assert result.exit_code == 0
+        assert "frontier-001" in result.output
+        assert "needs_post_review" in result.output
+
 
 # ---------------------------------------------------------------------------
 # inject command

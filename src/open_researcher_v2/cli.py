@@ -259,6 +259,7 @@ def review(
     skip: bool = typer.Option(False, help="Skip the pending review"),
     approve_all: bool = typer.Option(False, "--approve-all", help="Approve all and continue"),
     reject: list[str] = typer.Option([], help="Reject specific frontier IDs"),
+    archive: list[str] = typer.Option([], help="Archive frontier IDs (mark as done)"),
     priority: list[str] = typer.Option([], help="Set priority: FRONTIER_ID=PRIORITY"),
 ) -> None:
     """Show or act on a pending human review."""
@@ -286,6 +287,15 @@ def review(
         return
 
     if approve_all:
+        # Also transition needs_post_review items to archived
+        graph = state.load_graph()
+        changed = False
+        for item in graph.get("frontier", []):
+            if item.get("status") == "needs_post_review":
+                item["status"] = "archived"
+                changed = True
+        if changed:
+            state.save_graph(graph)
         state.clear_awaiting_review()
         state.append_log({"event": "review_completed", "review_type": review_type})
         console.print(f"Approved: {review_type}")
@@ -303,6 +313,18 @@ def review(
         console.print(f"Rejected {reject} and approved remaining")
         return
 
+    if archive:
+        graph = state.load_graph()
+        for fid in archive:
+            for item in graph.get("frontier", []):
+                if item.get("id") == fid:
+                    item["status"] = "archived"
+        state.save_graph(graph)
+        state.clear_awaiting_review()
+        state.append_log({"event": "review_completed", "review_type": review_type})
+        console.print(f"Archived {archive}")
+        return
+
     if priority:
         graph = state.load_graph()
         for spec in priority:
@@ -314,14 +336,36 @@ def review(
         console.print(f"Updated priorities: {priority}")
         return
 
-    # Default: show pending review info
+    # Default: show pending review info and frontier status
     console.print(f"[bold]Pending review:[/bold] {review_type}")
     console.print(f"[dim]Requested at: {requested_at}[/dim]")
+
+    # Show frontier items needing review
+    graph = state.load_graph()
+    review_items = [
+        item for item in graph.get("frontier", [])
+        if item.get("status") in ("needs_post_review", "approved", "draft")
+    ]
+    if review_items:
+        console.print()
+        table = Table(title="Items for Review")
+        table.add_column("ID", style="cyan")
+        table.add_column("Status", style="yellow")
+        table.add_column("Description")
+        for item in review_items:
+            table.add_row(
+                item.get("id", "?"),
+                item.get("status", "?"),
+                item.get("description", "")[:60],
+            )
+        console.print(table)
+
     console.print()
     console.print("Actions:")
-    console.print("  --approve-all    Approve and continue")
+    console.print("  --approve-all    Approve and continue (archives needs_post_review)")
     console.print("  --skip           Skip this review")
     console.print("  --reject ID      Reject a frontier item")
+    console.print("  --archive ID     Archive a frontier item (mark as done)")
     console.print("  --priority ID=N  Adjust priority")
 
 

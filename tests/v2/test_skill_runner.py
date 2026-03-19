@@ -505,7 +505,7 @@ class TestCheckpoints:
 
 
 class _MockPool:
-    """A lightweight mock for WorkerPool with run/wait methods."""
+    """A lightweight mock for WorkerPool with run/wait/stop methods."""
 
     def __init__(self):
         self.run_called = False
@@ -514,8 +514,11 @@ class _MockPool:
     def run(self):
         self.run_called = True
 
-    def wait(self):
+    def wait(self, timeout=None):
         self.wait_called = True
+
+    def stop(self):
+        pass
 
 
 class TestRunParallel:
@@ -702,7 +705,10 @@ class TestRunParallel:
                 activity = self._state.load_activity()
                 phases_seen.append(activity.get("phase"))
 
-            def wait(self):
+            def wait(self, timeout=None):
+                pass
+
+            def stop(self):
                 pass
 
         runner, adapter, state = _make_runner(
@@ -712,3 +718,50 @@ class TestRunParallel:
         runner.run_parallel(lambda: _PhaseCapturingPool(state))
 
         assert "experiment" in phases_seen
+
+    def test_parallel_passes_timeout_to_pool(self, tmp_path):
+        """run_parallel reads timeout_minutes and passes it to pool.wait()."""
+        wait_args = []
+
+        class _TimeoutCapturingPool:
+            def run(self):
+                pass
+
+            def wait(self, timeout=None):
+                wait_args.append(timeout)
+
+            def stop(self):
+                pass
+
+        runner, _, state = _make_runner(
+            tmp_path,
+            config_overrides={
+                "limits": {"max_rounds": 1, "timeout_minutes": 5},
+            },
+        )
+        runner.run_parallel(lambda: _TimeoutCapturingPool())
+        assert len(wait_args) == 1
+        assert wait_args[0] == 300.0  # 5 min * 60
+
+    def test_parallel_no_timeout_when_zero(self, tmp_path):
+        """When timeout_minutes is 0, pool.wait() gets None (no timeout)."""
+        wait_args = []
+
+        class _TimeoutCapturingPool:
+            def run(self):
+                pass
+
+            def wait(self, timeout=None):
+                wait_args.append(timeout)
+
+            def stop(self):
+                pass
+
+        runner, _, state = _make_runner(
+            tmp_path,
+            config_overrides={
+                "limits": {"max_rounds": 1, "timeout_minutes": 0},
+            },
+        )
+        runner.run_parallel(lambda: _TimeoutCapturingPool())
+        assert wait_args[0] is None
