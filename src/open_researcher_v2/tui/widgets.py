@@ -247,16 +247,27 @@ class MetricChart(Static):
             return
         try:
             import plotext as plt
+            import re
 
+            xs = list(range(1, len(values) + 1))
             plt.clf()
-            plt.plot(list(range(1, len(values) + 1)), values, marker="braille")
+            plt.plot(xs, values, marker="braille")
             plt.title("Metric Trend")
             plt.xlabel("Result #")
+            plt.xticks(xs)
             plt.plotsize(100, 15)
             chart = plt.build()
             # Strip ANSI escape sequences that break SVG export
-            import re
             chart = re.sub(r"\x1b\[[0-9;]*m", "", chart)
+            # Remove trailing frame artifact on the right edge
+            lines = chart.split("\n")
+            cleaned = []
+            for line in lines:
+                stripped = line.rstrip()
+                if stripped.endswith("│") and not stripped.startswith("│"):
+                    stripped = stripped[:-1].rstrip()
+                cleaned.append(stripped)
+            chart = "\n".join(cleaned)
             self.update(chart)
         except ImportError:
             lines = " ".join(f"{v:.4f}" for v in values)
