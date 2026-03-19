@@ -41,6 +41,20 @@ def _resolve_research_dir(repo: Path) -> Path:
     return repo / ".research"
 
 
+def _deploy_scripts(research_dir: Path) -> None:
+    """Copy bundled helper scripts into .research/scripts/."""
+    scripts_src = Path(__file__).parent / "skills" / "scripts"
+    scripts_dst = research_dir / "scripts"
+    scripts_dst.mkdir(parents=True, exist_ok=True)
+    for name in ("record.py", "rollback.sh"):
+        src = scripts_src / name
+        dst = scripts_dst / name
+        if src.exists():
+            dst.write_bytes(src.read_bytes())
+            if name.endswith(".sh"):
+                dst.chmod(0o755)
+
+
 # ---------------------------------------------------------------------------
 # run
 # ---------------------------------------------------------------------------
@@ -62,9 +76,10 @@ def run(
         console.print(f"[red]Error:[/red] repo path does not exist: {repo}")
         raise typer.Exit(code=1)
 
-    # Create .research dir
+    # Create .research dir and deploy helper scripts
     research_dir = _resolve_research_dir(repo)
     research_dir.mkdir(parents=True, exist_ok=True)
+    _deploy_scripts(research_dir)
 
     # Auto-generate tag if not provided
     if not tag:

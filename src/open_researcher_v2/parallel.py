@@ -7,6 +7,7 @@ inside isolated worktrees, and writes results back.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -371,17 +372,25 @@ class WorkerPool:
                 )
                 continue
 
-            # Run agent
+            # Run agent — append assigned experiment context
             env_override = {}
             if gpu_index >= 0:
                 env_override["CUDA_VISIBLE_DEVICES"] = str(gpu_index)
+
+            assigned_section = (
+                "\n\n## Assigned Experiment\n\n"
+                "This experiment was pre-assigned by the worker pool. "
+                "Do NOT claim a new item from graph.json.\n\n"
+                f"```json\n{json.dumps(item, indent=2)}\n```\n"
+            )
+            program_content = self.skill_content + assigned_section
 
             result: dict = {"status": "error", "description": "unknown"}
             try:
                 agent = self.agent_factory()
                 rc = agent.run(
                     wt_path,
-                    program_content=self.skill_content,
+                    program_content=program_content,
                     program_file=f"exp-{frontier_id}.md",
                     env=env_override,
                     on_output=lambda line: self.on_output(

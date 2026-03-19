@@ -15,16 +15,16 @@ Use this goal to guide your analysis. Focus your strategy on achieving this obje
 - **Write**: `.research/research-strategy.md` — research direction, focus areas, constraints
 - **Write**: `.research/evaluation.md` — primary metric, evaluation command, baseline method
 - **Update**: `.research/config.yaml` — fill in `metrics.primary.*` and the `bootstrap` section
-- **Write**: `.research/activity.json` — update `scout_agent` key with your status
+- **Update**: `.research/activity.json` — update phase/status fields
 
 ## Status Updates
 
-Before each action, update your status in `.research/activity.json`:
+Before each action, update `.research/activity.json` by reading the current file, then setting the `phase` field:
 ```json
-{"scout_agent": {"status": "<phase>", "detail": "<what you're doing>", "updated_at": "<ISO timestamp>"}}
+{"phase": "scout", "round": 0, "workers": [], "control": {"paused": false, "skip_current": false, "awaiting_review": null}}
 ```
 
-Valid statuses: `analyzing`, `searching`, `strategizing`, `idle`
+Valid phase values during scouting: `scout`
 
 ## Phase 1: Understand the Project
 
@@ -36,7 +36,7 @@ Valid statuses: `analyzing`, `searching`, `strategizing`, `idle`
    - whether batch size, precision, compile/backend flags, worker counts, or similar knobs already exist
    - whether there are short runnable checks/benchmarks that can act as backfill jobs
 3. Write your analysis to `.research/project-understanding.md`
-4. Update status: `{"status": "analyzing", "detail": "reading codebase"}`
+4. Update activity.json phase
 
 ## Phase 2: Research Related Work
 
@@ -44,7 +44,7 @@ Valid statuses: `analyzing`, `searching`, `strategizing`, `idle`
    - Search 3-5 technical queries related to the project
    - Identify state of the art and common improvement patterns
 2. Write findings to `.research/literature.md`
-3. Update status: `{"status": "searching", "detail": "searching related work"}`
+3. Update activity.json phase
 
 ## Phase 3: Define Research Strategy
 
@@ -69,7 +69,7 @@ Write to `.research/research-strategy.md` with this structure:
 - <Constraint 2>
 ```
 
-Update status: `{"status": "strategizing", "detail": "defining research strategy"}`
+Update activity.json phase
 
 ## Phase 4: Design Evaluation
 
@@ -85,10 +85,10 @@ Update status: `{"status": "strategizing", "detail": "defining research strategy
    - `bootstrap.requires_gpu` if the repo is GPU-only
 5. Write to `.research/evaluation.md`
 6. Update `.research/config.yaml`: set `metrics.primary.*` and `bootstrap.*`
-7. If the repo clearly exposes stable runtime shapes, record them in `.research/research_graph.json -> repo_profile.resource_capabilities`
+7. If the repo clearly exposes stable runtime shapes, record them in `.research/graph.json -> repo_profile.resource_capabilities`
    - keep this factual and repo-grounded
    - do not invent launch modes that the repo does not already expose
-7. Update status: `{"status": "idle", "detail": "analysis complete"}`
+7. Update activity.json phase
 
 ## Rules
 

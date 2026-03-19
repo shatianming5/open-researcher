@@ -522,6 +522,51 @@ class TestWorkerPoolLifecycle:
         assert len(results) == 1
         assert results[0]["status"] == "keep"
 
+    def test_agent_receives_assigned_experiment(self, tmp_path):
+        """Worker injects '## Assigned Experiment' section into program_content."""
+        rd = tmp_path / ".research"
+        rd.mkdir()
+        state = ResearchState(rd)
+
+        graph = _default_graph()
+        graph["frontier"] = [
+            {"id": "f1", "status": "approved", "priority": 3,
+             "description": "Test experiment"},
+        ]
+        state.save_graph(graph)
+
+        mock_agent = MagicMock()
+        mock_agent.run.return_value = 0
+
+        received_content = {}
+
+        def _capture_run(wt_path, program_content="", **kwargs):
+            received_content["content"] = program_content
+            return 0
+
+        mock_agent.run.side_effect = _capture_run
+
+        pool = WorkerPool(
+            repo_path=tmp_path,
+            state=state,
+            agent_factory=lambda: mock_agent,
+            skill_content="base skill content",
+            max_workers=1,
+            gpu_mem_per_worker_mb=0,
+        )
+
+        with patch("open_researcher_v2.parallel.create_worktree", return_value=tmp_path):
+            with patch("open_researcher_v2.parallel.cleanup_worktree"):
+                pool.run()
+                pool.wait(timeout=10.0)
+
+        assert "content" in received_content
+        content = received_content["content"]
+        assert "## Assigned Experiment" in content
+        assert "f1" in content
+        assert "base skill content" in content
+        assert "Do NOT claim a new item" in content
+
     def test_stop_signal(self, tmp_path):
         """Pool.stop() terminates workers."""
         rd = tmp_path / ".research"

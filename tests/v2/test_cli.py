@@ -7,7 +7,7 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from open_researcher_v2.cli import app, _auto_tag
+from open_researcher_v2.cli import app, _auto_tag, _deploy_scripts
 
 runner = CliRunner()
 
@@ -371,6 +371,42 @@ class TestConstrainCommand:
 # ---------------------------------------------------------------------------
 # run --mode flag
 # ---------------------------------------------------------------------------
+
+
+class TestScriptDeployment:
+    """Tests for _deploy_scripts copying helper scripts to .research/scripts/."""
+
+    def test_deploy_creates_scripts_dir(self, tmp_path):
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        _deploy_scripts(research_dir)
+        assert (research_dir / "scripts").is_dir()
+
+    def test_deploy_copies_record_py(self, tmp_path):
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        _deploy_scripts(research_dir)
+        record = research_dir / "scripts" / "record.py"
+        assert record.exists()
+        content = record.read_text(encoding="utf-8")
+        assert "def main" in content
+
+    def test_deploy_copies_rollback_sh(self, tmp_path):
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        _deploy_scripts(research_dir)
+        rollback = research_dir / "scripts" / "rollback.sh"
+        assert rollback.exists()
+        import os
+        assert os.access(rollback, os.X_OK)
+
+    def test_deploy_is_idempotent(self, tmp_path):
+        research_dir = tmp_path / ".research"
+        research_dir.mkdir()
+        _deploy_scripts(research_dir)
+        _deploy_scripts(research_dir)
+        assert (research_dir / "scripts" / "record.py").exists()
+        assert (research_dir / "scripts" / "rollback.sh").exists()
 
 
 class TestRunModeFlag:
