@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from textual.containers import Vertical
+from textual.containers import Vertical, VerticalScroll
 from textual.widgets import DataTable, RichLog, Static
 from rich.text import Text
 
@@ -244,7 +244,8 @@ class MetricChart(Vertical):
 
     def compose(self):  # type: ignore[override]
         yield Static(id="metric-summary")
-        yield Static(id="metric-chart")
+        with VerticalScroll(id="metric-scroll"):
+            yield Static(id="metric-chart")
         yield DataTable(id="metric-results")
 
     def update_data(self, results: list[dict[str, Any]]) -> None:

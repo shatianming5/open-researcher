@@ -72,9 +72,13 @@ MetricChart {
     background: $surface-darken-1;
 }
 
+#metric-scroll {
+    height: 1fr;
+    min-height: 8;
+}
+
 #metric-chart {
     height: auto;
-    min-height: 14;
     padding: 0 1;
 }
 
