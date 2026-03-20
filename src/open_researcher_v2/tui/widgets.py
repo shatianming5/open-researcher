@@ -11,6 +11,7 @@ from typing import Any
 
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import DataTable, RichLog, Static
+from rich.console import Group
 from rich.text import Text
 
 import logging
@@ -233,14 +234,20 @@ class LogPanel(Vertical):
 
 
 class MetricChart(Vertical):
-    """Metrics panel with per-metric sparkline area charts and results table."""
+    """Metrics panel with per-metric line charts and results table."""
 
     BORDER_TITLE = "Metrics"
 
-    # Bright line colors
-    _COLORS = ["#00d7ff", "#00ff87", "#ffd700", "#d787ff", "#5fafff"]
-    # Dark fill colors (same hue, much darker for area below curve)
-    _COLORS_DIM = ["#004050", "#003820", "#403800", "#301848", "#183050"]
+    # Vibrant, distinct line colors for up to 10 metrics
+    _COLORS = [
+        "#00d7ff", "#00ff87", "#ffd700", "#ff5f87", "#af87ff",
+        "#5fd7ff", "#87d700", "#ffaf00", "#d75f87", "#875fff",
+    ]
+
+    # Metric name patterns where lower is better
+    _MINIMIZE_PATTERNS = (
+        "loss", "error", "perp", "mse", "mae", "cer", "wer", "fer",
+    )
 
     def compose(self):  # type: ignore[override]
         yield Static(id="metric-summary")
@@ -273,34 +280,43 @@ class MetricChart(Vertical):
             return
 
         # -- Summary line --
+        # Textual strips whitespace at style boundaries.  Use NBSP (\xa0)
+        # inside styled spans so spaces survive rendering.
+        S = "\xa0"  # non-breaking space
         n_metrics = len(metric_data)
         if n_metrics == 1:
             name, vals = next(iter(metric_data.items()))
-            best = max(vals)
+            lo_better = self._is_minimize(name)
+            best = min(vals) if lo_better else max(vals)
             latest = vals[-1]
             mean = sum(vals) / len(vals)
-            trend = self._trend_arrow(vals)
-            summary_w.update(
-                f" [dim]Kept: [/][bold]{len(kept)} [/]"
-                f"[dim]Disc: [/]{len(discarded)} "
-                f"[dim]\u2502 [/]"
-                f"[dim]Best: [/][bold cyan]{best:.4f} [/]"
-                f"[dim]Mean: [/]{mean:.4f} "
-                f"[dim]Latest: [/][bold]{latest:.4f}[/]{trend}"
-            )
+            trend = self._trend_arrow(vals, lo_better)
+            t = Text()
+            t.append(f" {len(kept)}{S}", style="bold")
+            t.append(f"kept{S}\u00b7{S}{len(discarded)}{S}disc{S}\u2502{S}", style="dim")
+            t.append(f"best{S}", style="dim")
+            t.append(f"{best:.4f}{S}", style="bold cyan")
+            t.append(f"\u00b7{S}mean{S}", style="dim")
+            t.append(f"{mean:.4f}{S}", style="")
+            t.append(f"\u00b7{S}latest{S}", style="dim")
+            t.append(f"{latest:.4f}{S}", style="bold")
+            t.append_text(Text.from_markup(trend))
+            summary_w.update(t)
         else:
-            summary_w.update(
-                f" [dim]Kept: [/][bold]{len(kept)} [/]"
-                f"[dim]Disc: [/]{len(discarded)} "
-                f"[dim]\u2502 [/]"
-                f"[dim]{n_metrics} metrics tracked[/]"
-            )
+            t = Text()
+            t.append(f" {len(kept)}{S}", style="bold")
+            t.append(f"kept{S}\u00b7{S}{len(discarded)}{S}disc{S}\u2502{S}", style="dim")
+            t.append(f"{n_metrics}{S}", style="bold")
+            t.append("metrics", style="dim")
+            summary_w.update(t)
 
-        # -- Sparkline charts --
-        self._render_sparklines(chart_w, metric_data)
+        # -- Line charts --
+        self._render_charts(chart_w, metric_data)
 
         # -- Results table: pivot so each experiment is one row --
         self._update_table(table_w, results, list(metric_data.keys()))
+
+    # -- Table ---------------------------------------------------------------
 
     @staticmethod
     def _update_table(
@@ -312,7 +328,6 @@ class MetricChart(Vertical):
         table_w.clear(columns=True)
 
         if len(metric_names) <= 1:
-            # Single metric or unknown — simple flat table
             table_w.add_columns("#", "Frontier", "Status", "Value", "Worker", "Desc")
             recent = list(reversed(results[-20:]))
             for i, r in enumerate(recent):
@@ -329,13 +344,11 @@ class MetricChart(Vertical):
                 )
             return
 
-        # Multi-metric: pivot — group by frontier_id, one column per metric
         table_w.add_columns("#", "Frontier", "Status", *metric_names, "Worker", "Desc")
 
-        # Build pivot: frontier_id → {metric: value, ...}
         pivoted: dict[str, dict[str, str]] = {}
-        row_info: dict[str, dict[str, str]] = {}  # frontier_id → status/worker/desc
-        order: list[str] = []  # insertion order of frontier_ids
+        row_info: dict[str, dict[str, str]] = {}
+        order: list[str] = []
 
         for r in results:
             fid = r.get("frontier_id", "")
@@ -349,10 +362,8 @@ class MetricChart(Vertical):
                     "desc": str(r.get("description", ""))[:40],
                 }
             pivoted[fid][metric] = str(r.get("value", ""))
-            # Update status to latest
             row_info[fid]["status"] = str(r.get("status", ""))
 
-        # Show most recent first, up to 20
         recent_ids = list(reversed(order[-20:]))
         for i, fid in enumerate(recent_ids):
             idx = len(order) - i
@@ -369,60 +380,89 @@ class MetricChart(Vertical):
                 info["desc"],
             )
 
+    # -- Helpers -------------------------------------------------------------
+
+    @classmethod
+    def _is_minimize(cls, name: str) -> bool:
+        """Heuristic: lower is better for loss/error style metrics."""
+        return any(p in name.lower() for p in cls._MINIMIZE_PATTERNS)
+
     @staticmethod
-    def _trend_arrow(vals: list[float]) -> str:
+    def _trend_arrow(vals: list[float], lower_is_better: bool = False) -> str:
+        """Return a colored trend arrow with trailing padding inside the tag.
+
+        Trailing spaces live inside the markup tag to survive Textual's
+        post-[/] whitespace stripping.
+        """
         if len(vals) < 2:
-            return "\u2192"
-        return "\u2191" if vals[-1] > vals[-2] else "\u2193" if vals[-1] < vals[-2] else "\u2192"
+            return ""
+        diff = vals[-1] - vals[-2]
+        if abs(diff) < 1e-9:
+            return "[dim]\u2192  [/]"
+        improving = (diff < 0) if lower_is_better else (diff > 0)
+        if improving:
+            arrow = "\u2193" if lower_is_better else "\u2191"
+            return f"[green]{arrow}  [/]"
+        arrow = "\u2191" if lower_is_better else "\u2193"
+        return f"[red]{arrow}  [/]"
 
-    def _render_sparklines(self, widget: Static, metric_data: dict[str, list[float]]) -> None:
-        """Render stacked sparkline area charts, one per metric."""
+    # -- Chart rendering -----------------------------------------------------
+
+    def _render_charts(
+        self, widget: Static, metric_data: dict[str, list[float]]
+    ) -> None:
+        """Render stacked line charts, one per metric."""
         n_metrics = len(metric_data)
-        chart_cols = 90
+        chart_cols = 92
 
-        # Allocate chart rows per metric
         if n_metrics == 1:
             rows_per = 8
         elif n_metrics == 2:
-            rows_per = 5
+            rows_per = 6
         elif n_metrics <= 4:
             rows_per = 4
         else:
             rows_per = 3
 
-        colors = self._COLORS
-        dim_colors = self._COLORS_DIM
-        lines: list[str] = []
+        parts: list[Text | str] = []
 
         for i, (name, values) in enumerate(metric_data.items()):
-            color = colors[i % len(colors)]
-            dim_color = dim_colors[i % len(dim_colors)]
-            best = max(values)
+            color = self._COLORS[i % len(self._COLORS)]
+            lo_better = self._is_minimize(name)
+            best = min(values) if lo_better else max(values)
             latest = values[-1]
-            trend = self._trend_arrow(values)
+            trend = self._trend_arrow(values, lo_better)
 
-            # Compact metric header
-            lines.append(
-                f" [{color}]\u25cf {name}  [/]"
-                f"[bold {color}]{best:.4f} [/]"
-                f"[dim]best  [/]"
-                f"[bold]{latest:.4f}[/]{trend} "
-                f"[dim]latest  n={len(values)}[/]"
-            )
+            # Legend header: colored dash + name + stats
+            # Use NBSP (\xa0) at style boundaries to survive Textual stripping
+            S = "\xa0"
+            padded_name = name.ljust(22)
+            header = Text(f"  ")
+            header.append(f"\u2500\u2500{S}", style=color)
+            header.append(f"{padded_name}", style=f"bold {color}")
+            header.append(f"best{S}", style="dim")
+            header.append(f"{best:.4f}{S}{S}", style=f"bold {color}")
+            header.append(f"latest{S}", style="dim")
+            header.append(f"{latest:.4f}{S}", style="bold")
+            header.append_text(Text.from_markup(trend))
+            header.append(f"n={len(values)}", style="dim")
+            parts.append(header)
 
             if len(values) < 2:
-                # Single-value mini bar
-                lines.append(f"   [{color}]\u2588\u2588\u2588\u2588\u2588[/] {values[0]:.4f}")
-            else:
-                chart_lines = self._render_area(
-                    values, chart_cols, rows_per, color, dim_color,
+                parts.append(
+                    f"    [{color}]\u2501\u2501\u2501\u2501\u2501"
+                    f"\u2501\u2501\u2501\u2501\u2501 [/]{values[0]:.4f}"
                 )
-                lines.extend(chart_lines)
+            else:
+                chart_lines = self._render_line_chart(
+                    values, chart_cols, rows_per, color,
+                )
+                parts.append("\n".join(chart_lines))
 
             if i < n_metrics - 1:
-                lines.append("")
+                parts.append("")
 
-        widget.update("\n".join(lines))
+        widget.update(Group(*parts))
 
     # Braille dot positions: (row 0-3, col 0-1) → bitmask
     _DOT_MAP = [
@@ -433,19 +473,18 @@ class MetricChart(Vertical):
     ]
 
     @classmethod
-    def _render_area(
+    def _render_line_chart(
         cls,
         values: list[float],
         chart_cols: int,
         chart_rows: int,
         color: str,
-        dim_color: str,
     ) -> list[str]:
-        """Render a braille area chart (4× vertical, 2× horizontal resolution).
+        """Render a clean braille line chart (no area fill).
 
-        All braille dots at or below the curve are set.  Character cells
-        containing the curve boundary use *color* (bright); cells that are
-        purely fill below the curve use *dim_color*.
+        Only the curve itself is drawn (with vertical connections between
+        consecutive pixel columns for continuity).  A dim Y-axis is shown
+        on the left with value labels at top, middle, and bottom.
         """
         vmin, vmax = min(values), max(values)
         vrange = vmax - vmin
@@ -462,10 +501,10 @@ class MetricChart(Vertical):
             vrange = vmax - vmin
 
         n = len(values)
-        px_w = chart_cols * 2   # 2 horizontal pixels per cell
-        px_h = chart_rows * 4   # 4 vertical pixels per cell
+        px_w = chart_cols * 2  # 2 horizontal pixels per braille cell
+        px_h = chart_rows * 4  # 4 vertical pixels per braille cell
 
-        # Per-pixel-column height (0 = bottom, px_h-1 = top)
+        # Interpolate data values to pixel-column heights
         heights: list[int] = []
         for gx in range(px_w):
             data_x = gx / max(1, px_w - 1) * (n - 1)
@@ -478,49 +517,66 @@ class MetricChart(Vertical):
             h = (v - vmin) / vrange * (px_h - 1)
             heights.append(max(0, min(px_h - 1, round(h))))
 
+        # Build pixel set — 2px-thick line for visual weight
+        pixels: set[tuple[int, int]] = set()
+        for gx in range(px_w):
+            h = heights[gx]
+            pixels.add((gx, h))
+            # Thicken: add one pixel below the curve
+            if h > 0:
+                pixels.add((gx, h - 1))
+            # Vertical connection to previous column for continuity
+            if gx > 0:
+                prev_h = heights[gx - 1]
+                lo, hi = min(h, prev_h), max(h, prev_h)
+                for gy in range(lo, hi + 1):
+                    pixels.add((gx, gy))
+
         dot_map = cls._DOT_MAP
         lines: list[str] = []
 
+        # Determine which rows get a Y-axis value label
+        mid_row = chart_rows // 2
+        label_rows: dict[int, float] = {
+            0: vmax,
+            chart_rows - 1: vmin,
+        }
+        if chart_rows >= 5:
+            label_rows[mid_row] = (vmin + vmax) / 2
+
         for crow in range(chart_rows):
-            # Y-axis label
-            if crow == 0:
-                label = f"{vmax:.4f} "
-            elif crow == chart_rows - 1:
-                label = f"{vmin:.4f} "
+            # Y-axis value label (right-aligned, 8 chars)
+            if crow in label_rows:
+                label = f"{label_rows[crow]:>8.3f}"
             else:
                 label = " " * 8
 
-            # Build braille characters for this row
-            bright_parts: list[str] = []  # chars containing the line
-            dim_parts: list[str] = []     # chars that are pure fill
-            row_markup: list[str] = []
-
+            # Build braille characters for this cell row
+            row_chars: list[str] = []
             for ccol in range(chart_cols):
                 code = 0x2800
-                has_line = False
-                has_any = False
+                has_dot = False
 
                 for dy in range(4):
                     for dx in range(2):
-                        # pixel y: 0 = bottom of chart
                         gy = px_h - 1 - (crow * 4 + dy)
                         gx = ccol * 2 + dx
-                        if 0 <= gy and gx < px_w:
-                            h = heights[gx]
-                            if gy <= h:
-                                code |= dot_map[dy][dx]
-                                has_any = True
-                                if gy == h or gy == h - 1:
-                                    has_line = True
+                        if (
+                            0 <= gy < px_h
+                            and 0 <= gx < px_w
+                            and (gx, gy) in pixels
+                        ):
+                            code |= dot_map[dy][dx]
+                            has_dot = True
 
                 ch = chr(code)
-                if has_line:
-                    row_markup.append(f"[{color}]{ch}[/]")
-                elif has_any:
-                    row_markup.append(f"[{dim_color}]{ch}[/]")
+                if has_dot:
+                    row_chars.append(f"[{color}]{ch}[/]")
                 else:
-                    row_markup.append(" ")
+                    row_chars.append(" ")
 
-            lines.append(f"[dim]{label}[/]{''.join(row_markup)}")
+            lines.append(
+                f"  [dim]{label} \u2502[/]{''.join(row_chars)}"
+            )
 
         return lines
