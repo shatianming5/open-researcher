@@ -88,6 +88,7 @@ class TestWidgetInstantiation:
     def test_metric_chart(self) -> None:
         w = MetricChart()
         assert w is not None
+        assert hasattr(w, "update_data")
 
 
 # ---------------------------------------------------------------------------

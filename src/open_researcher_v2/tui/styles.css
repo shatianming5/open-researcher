@@ -60,8 +60,27 @@ LogPanel {
 }
 
 MetricChart {
+    height: 1fr;
+    border: solid $primary-background;
+    border-title-color: $text;
+    border-title-style: bold;
+}
+
+#metric-summary {
+    height: 1;
+    padding: 0 1;
+    background: $surface-darken-1;
+}
+
+#metric-chart {
     height: auto;
-    min-height: 15;
+    min-height: 14;
+    padding: 0 1;
+}
+
+#metric-results {
+    height: 1fr;
+    min-height: 6;
 }
 
 /* Review modal screens */

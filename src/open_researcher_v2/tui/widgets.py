@@ -13,6 +13,10 @@ from textual.containers import Vertical
 from textual.widgets import DataTable, RichLog, Static
 from rich.text import Text
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -228,23 +232,82 @@ class LogPanel(Vertical):
 # ---------------------------------------------------------------------------
 
 
-class MetricChart(Static):
-    """Simple text-based chart of kept result values using plotext."""
+class MetricChart(Vertical):
+    """Metrics panel with summary stats, trend chart, and results table."""
+
+    BORDER_TITLE = "Metrics"
+
+    def compose(self):  # type: ignore[override]
+        yield Static(id="metric-summary")
+        yield Static(id="metric-chart")
+        table = DataTable(id="metric-results")
+        table.add_columns("#", "Frontier", "Status", "Metric", "Value", "Worker", "Desc")
+        yield table
 
     def update_data(self, results: list[dict[str, Any]]) -> None:
+        summary_w: Static = self.query_one("#metric-summary", Static)
+        chart_w: Static = self.query_one("#metric-chart", Static)
+        table_w: DataTable = self.query_one("#metric-results", DataTable)
+
         kept = [r for r in results if r.get("status") == "keep"]
-        if not kept:
-            self.update("[dim]No kept results yet.[/]")
-            return
+        discarded = [r for r in results if r.get("status") == "discard"]
+
+        # Extract numeric values from kept results
         values: list[float] = []
         for r in kept:
             try:
                 values.append(float(r["value"]))
             except (ValueError, KeyError, TypeError):
                 continue
+
+        # -- Summary line --
         if not values:
-            self.update("[dim]No numeric results to plot.[/]")
+            summary_w.update("[dim]No kept results yet.[/]")
+            chart_w.update("")
+            table_w.clear()
             return
+
+        best = max(values)
+        worst = min(values)
+        latest = values[-1]
+        mean = sum(values) / len(values)
+        if len(values) >= 2:
+            trend = "\u2191" if values[-1] > values[-2] else "\u2193" if values[-1] < values[-2] else "\u2192"
+        else:
+            trend = "\u2192"
+
+        summary_w.update(
+            f" [dim]Kept:[/][bold]{len(kept)}[/] "
+            f"[dim]Disc:[/]{len(discarded)} "
+            f"[dim]\u2502[/] "
+            f"[dim]Best:[/][bold cyan]{best:.4f}[/] "
+            f"[dim]Mean:[/]{mean:.4f} "
+            f"[dim]Latest:[/][bold]{latest:.4f}[/]{trend}"
+        )
+
+        # -- Chart --
+        self._render_chart(chart_w, values)
+
+        # -- Results table (most recent first, up to 20 rows) --
+        table_w.clear()
+        recent = list(reversed(results[-20:]))
+        for i, r in enumerate(recent):
+            idx = len(results) - i
+            status = str(r.get("status", ""))
+            style = _STATUS_STYLES.get(status, "white")
+            table_w.add_row(
+                str(idx),
+                str(r.get("frontier_id", "")),
+                Text(status, style=style),
+                str(r.get("metric", "")),
+                str(r.get("value", "")),
+                str(r.get("worker", "")),
+                str(r.get("description", ""))[:40],
+            )
+
+    @staticmethod
+    def _render_chart(widget: Static, values: list[float]) -> None:
+        """Render a plotext chart into the given Static widget."""
         try:
             import plotext as plt
             import re
@@ -252,23 +315,39 @@ class MetricChart(Static):
             xs = list(range(1, len(values) + 1))
             plt.clf()
             plt.plot(xs, values, marker="braille")
-            plt.title("Metric Trend")
+            plt.title("Metric Trend (kept)")
             plt.xlabel("Result #")
-            plt.xticks(xs)
-            plt.plotsize(100, 15)
+
+            # Dynamic width: scale with data points but cap at terminal width
+            width = max(60, min(len(values) * 7 + 15, 110))
+            plt.plotsize(width, 12)
+
+            # Limit x-ticks to avoid crowding
+            if len(xs) > 15:
+                step = max(1, len(xs) // 10)
+                ticks = [x for x in xs if x == 1 or x % step == 0]
+                if xs[-1] not in ticks:
+                    ticks.append(xs[-1])
+                plt.xticks(ticks)
+            else:
+                plt.xticks(xs)
+
             chart = plt.build()
-            # Strip ANSI escape sequences that break SVG export
+            # Strip ANSI escape sequences
             chart = re.sub(r"\x1b\[[0-9;]*m", "", chart)
-            # Remove trailing frame artifact on the right edge
+            # Remove trailing frame artifact on right edge
             lines = chart.split("\n")
             cleaned = []
             for line in lines:
                 stripped = line.rstrip()
-                if stripped.endswith("│") and not stripped.startswith("│"):
+                if stripped.endswith("\u2502") and not stripped.startswith("\u2502") and not stripped.startswith(" "):
                     stripped = stripped[:-1].rstrip()
                 cleaned.append(stripped)
             chart = "\n".join(cleaned)
-            self.update(chart)
+            widget.update(chart)
         except ImportError:
-            lines = " ".join(f"{v:.4f}" for v in values)
-            self.update(f"[dim]Values: {lines}[/]")
+            line = " ".join(f"{v:.4f}" for v in values)
+            widget.update(f"[dim]Values: {line}[/]")
+        except Exception:
+            logger.debug("Chart rendering failed", exc_info=True)
+            widget.update("[dim]Chart unavailable[/]")
