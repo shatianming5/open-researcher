@@ -28,7 +28,7 @@
 
 - **🔬 Scout → Prepare → Review → Experiment Flow**: AI agent analyzes your codebase, resolves install/data/smoke bootstrap steps, then runs the `research-v1` loop — keeping what works, discarding what doesn't.
 
-- **🖥️ Research Command Center TUI**: A 4-tab `Command / Execution / Logs / Docs` dashboard with frontier focus, collapsible detail drawer, hypothesis lineage, trace-aware logs, and searchable docs navigation.
+- **🖥️ Research Command Center TUI**: A 3-tab `Execution / Metrics / Logs` dashboard with frontier table, parallel worker status, trend chart with results table, and color-coded event stream.
 
 - **🛡️ Safety First**: Every experiment is an isolated git commit. Failed experiments auto-rollback. Timeout watchdog, crash counter, and max-experiments limit keep things under control.
 
@@ -262,7 +262,7 @@ agents:
 
 ## 📊 Interactive TUI Dashboard
 
-The interactive TUI is a **research command center** built around the runtime state in `.research/`: frontier items, experiment results, worker status, and the event stream. It supports **human-in-the-loop checkpoints** — review hypotheses, override results, inject ideas, and edit goals without leaving the terminal.
+The interactive TUI is a **research command center** built around the runtime state in `.research/`: frontier items, experiment results, worker status, and the event stream. Three tabs — **Execution** (frontier + workers), **Metrics** (summary stats + trend chart + results table), and **Logs** (color-coded event stream). Supports **human-in-the-loop checkpoints** — review hypotheses, override results, inject ideas, and edit goals without leaving the terminal.
 
 ### Screenshots
 
@@ -274,12 +274,12 @@ The interactive TUI is a **research command center** built around the runtime st
 <p align="center">
   <img src="imgs/tui-05_metrics.png" alt="Metrics tab — experiment trend chart" width="100%" />
 </p>
-<p align="center"><em>Metrics</em>: braille-dot trend chart tracking kept experiment results across rounds.</p>
+<p align="center"><em>Metrics</em>: summary stats (kept/discarded/best/mean/latest), braille trend chart, and scrollable results table.</p>
 
 <p align="center">
   <img src="imgs/tui-06_logs.png" alt="Logs tab — multi-round event stream" width="100%" />
 </p>
-<p align="center"><em>Logs</em>: color-coded event stream with aligned prefixes — SKILL / RES / WAIT / INJ / GOAL events across 5 rounds.</p>
+<p align="center"><em>Logs</em>: color-coded event stream with aligned prefixes — SKILL / DONE / W+ / W- / RES / WAIT / REVW / INJ / GOAL events across rounds.</p>
 
 <p align="center">
   <img src="imgs/tui-07_hyp_review.png" alt="Hypothesis review modal" width="100%" />
@@ -318,7 +318,7 @@ The interactive TUI is a **research command center** built around the runtime st
 <p align="center">
   <img src="imgs/tui-12_stress.png" alt="Stress test — 10 rounds, 6 workers" width="100%" />
 </p>
-<p align="center"><em>Stress Test</em>: 10 rounds, 30+ frontier items, 6 parallel workers — scales smoothly.</p>
+<p align="center"><em>Stress Test</em>: round 10, 8 frontier items, 6 parallel workers across GPUs — scales smoothly.</p>
 
 <p align="center">
   <img src="imgs/tui-14_idle.png" alt="Idle initial state" width="100%" />
@@ -338,9 +338,9 @@ The interactive TUI is a **research command center** built around the runtime st
 
 **3 tabs**:
 
-- **Execution** — Frontier table (sorted by priority, colored status) + Workers panel (GPU, frontier assignment)
-- **Metrics** — Braille-dot trend chart of kept experiment values across rounds
-- **Logs** — Color-coded event stream: SKILL / DONE / W+ / W- / RES / WAIT / REVW / INJ / GOAL
+- **Execution** — Frontier table (sorted by priority, colored status) + Workers panel (GPU, frontier assignment, live status)
+- **Metrics** — Summary stats bar (kept/discarded/best/mean/latest + trend arrow) + braille trend chart + scrollable results table
+- **Logs** — Color-coded event stream: SKILL / DONE / OUT / W+ / W- / RES / WAIT / REVW / INJ / GOAL
 
 **Keyboard shortcuts**: `p` pause, `r` resume, `s` skip, `g` edit goal, `i` inject idea, `q` quit.
 
