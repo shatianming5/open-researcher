@@ -307,47 +307,76 @@ class MetricChart(Vertical):
 
     @staticmethod
     def _render_chart(widget: Static, values: list[float]) -> None:
-        """Render a plotext chart into the given Static widget."""
-        try:
-            import plotext as plt
-            import re
+        """Render a Unicode block chart into the given Static widget."""
+        if not values:
+            widget.update("")
+            return
 
-            xs = list(range(1, len(values) + 1))
-            plt.clf()
-            plt.plot(xs, values, marker="braille")
-            plt.title("Metric Trend (kept)")
-            plt.xlabel("Result #")
+        _BLOCKS = " \u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588"
+        rows = 8
+        vmin, vmax = min(values), max(values)
+        vrange = vmax - vmin
+        if vrange < 1e-9:
+            # Flat data — show a single mid-height bar
+            widget.update(
+                f"[dim]  {vmin:.4f} [/][dim]\u2502[/]"
+                f"[cyan]{'\u2584' * min(len(values) * 2, 80)}[/]"
+            )
+            return
 
-            # Dynamic width: scale with data points but cap at terminal width
-            width = max(60, min(len(values) * 7 + 15, 110))
-            plt.plotsize(width, 12)
+        n = len(values)
+        # Bar width: aim for ~100 chars total chart area
+        bar_w = max(1, min(6, 100 // n))
 
-            # Limit x-ticks to avoid crowding
-            if len(xs) > 15:
-                step = max(1, len(xs) // 10)
-                ticks = [x for x in xs if x == 1 or x % step == 0]
-                if xs[-1] not in ticks:
-                    ticks.append(xs[-1])
-                plt.xticks(ticks)
+        # Y-axis labels: show at top, middle, bottom rows
+        y_positions = {rows - 1: vmax, rows // 2: (vmin + vmax) / 2, 0: vmin}
+
+        lines = []
+        for row in range(rows - 1, -1, -1):
+            # Y-axis label
+            if row in y_positions:
+                label = f"{y_positions[row]:.4f}"
             else:
-                plt.xticks(xs)
+                label = ""
+            parts = [f"[dim]{label:>7} \u2502[/]"]
 
-            chart = plt.build()
-            # Strip ANSI escape sequences
-            chart = re.sub(r"\x1b\[[0-9;]*m", "", chart)
-            # Remove trailing frame artifact on right edge
-            lines = chart.split("\n")
-            cleaned = []
-            for line in lines:
-                stripped = line.rstrip()
-                if stripped.endswith("\u2502") and not stripped.startswith("\u2502") and not stripped.startswith(" "):
-                    stripped = stripped[:-1].rstrip()
-                cleaned.append(stripped)
-            chart = "\n".join(cleaned)
-            widget.update(chart)
-        except ImportError:
-            line = " ".join(f"{v:.4f}" for v in values)
-            widget.update(f"[dim]Values: {line}[/]")
-        except Exception:
-            logger.debug("Chart rendering failed", exc_info=True)
-            widget.update("[dim]Chart unavailable[/]")
+            for v in values:
+                normalized = (v - vmin) / vrange * rows * 8
+                row_fill = normalized - row * 8
+                if row_fill >= 8:
+                    ch = _BLOCKS[8]
+                elif row_fill >= 1:
+                    ch = _BLOCKS[int(row_fill)]
+                elif row_fill > 0:
+                    ch = _BLOCKS[1]
+                else:
+                    ch = " "
+                if ch != " ":
+                    parts.append(f"[cyan]{ch * bar_w}[/]")
+                else:
+                    parts.append(" " * bar_w)
+
+            lines.append("".join(parts))
+
+        # X-axis line
+        chart_w = bar_w * n
+        lines.append(f"[dim]{' ' * 8}\u2514{'─' * chart_w}[/]")
+
+        # X-axis labels (sparse to avoid crowding)
+        if n <= 20:
+            step = 1
+        elif n <= 50:
+            step = max(1, n // 15)
+        else:
+            step = max(1, n // 10)
+
+        x_parts = [" " * 9]
+        for i in range(n):
+            num = i + 1
+            if num == 1 or num == n or num % step == 0:
+                x_parts.append(f"[dim]{str(num).center(bar_w)}[/]")
+            else:
+                x_parts.append(" " * bar_w)
+        lines.append("".join(x_parts))
+
+        widget.update("\n".join(lines))
