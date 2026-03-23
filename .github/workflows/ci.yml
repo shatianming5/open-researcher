@@ -31,7 +31,7 @@ jobs:
       should_run: ${{ steps.decide.outputs.should_run }}
     steps:
       - uses: actions/checkout@v6
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
